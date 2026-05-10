@@ -1,6 +1,6 @@
 import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
-import HeaderPrimary from 'flarum/forum/components/HeaderPrimary';
+import IndexPage from 'flarum/forum/components/IndexPage';
 import PostUser from 'flarum/forum/components/PostUser';
 import AccountPage from 'flarum/forum/components/AccountPage';
 import LinkButton from 'flarum/common/components/LinkButton';
@@ -30,8 +30,8 @@ app.initializers.add('ernestdefoe-social-groups', () => {
     component: GroupDiscussionThread,
   };
 
-  // ── Primary navigation link ────────────────────────────────────────────────
-  extend(HeaderPrimary.prototype, 'items', function (items) {
+  // ── Sidebar navigation link (alongside All Discussions, Tags, etc.) ────────
+  extend(IndexPage.prototype, 'sidebarItems', function (items) {
     items.add(
       'social-groups',
       m(
