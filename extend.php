@@ -20,7 +20,6 @@ use Ernestdefoe\SocialGroups\Api\Controller\UploadGroupImageController;
 use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupResource;
 use Ernestdefoe\SocialGroups\Access\SocialGroupPolicy;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
-use Ernestdefoe\SocialGroups\Notification\GroupMemberJoinedBlueprint;
 use Flarum\Api\Resource\UserResource;
 use Flarum\Api\Schema;
 use Flarum\Extend;
@@ -113,6 +112,4 @@ return [
     (new Extend\Settings())
         ->default('ernestdefoe-social-groups.create_permission', 'member'),
 
-    (new Extend\Notification())
-        ->type(GroupMemberJoinedBlueprint::class, [], ['alert']),
 ];

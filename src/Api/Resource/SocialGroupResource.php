@@ -116,6 +116,7 @@ class SocialGroupResource extends AbstractDatabaseResource
 
             Schema\Str::make('membershipType')
                 ->get(fn ($g) => $g->membership_type ?? 'open')
+                ->set(fn ($model, $value) => $model->membership_type = $value)
                 ->writable()
                 ->nullable(),
 
@@ -161,24 +162,12 @@ class SocialGroupResource extends AbstractDatabaseResource
         ]);
     }
 
-    public function mutateDataBeforeValidation(Context $context, array $data): array
+    public function updating(object $model, Context $context): void
     {
-        if ($context->updating() && isset($data['attributes']['name'])) {
-            // Regenerate slug only if name changes and slug wasn't manually set
-            if (! isset($data['attributes']['slug'])) {
-                $model = $context->model;
-                if ($model && $model->name !== $data['attributes']['name']) {
-                    $data['attributes']['slug'] = SocialGroup::createSlug($data['attributes']['name']);
-                }
-            }
+        $name = $context->body()->attribute('name');
+        if ($name !== null && $model->name !== $name) {
+            $model->slug = SocialGroup::createSlug($name);
         }
-
-        if (isset($data['attributes']['membershipType'])) {
-            $data['attributes']['membership_type'] = $data['attributes']['membershipType'];
-            unset($data['attributes']['membershipType']);
-        }
-
-        return $data;
     }
 
 }

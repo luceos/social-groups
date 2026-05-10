@@ -4,9 +4,7 @@ namespace Ernestdefoe\SocialGroups\Api\Controller;
 
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupJoinRequest;
-use Ernestdefoe\SocialGroups\Notification\GroupMemberJoinedBlueprint;
 use Flarum\Http\RequestUtil;
-use Flarum\Notification\NotificationSyncer;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -14,10 +12,6 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class ApproveJoinRequestController implements RequestHandlerInterface
 {
-    public function __construct(
-        private NotificationSyncer $notifications
-    ) {}
-
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
@@ -53,16 +47,6 @@ class ApproveJoinRequestController implements RequestHandlerInterface
                 'joined_at' => now(),
             ]);
             $group->increment('member_count');
-        }
-
-        // Notify the group creator that someone joined (if the approver is not the joiner)
-        $creator = $group->creator;
-        $joiner  = $joinRequest->user;
-        if ($creator && $joiner && $creator->id !== $joiner->id) {
-            $this->notifications->sync(
-                new GroupMemberJoinedBlueprint($group, $joiner),
-                [$creator]
-            );
         }
 
         return new JsonResponse(['memberCount' => $group->fresh()->member_count]);
