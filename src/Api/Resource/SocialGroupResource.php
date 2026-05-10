@@ -50,11 +50,11 @@ class SocialGroupResource extends AbstractDatabaseResource
 
             Endpoint\Update::make()
                 ->authenticated()
-                ->authorize(fn ($actor, $model) => $actor->id === $model->user_id || $actor->isAdmin()),
+                ->can('edit'),
 
             Endpoint\Delete::make()
                 ->authenticated()
-                ->authorize(fn ($actor, $model) => $actor->id === $model->user_id || $actor->isAdmin()),
+                ->can('delete'),
         ];
     }
 
