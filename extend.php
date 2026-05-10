@@ -114,6 +114,5 @@ return [
         ->default('ernestdefoe-social-groups.create_permission', 'member'),
 
     (new Extend\Notification())
-        ->type(GroupMemberJoinedBlueprint::class, [GroupMemberJoinedBlueprint::class], ['alert'])
-        ->driver('database', GroupMemberJoinedBlueprint::class),
+        ->type(GroupMemberJoinedBlueprint::class, [], ['alert']),
 ];
