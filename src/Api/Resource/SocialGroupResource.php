@@ -9,6 +9,7 @@ use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Flarum\Http\RequestUtil;
 use Illuminate\Database\Eloquent\Builder;
+use Tobyz\JsonApiServer\Context as BaseContext;
 
 class SocialGroupResource extends AbstractDatabaseResource
 {
@@ -144,30 +145,36 @@ class SocialGroupResource extends AbstractDatabaseResource
         ];
     }
 
-    public function creating(object $model, Context $context): void
+    public function creating(object $model, BaseContext $context): ?object
     {
+        /** @var Context $context */
         $actor = $context->getActor();
         $model->user_id = $actor->id;
         $model->slug = SocialGroup::createSlug($context->body()->attribute('name'));
         $model->member_count = 1;
+        return null;
     }
 
-    public function created(object $model, Context $context): void
+    public function created(object $model, BaseContext $context): ?object
     {
+        /** @var Context $context */
         // Creator automatically joins as 'creator' role
         $model->members()->create([
             'user_id' => $context->getActor()->id,
             'role'    => 'creator',
             'joined_at' => now(),
         ]);
+        return null;
     }
 
-    public function updating(object $model, Context $context): void
+    public function updating(object $model, BaseContext $context): ?object
     {
+        /** @var Context $context */
         $name = $context->body()->attribute('name');
         if ($name !== null && $model->name !== $name) {
             $model->slug = SocialGroup::createSlug($name);
         }
+        return null;
     }
 
 }
