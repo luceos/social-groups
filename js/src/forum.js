@@ -41,7 +41,7 @@ app.initializers.add('ernestdefoe-social-groups', () => {
         },
         app.translator.trans('ernestdefoe-social-groups.forum.groups.title')
       ),
-      30
+      75
     );
   });
 
