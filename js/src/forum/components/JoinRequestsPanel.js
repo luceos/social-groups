@@ -2,7 +2,6 @@ import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
-import avatar from 'flarum/common/helpers/avatar';
 
 /**
  * Shown inside the group sidebar for the creator/admins when there are
