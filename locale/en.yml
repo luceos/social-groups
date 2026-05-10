@@ -1,0 +1,46 @@
+ernestdefoe-social-groups:
+  forum:
+    groups:
+      title: Groups
+      create_button: Create Group
+      search_placeholder: Search groups…
+      empty_title: No groups yet
+      empty_text: Be the first to create a group!
+      members_count: "{count} member|{count} members"
+      join: Join
+      joined: Joined
+      leave: Leave
+      view: View
+      private: Private
+
+    group:
+      edit: Edit Group
+      delete: Delete Group
+      delete_confirm: Are you sure you want to delete this group? This cannot be undone.
+      members_section: Members
+      description_placeholder: No description yet.
+
+    create_modal:
+      title: Create a Group
+      name_label: Group Name
+      name_placeholder: e.g. Photography Lovers
+      description_label: Description
+      description_placeholder: What is this group about?
+      color_label: Accent Color
+      private_label: Private Group
+      private_help: Private groups are only visible to members.
+      image_label: Group Image
+      banner_label: Banner Image
+      submit: Create Group
+
+    edit_modal:
+      title: Edit Group
+      submit: Save Changes
+
+    upload:
+      invalid_type: Invalid file type. Please upload a JPG, PNG, GIF, or WebP image.
+      too_large: File is too large. Maximum size is 5MB.
+
+  admin:
+    permissions:
+      create_groups: Create social groups

@@ -1,0 +1,782 @@
+// ============================================================
+// Social Groups — Forum Styles
+// Flarum 2 design system compatible
+// ============================================================
+
+// Variables
+@sg-primary:      #4A90E2;
+@sg-secondary:    #7b5ea7;
+@sg-radius:       12px;
+@sg-radius-sm:    8px;
+@sg-shadow:       0 2px 12px rgba(0, 0, 0, 0.08);
+@sg-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+@sg-transition:   0.15s ease;
+
+// ============================================================
+// Navigation Link
+// ============================================================
+
+.SocialGroups-navLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: @sg-radius-sm;
+  text-decoration: none;
+  color: inherit;
+  transition: background @sg-transition, color @sg-transition;
+  font-weight: 500;
+
+  &:hover,
+  &.active {
+    background: var(--control-bg);
+    text-decoration: none;
+  }
+
+  .fas {
+    font-size: 0.9em;
+    opacity: 0.8;
+  }
+}
+
+// ============================================================
+// GroupsPage
+// ============================================================
+
+.GroupsPage {
+  padding: 2rem 0;
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  &-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.2;
+    }
+  }
+
+  &-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  &-search {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--control-bg);
+    border-radius: 999px;
+    background: var(--body-bg);
+    font-size: 0.9rem;
+    outline: none;
+    min-width: 200px;
+    color: var(--text-color);
+    transition: border-color @sg-transition, box-shadow @sg-transition;
+
+    &:focus {
+      border-color: @sg-primary;
+      box-shadow: 0 0 0 3px fade(@sg-primary, 15%);
+    }
+
+    &::placeholder {
+      color: var(--muted-color);
+    }
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  &-loading,
+  &-error {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted-color);
+  }
+
+  &-empty {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--muted-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+
+    .fas.fa-users {
+      font-size: 3.5rem;
+      opacity: 0.2;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text-color);
+      opacity: 0.7;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .Button {
+      margin-top: 0.5rem;
+    }
+  }
+}
+
+// ============================================================
+// GroupCard
+// ============================================================
+
+.GroupCard {
+  border-radius: @sg-radius;
+  background: var(--body-bg);
+  box-shadow: @sg-shadow;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform @sg-transition, box-shadow @sg-transition;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: @sg-shadow-hover;
+  }
+
+  &-banner {
+    height: 120px;
+    background: linear-gradient(135deg, @sg-primary, @sg-secondary);
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &-avatar {
+    position: absolute;
+    bottom: -22px;
+    left: 1rem;
+    width: 56px;
+    height: 56px;
+    border-radius: @sg-radius-sm + 2px;
+    border: 3px solid var(--body-bg);
+    background: @sg-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &-body {
+    padding: 1.85rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  &-name {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--heading-color, var(--text-color));
+  }
+
+  &-meta {
+    font-size: 0.8rem;
+    color: var(--muted-color);
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    .fas {
+      font-size: 0.75em;
+    }
+  }
+
+  &-private {
+    background: var(--control-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+
+    .fas { margin-right: 2px; }
+  }
+
+  &-description {
+    font-size: 0.85rem;
+    color: var(--text-color);
+    opacity: 0.75;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    min-height: 2.4em;
+    flex: 1;
+    line-height: 1.4;
+
+    &--empty {
+      background: var(--control-bg);
+      border-radius: 4px;
+      opacity: 0.4;
+    }
+  }
+
+  &-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+  }
+
+  &-viewLink {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: @sg-primary;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  &-joinBtn {
+    padding: 0.35rem 1rem !important;
+    border-radius: 999px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    transition: all @sg-transition !important;
+    line-height: 1.4 !important;
+  }
+}
+
+// ============================================================
+// GroupHero
+// ============================================================
+
+.GroupHero {
+  position: relative;
+
+  &-banner {
+    height: 240px;
+    background: linear-gradient(135deg, @sg-primary, @sg-secondary);
+    background-size: cover;
+    background-position: center;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.15) 100%);
+    }
+  }
+
+  &-info {
+    background: var(--body-bg);
+    border-bottom: 1px solid var(--control-bg);
+  }
+
+  &-info-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem 1.25rem;
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5rem;
+    position: relative;
+  }
+
+  &-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 18px;
+    border: 4px solid var(--body-bg);
+    background: @sg-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    margin-top: -44px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    box-shadow: @sg-shadow;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &-text {
+    flex: 1;
+    padding-top: 0.5rem;
+    min-width: 0;
+  }
+
+  &-name {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin: 0 0 0.3rem;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+
+  &-meta {
+    font-size: 0.875rem;
+    color: var(--muted-color);
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .fas { font-size: 0.8em; }
+  }
+
+  &-actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    flex-shrink: 0;
+    padding-bottom: 0.1rem;
+
+    .Button {
+      white-space: nowrap;
+    }
+  }
+}
+
+// ============================================================
+// GroupPage
+// ============================================================
+
+.GroupPage {
+  min-height: 60vh;
+
+  &-loading,
+  &-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    color: var(--muted-color);
+    gap: 1rem;
+
+    .fas {
+      font-size: 2.5rem;
+      opacity: 0.3;
+    }
+
+    a {
+      color: @sg-primary;
+    }
+  }
+
+  &-body {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  &-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &-description {
+    background: var(--body-bg);
+    border-radius: @sg-radius;
+    padding: 1.5rem;
+    box-shadow: @sg-shadow;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    min-height: 100px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-color);
+  }
+
+  &-noDescription {
+    color: var(--muted-color);
+    font-style: italic;
+  }
+
+  &-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+// ============================================================
+// MemberList
+// ============================================================
+
+.MemberList {
+  background: var(--body-bg);
+  border-radius: @sg-radius;
+  padding: 1.25rem;
+  box-shadow: @sg-shadow;
+
+  &-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted-color);
+    margin-bottom: 1rem;
+  }
+
+  &-loading {
+    padding: 1rem 0;
+    text-align: center;
+  }
+
+  &-empty,
+  &-error {
+    font-size: 0.85rem;
+    color: var(--muted-color);
+    text-align: center;
+    padding: 0.5rem 0;
+  }
+
+  &-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: block;
+    flex-shrink: 0;
+    transition: transform @sg-transition;
+
+    &:hover { transform: scale(1.1); }
+
+    .Avatar,
+    &Img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &-more {
+    font-size: 0.75rem;
+    color: var(--muted-color);
+    margin-top: 0.5rem;
+  }
+}
+
+// ============================================================
+// Modals — CreateGroupModal / EditGroupModal
+// ============================================================
+
+.CreateGroupModal,
+.EditGroupModal {
+  .Modal-content {
+    max-width: 560px;
+  }
+
+  .Modal-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .Form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0;
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted-color);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  .helpText {
+    font-size: 0.8rem;
+    color: var(--muted-color);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .help-block {
+    font-size: 0.8rem;
+    color: var(--error-color, #e2574a);
+  }
+
+  .GroupModal-colorPicker {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .GroupModal-colorSwatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: border-color @sg-transition, transform @sg-transition;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+
+    &:hover { transform: scale(1.1); }
+    &.active {
+      border-color: var(--body-bg);
+      box-shadow: 0 0 0 2px var(--primary-color, @sg-primary), 0 1px 4px rgba(0,0,0,0.2);
+    }
+  }
+
+  .GroupModal-uploadRow {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.25rem;
+    align-items: flex-start;
+  }
+}
+
+.EditGroupModal {
+  &-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+
+    .Button { flex: 1; }
+  }
+}
+
+// ============================================================
+// ImageUploadButton
+// ============================================================
+
+.ImageUploadButton {
+  cursor: pointer;
+  border: 2px dashed var(--control-bg);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: border-color @sg-transition, box-shadow @sg-transition;
+  background: var(--control-bg, #f5f5f5);
+
+  &:hover {
+    border-color: @sg-primary;
+    box-shadow: 0 0 0 3px fade(@sg-primary, 12%);
+  }
+
+  // Variants
+  &--avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 14px;
+    flex-shrink: 0;
+  }
+
+  &--banner {
+    width: 100%;
+    height: 100px;
+    border-radius: @sg-radius-sm;
+  }
+
+  &-preview {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  &-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--muted-color);
+    font-size: 0.72rem;
+    padding: 0.5rem;
+    text-align: center;
+    line-height: 1.3;
+
+    .fas {
+      font-size: 1.25rem;
+      opacity: 0.5;
+    }
+  }
+
+  &-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    z-index: 3;
+  }
+
+  input[type=file] {
+    display: none;
+  }
+
+  &-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background @sg-transition;
+    z-index: 2;
+
+    span {
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity @sg-transition;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+  }
+
+  &:hover &-overlay {
+    background: rgba(0, 0, 0, 0.32);
+
+    span { opacity: 1; }
+  }
+}
+
+// ============================================================
+// Responsive
+// ============================================================
+
+@media (max-width: 900px) {
+  .GroupPage-body {
+    grid-template-columns: 1fr;
+  }
+
+  .GroupPage-sidebar {
+    order: -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .GroupsPage {
+    padding: 1rem 0;
+
+    &-header {
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: 1.25rem;
+    }
+
+    &-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .GroupHero {
+    &-banner {
+      height: 160px;
+    }
+
+    &-info-inner {
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    &-avatar {
+      width: 72px;
+      height: 72px;
+      margin-top: -36px;
+    }
+
+    &-name {
+      font-size: 1.25rem;
+    }
+
+    &-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+
+  .GroupPage-body {
+    padding: 1rem;
+  }
+
+  .CreateGroupModal .Modal-content,
+  .EditGroupModal .Modal-content {
+    max-width: 100%;
+  }
+}
