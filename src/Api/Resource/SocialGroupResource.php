@@ -23,21 +23,24 @@ class SocialGroupResource extends AbstractDatabaseResource
         return SocialGroup::class;
     }
 
+    public function scope(Builder $query, BaseContext $context): void
+    {
+        /** @var Context $context */
+        $q = $context->getRequest()->getQueryParams()['filter']['q'] ?? null;
+        if ($q) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%");
+            });
+        }
+        $query->orderByDesc('member_count');
+    }
+
     public function endpoints(): array
     {
         return [
             Endpoint\Index::make()
-                ->paginate()
-                ->scope(function (Builder $query, \Flarum\Api\Context $context) {
-                    $q = $context->getRequest()->getQueryParams()['filter']['q'] ?? null;
-                    if ($q) {
-                        $query->where(function ($sub) use ($q) {
-                            $sub->where('name', 'like', "%{$q}%")
-                                ->orWhere('description', 'like', "%{$q}%");
-                        });
-                    }
-                    $query->orderByDesc('member_count');
-                }),
+                ->paginate(),
 
             Endpoint\Show::make(),
 
