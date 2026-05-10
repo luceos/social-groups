@@ -181,15 +181,4 @@ class SocialGroupResource extends AbstractDatabaseResource
         return $data;
     }
 
-    public function scope(Builder $query, \Flarum\Api\Context $context): void
-    {
-        $q = $context->getRequest()->getQueryParams()['filter']['q'] ?? null;
-        if ($q) {
-            $query->where(function ($sub) use ($q) {
-                $sub->where('name', 'like', "%{$q}%")
-                    ->orWhere('description', 'like', "%{$q}%");
-            });
-        }
-        $query->orderByDesc('member_count');
-    }
 }
