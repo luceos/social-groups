@@ -2,7 +2,7 @@ import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
 import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import PostUser from 'flarum/forum/components/PostUser';
-import AccountPage from 'flarum/forum/components/AccountPage';
+import SettingsPage from 'flarum/forum/components/SettingsPage';
 import LinkButton from 'flarum/common/components/LinkButton';
 import SocialGroup from './forum/models/SocialGroup';
 import GroupsPage from './forum/components/GroupsPage';
@@ -63,7 +63,7 @@ app.initializers.add('ernestdefoe-social-groups', () => {
   });
 
   // ── Primary group selector in account settings ─────────────────────────────
-  extend(AccountPage.prototype, 'accountItems', function (items) {
+  extend(SettingsPage.prototype, 'settingsItems', function (items) {
     items.add('sg-primary-group', m(PrimaryGroupSelector), 5);
   });
 });
