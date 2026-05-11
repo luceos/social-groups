@@ -7,10 +7,9 @@ import CreateGroupModal from './CreateGroupModal';
 export default class GroupsPage extends Page {
   oninit(vnode) {
     super.oninit(vnode);
-    this.groups      = null;
+    this.allGroups   = null; // full list from server
     this.loading     = true;
     this.searchValue = '';
-    this.searchTimer = null;
     this.error       = null;
   }
 
@@ -20,18 +19,18 @@ export default class GroupsPage extends Page {
     this.loadGroups();
   }
 
-  loadGroups(q) {
+  loadGroups() {
     this.loading = true;
     m.redraw();
 
-    const params = { 'page[limit]': 50 };
-    if (q) params['filter[q]'] = q;
-
+    // Flarum 2's filter[*] param triggers the searcher system which throws
+    // for resources that don't implement AbstractSearcher. We load all groups
+    // once and filter client-side — instant feedback, no round-trip per keystroke.
     app.store
-      .find('social-groups', params)
+      .find('social-groups', { 'page[limit]': 200 })
       .then((groups) => {
-        this.groups  = groups;
-        this.loading = false;
+        this.allGroups = groups;
+        this.loading   = false;
         m.redraw();
       })
       .catch((err) => {
@@ -41,12 +40,17 @@ export default class GroupsPage extends Page {
       });
   }
 
+  get filteredGroups() {
+    const q = this.searchValue.trim().toLowerCase();
+    if (!q || !this.allGroups) return this.allGroups;
+    return this.allGroups.filter((g) =>
+      (g.name()        || '').toLowerCase().includes(q) ||
+      (g.description() || '').toLowerCase().includes(q)
+    );
+  }
+
   onSearch(value) {
     this.searchValue = value;
-    if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => {
-      this.loadGroups(value.trim() || undefined);
-    }, 300);
     m.redraw();
   }
 
@@ -74,8 +78,7 @@ export default class GroupsPage extends Page {
                   icon:    'fas fa-plus',
                   onclick: () => app.modal.show(CreateGroupModal, {
                     onCreated: (group) => {
-                      if (!this.groups) this.groups = [];
-                      this.groups = [group, ...this.groups];
+                      this.allGroups = [group, ...(this.allGroups || [])];
                       m.redraw();
                     },
                   }),
@@ -89,17 +92,23 @@ export default class GroupsPage extends Page {
           ? m('div.GroupsPage-loading', m(LoadingIndicator, { display: 'block' }))
           : this.error
           ? m('div.GroupsPage-error', 'Failed to load groups. Please try again.')
-          : !this.groups || this.groups.length === 0
+          : !this.filteredGroups || this.filteredGroups.length === 0
           ? m('div.GroupsPage-empty', [
               m('i.fas.fa-users'),
-              m('h3', app.translator.trans('ernestdefoe-social-groups.forum.groups.empty_title')),
-              m('p', app.translator.trans('ernestdefoe-social-groups.forum.groups.empty_text')),
-              canCreate
+              m('h3', app.translator.trans(
+                this.searchValue.trim()
+                  ? 'ernestdefoe-social-groups.forum.groups.empty_search'
+                  : 'ernestdefoe-social-groups.forum.groups.empty_title'
+              )),
+              !this.searchValue.trim()
+                ? m('p', app.translator.trans('ernestdefoe-social-groups.forum.groups.empty_text'))
+                : null,
+              canCreate && !this.searchValue.trim()
                 ? m(Button, {
                     class:   'Button Button--primary',
                     onclick: () => app.modal.show(CreateGroupModal, {
                       onCreated: (group) => {
-                        this.groups = [group];
+                        this.allGroups = [group, ...(this.allGroups || [])];
                         m.redraw();
                       },
                     }),
@@ -107,7 +116,7 @@ export default class GroupsPage extends Page {
                 : null,
             ])
           : m('div.GroupsPage-grid',
-              this.groups.map((group) => m(GroupCard, { group, key: group.id() }))
+              this.filteredGroups.map((group) => m(GroupCard, { group, key: group.id() }))
             ),
       ]),
     ]);

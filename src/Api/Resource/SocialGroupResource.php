@@ -36,17 +36,9 @@ class SocialGroupResource extends AbstractDatabaseResource
     {
         $params = $context->request->getQueryParams();
 
-        // Plain text search — sent as filter[q] to stay within JSON:API's
-        // allowed query parameter namespace (bare ?q= is rejected by Flarum 2).
-        $filter = $params['filter'] ?? [];
-        $q      = $filter['q'] ?? null;
-        if ($q) {
-            $query->where(function ($sub) use ($q) {
-                $sub->where('name', 'like', "%{$q}%")
-                    ->orWhere('description', 'like', "%{$q}%");
-            });
-        }
-
+        // Search is handled client-side in GroupsPage.js.
+        // filter[*] params on AbstractDatabaseResource trigger Flarum 2's
+        // searcher system (AbstractSearcher) which throws if not implemented.
         $query->orderByDesc('member_count');
     }
 

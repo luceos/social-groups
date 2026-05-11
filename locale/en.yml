@@ -6,6 +6,7 @@ ernestdefoe-social-groups:
       search_placeholder: Search groups…
       empty_title: No groups yet
       empty_text: Be the first to create a group!
+      empty_search: No groups match your search.
       members_count: "{count} member|{count} members"
       join: Join
       joined: Joined
