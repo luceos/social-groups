@@ -24,7 +24,7 @@ class SocialGroupResource extends AbstractDatabaseResource
 
     public function scope(Builder $query, BaseContext $context): void
     {
-        $q = $context->request->getQueryParams()['filter']['q'] ?? null;
+        $q = $context->request->getQueryParams()['q'] ?? null;
         if ($q) {
             $query->where(function ($sub) use ($q) {
                 $sub->where('name', 'like', "%{$q}%")
@@ -168,13 +168,6 @@ class SocialGroupResource extends AbstractDatabaseResource
             'joined_at' => \Carbon\Carbon::now(),
         ]);
         return null;
-    }
-
-    public function filters(): array
-    {
-        // Return empty array so Flarum 2 doesn't throw when filter params are
-        // present. Actual search filtering is handled in scope() above.
-        return [];
     }
 
     public function updating(object $model, BaseContext $context): ?object
