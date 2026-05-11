@@ -15,11 +15,15 @@ class SocialGroupPolicy extends AbstractPolicy
 
     public function edit(User $actor, SocialGroup $group): bool
     {
-        return $actor->id === $group->user_id || $actor->isAdmin();
+        return $actor->id === $group->user_id
+            || $actor->isAdmin()
+            || $actor->hasPermission('ernestdefoe-social-groups.moderate');
     }
 
     public function delete(User $actor, SocialGroup $group): bool
     {
-        return $actor->id === $group->user_id || $actor->isAdmin();
+        return $actor->id === $group->user_id
+            || $actor->isAdmin()
+            || $actor->hasPermission('ernestdefoe-social-groups.moderate');
     }
 }

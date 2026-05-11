@@ -107,7 +107,9 @@ class SocialGroupResource extends AbstractDatabaseResource
             Schema\Boolean::make('canEdit')
                 ->get(function ($group, Context $context) {
                     $actor = $context->getActor();
-                    return $actor->id === $group->user_id || $actor->isAdmin();
+                    return $actor->id === $group->user_id
+                        || $actor->isAdmin()
+                        || $actor->hasPermission('ernestdefoe-social-groups.moderate');
                 }),
 
             Schema\Boolean::make('isMember')
@@ -143,7 +145,10 @@ class SocialGroupResource extends AbstractDatabaseResource
             Schema\Integer::make('pendingRequestCount')
                 ->get(function ($g, Context $context) {
                     $actor = $context->getActor();
-                    if ($actor->id !== $g->user_id && ! $actor->isAdmin()) {
+                    if ($actor->id !== $g->user_id
+                        && ! $actor->isAdmin()
+                        && ! $actor->hasPermission('ernestdefoe-social-groups.moderate')
+                    ) {
                         return 0;
                     }
                     return $g->joinRequests()->where('status', 'pending')->count();

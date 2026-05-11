@@ -11,5 +11,14 @@ export default [
       }),
       'start',
       90
+    )
+    .permission(
+      () => ({
+        icon: 'fas fa-shield-alt',
+        label: app.translator.trans('ernestdefoe-social-groups.admin.permissions.moderate_groups'),
+        permission: 'ernestdefoe-social-groups.moderate',
+      }),
+      'moderate',
+      90
     ),
 ];

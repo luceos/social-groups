@@ -370,6 +370,12 @@
     &:hover { text-decoration: underline; }
   }
 
+  &-footerRight {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   &-joinBtn {
     padding: 0.35rem 1rem !important;
     border-radius: 999px !important;
@@ -380,6 +386,42 @@
 
     &--pending {
       opacity: 0.75;
+    }
+  }
+
+  &-kebab {
+    position: relative;
+
+    .Dropdown-menu {
+      right: 0;
+      left: auto;
+      min-width: 140px;
+    }
+  }
+
+  &-kebabBtn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    border-radius: 6px !important;
+    color: var(--muted-color) !important;
+    font-size: 0.85rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background @sg-transition, color @sg-transition !important;
+
+    &:hover {
+      background: var(--control-bg) !important;
+      color: var(--text-color) !important;
+    }
+  }
+
+  &-kebabDelete {
+    color: var(--error-color, #e2574a) !important;
+
+    &:hover {
+      background: rgba(226, 87, 74, 0.08) !important;
     }
   }
 }
