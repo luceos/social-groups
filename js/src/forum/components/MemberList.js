@@ -130,18 +130,18 @@ export default class MemberList extends Component {
         ? m('div.MemberList-actions', [
             member.role === 'member'
               ? m(Button, {
-                  class:    'Button Button--sm MemberList-promoteBtn',
-                  loading:  acting === 'promote',
-                  disabled: !!acting,
-                  title:    app.translator.trans('ernestdefoe-social-groups.forum.group.promote_member'),
-                  onclick:  () => this.promote(member),
+                  class:       'Button Button--sm MemberList-promoteBtn',
+                  'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.group.promote_member'),
+                  loading:     acting === 'promote',
+                  disabled:    !!acting,
+                  onclick:     () => this.promote(member),
                 }, m('i.fas.fa-shield-alt'))
               : m(Button, {
-                  class:    'Button Button--sm MemberList-demoteBtn',
-                  loading:  acting === 'demote',
-                  disabled: !!acting,
-                  title:    app.translator.trans('ernestdefoe-social-groups.forum.group.demote_member'),
-                  onclick:  () => this.demote(member),
+                  class:       'Button Button--sm MemberList-demoteBtn',
+                  'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.group.demote_member'),
+                  loading:     acting === 'demote',
+                  disabled:    !!acting,
+                  onclick:     () => this.demote(member),
                 }, m('i.fas.fa-user')),
           ])
         : null,

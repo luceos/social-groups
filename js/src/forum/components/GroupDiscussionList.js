@@ -131,6 +131,7 @@ export default class GroupDiscussionList extends Component {
               ? m('.SGDiscussionList-pagination', [
                   m(Button, {
                     class: 'Button',
+                    'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.discussions.prev_page'),
                     disabled: this.page <= 1,
                     onclick: () => this.load(this.page - 1),
                   }, m('i.fas.fa-chevron-left')),
@@ -138,6 +139,7 @@ export default class GroupDiscussionList extends Component {
                     `${this.page} / ${this.pages}`),
                   m(Button, {
                     class: 'Button',
+                    'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.discussions.next_page'),
                     disabled: this.page >= this.pages,
                     onclick: () => this.load(this.page + 1),
                   }, m('i.fas.fa-chevron-right')),

@@ -48,6 +48,8 @@ ernestdefoe-social-groups:
       content_label: First Post
       content_placeholder: Write something…
       submit: Post Discussion
+      prev_page: Previous page
+      next_page: Next page
       delete: Delete discussion
       delete_confirm: Delete this discussion and all its replies?
       reply_count: "{count} reply|{count} replies"
