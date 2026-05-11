@@ -25,7 +25,7 @@ export default class GroupsPage extends Page {
     m.redraw();
 
     const params = { 'page[limit]': 50 };
-    if (q) params['q'] = q;
+    if (q) params['filter[q]'] = q;
 
     app.store
       .find('social-groups', params)
