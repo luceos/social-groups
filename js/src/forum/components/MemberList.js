@@ -1,7 +1,9 @@
+import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Button from 'flarum/common/components/Button';
 import Link from 'flarum/common/components/Link';
+import InviteUserModal from './InviteUserModal';
 
 export default class MemberList extends Component {
   oninit(vnode) {
@@ -77,12 +79,39 @@ export default class MemberList extends Component {
       });
   }
 
+  openInvite() {
+    app.modal.show(InviteUserModal, {
+      groupId:   this.attrs.groupId,
+      onInvited: (data) => {
+        this.members.push({
+          userId:      data.userId,
+          displayName: data.displayName,
+          avatarUrl:   data.avatarUrl,
+          slug:        data.slug,
+          role:        'member',
+          canModerate: true,
+        });
+        m.redraw();
+      },
+    });
+  }
+
   view() {
     const { isCreator } = this.attrs;
 
     return m('div.MemberList', [
-      m('div.MemberList-title',
-        app.translator.trans('ernestdefoe-social-groups.forum.group.members_section')),
+      m('div.MemberList-header', [
+        m('div.MemberList-title',
+          app.translator.trans('ernestdefoe-social-groups.forum.group.members_section')),
+        isCreator
+          ? m(Button, {
+              class:   'Button Button--sm Button--primary MemberList-inviteBtn',
+              'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.invite.title'),
+              onclick: () => this.openInvite(),
+            }, [m('i.fas.fa-user-plus'), ' ',
+                app.translator.trans('ernestdefoe-social-groups.forum.invite.button')])
+          : null,
+      ]),
 
       this.loading
         ? m('div.MemberList-loading', m(LoadingIndicator, { size: 'small', display: 'block' }))

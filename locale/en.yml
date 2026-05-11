@@ -81,11 +81,14 @@ ernestdefoe-social-groups:
       approve: Approve
       reject: Reject
 
-    settings:
-      primary_group_label: Group Badge
-      primary_group_help: Choose a group to display as a badge on your posts.
-      primary_group_none: None (no badge)
-      primary_group_empty: You haven't joined any groups yet.
+    invite:
+      title: Invite Member
+      button: Invite
+      username_label: Username
+      username_placeholder: Enter exact username…
+      submit: Send Invite
+      success: "{username} has been added to the group."
+      error_generic: Something went wrong. Please try again.
 
     upload:
       invalid_type: Invalid file type. Please upload a JPG, PNG, GIF, or WebP image.

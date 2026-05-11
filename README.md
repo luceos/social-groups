@@ -1,6 +1,6 @@
 # Social Groups for Flarum 2
 
-A modern social groups extension for Flarum 2. Members can create communities, post discussions inside groups, manage membership, and display a group badge alongside their posts — all without requiring Flarum tags.
+A modern social groups extension for Flarum 2. Members can create communities, post discussions inside groups, and manage membership — all without requiring Flarum tags.
 
 ---
 
@@ -17,6 +17,7 @@ A modern social groups extension for Flarum 2. Members can create communities, p
 ### Membership
 - **Open or approval-required** — groups can be set to open (anyone joins instantly) or require the creator to approve each request
 - **Join / leave** — one-click for open groups; "Request to Join" and "Pending…" states for approval groups
+- **Invite members** — group creators and moderators can invite any forum user directly by username, regardless of the group's privacy or membership type
 - **Join requests panel** — creators and admins see a panel in the group sidebar listing pending requests with Approve / Reject buttons
 - **Join notifications** — group creator receives an in-app notification when someone joins an open group
 - **Member roles** — `creator`, `moderator` (admin), `member`
@@ -27,11 +28,6 @@ A modern social groups extension for Flarum 2. Members can create communities, p
 - **Thread view** at `/groups/{slug}/d/{discussionId}` — full post list, inline reply composer
 - **Edit & delete** — authors can edit or delete their own posts; group moderators can delete any post or discussion
 - **Paginated feed** — 20 discussions per page with Previous / Next navigation
-
-### Group Badge on Posts
-- Members choose a **primary group** from their account settings
-- A small colored pill badge appears below their username on every Flarum discussion post — similar to the built-in Admin / Moderator badges
-- Badge color follows the group's accent color
 
 ### Theme Compatibility
 - All colors use CSS custom properties (`var(--primary-color)`, `var(--body-bg)`, `var(--control-bg)`, `var(--muted-color)`, etc.) so the extension adapts to any Flarum 2 theme, including **Avocado**
@@ -82,6 +78,8 @@ When creating or editing a group, choose:
 | **Open** | Any logged-in member can join instantly |
 | **Approval required** | A join request is queued; the creator (or a group moderator) must approve it before the user becomes a member |
 
+> Group creators and moderators can always **invite** a user directly regardless of the membership type — the invite bypasses both open-join and approval flows.
+
 ### Image uploads
 
 Images are stored in `public/assets/social-groups/` and served directly. Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 5 MB.
@@ -105,7 +103,11 @@ The page is divided into:
 - **Sidebar** (right column):
   - *Join Requests panel* — visible to creators/moderators on approval-required groups; shows queued requests with Approve / Reject controls
   - *About this Group* — description, privacy tag, approval tag
-  - *Members* — list of members with role badges; creators see Promote / Demote buttons
+  - *Members* — list of members with role badges; creators see Promote / Demote buttons and an **Invite** button
+
+### Inviting members
+
+Creators and moderators see an **Invite** button at the top of the Members sidebar. Clicking it opens a modal where you type the exact Flarum username of the person to invite. The user is added immediately as a `member` — no join request, no approval step needed — and the member list updates live.
 
 ### Group discussions
 
@@ -115,10 +117,6 @@ Discussions are completely separate from Flarum's core discussion/tag system. Ea
 - Reply inline at the bottom of the thread
 - Edit or delete their own posts
 - Group moderators can delete any post or discussion
-
-### Group badge
-
-Members navigate to **Settings → Account → Group Badge** and choose one of their joined groups. A colored pill then appears on all of their posts in the main Flarum discussion stream.
 
 ---
 
