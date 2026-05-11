@@ -22,6 +22,16 @@ class SocialGroupResource extends AbstractDatabaseResource
         return SocialGroup::class;
     }
 
+    public function find(string $id, BaseContext $context): ?object
+    {
+        // Allow slug-based lookup: if the "id" is non-numeric treat it as a slug
+        if (! is_numeric($id)) {
+            return SocialGroup::where('slug', $id)->first();
+        }
+
+        return parent::find($id, $context);
+    }
+
     public function scope(Builder $query, BaseContext $context): void
     {
         $params = $context->request->getQueryParams();
@@ -98,7 +108,8 @@ class SocialGroupResource extends AbstractDatabaseResource
             Schema\Boolean::make('isPrivate')
                 ->writable()
                 ->default(false)
-                ->get(fn ($group) => (bool) $group->is_private),
+                ->get(fn ($group) => (bool) $group->is_private)
+                ->set(fn ($model, $value) => $model->is_private = (bool) $value),
 
             Schema\Integer::make('memberCount')
                 ->get(fn ($group) => (int) $group->member_count),

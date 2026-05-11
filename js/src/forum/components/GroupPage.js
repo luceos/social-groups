@@ -30,15 +30,15 @@ export default class GroupPage extends Page {
   }
 
   loadGroup(slug) {
+    // Use the Show endpoint (GET /api/social-groups/{slug}) so we avoid the
+    // JSON:API server rejecting non-standard query parameters.  The resource's
+    // find() override treats non-numeric IDs as slug lookups.
     app.store
-      .find('social-groups', {
-        slug,
+      .find('social-groups', slug, {
         include: 'user',
-        'page[limit]': 1,
       })
-      .then((groups) => {
-        const group  = groups[0] || null;
-        this.group   = group;
+      .then((group) => {
+        this.group   = group || null;
         this.loading = false;
         if (group) {
           document.title = `${group.name()} — ${app.forum.attribute('title')}`;
