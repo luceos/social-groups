@@ -23,6 +23,8 @@ class SocialGroupDiscussion extends AbstractModel
 
     protected $guarded = [];
 
+    public $timestamps = true;
+
     protected $casts = [
         'is_locked'      => 'boolean',
         'last_posted_at' => 'datetime',

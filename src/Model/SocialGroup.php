@@ -23,6 +23,8 @@ class SocialGroup extends AbstractModel
 {
     protected $table = 'social_groups';
 
+    public $timestamps = true;
+
     protected $casts = [
         'is_private' => 'boolean',
     ];

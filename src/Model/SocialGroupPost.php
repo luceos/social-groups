@@ -20,6 +20,8 @@ class SocialGroupPost extends AbstractModel
 
     protected $guarded = [];
 
+    public $timestamps = true;
+
     public function discussion()
     {
         return $this->belongsTo(SocialGroupDiscussion::class, 'discussion_id');
