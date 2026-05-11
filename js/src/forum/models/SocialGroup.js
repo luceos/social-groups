@@ -2,63 +2,63 @@ import Model from 'flarum/common/Model';
 
 export default class SocialGroup extends Model {
   name() {
-    return Model.attribute('name')(this);
+    return this.attribute('name');
   }
 
   slug() {
-    return Model.attribute('slug')(this);
+    return this.attribute('slug');
   }
 
   description() {
-    return Model.attribute('description')(this);
+    return this.attribute('description');
   }
 
   color() {
-    return Model.attribute('color')(this);
+    return this.attribute('color');
   }
 
   imageUrl() {
-    return Model.attribute('imageUrl')(this);
+    return this.attribute('imageUrl');
   }
 
   bannerUrl() {
-    return Model.attribute('bannerUrl')(this);
+    return this.attribute('bannerUrl');
   }
 
   isPrivate() {
-    return Model.attribute('isPrivate')(this);
+    return this.attribute('isPrivate');
   }
 
   memberCount() {
-    return Model.attribute('memberCount')(this);
+    return this.attribute('memberCount');
   }
 
   createdAt() {
-    return Model.attribute('createdAt', Model.transformDate)(this);
+    return this.attribute('createdAt', Model.transformDate);
   }
 
   canEdit() {
-    return Model.attribute('canEdit')(this);
+    return this.attribute('canEdit');
   }
 
   isMember() {
-    return Model.attribute('isMember')(this);
+    return this.attribute('isMember');
   }
 
   isCreator() {
-    return Model.attribute('isCreator')(this);
+    return this.attribute('isCreator');
   }
 
   membershipType() {
-    return Model.attribute('membershipType')(this) || 'open';
+    return this.attribute('membershipType') || 'open';
   }
 
   isPending() {
-    return Model.attribute('isPending')(this) || false;
+    return this.attribute('isPending') || false;
   }
 
   pendingRequestCount() {
-    return Model.attribute('pendingRequestCount')(this) || 0;
+    return this.attribute('pendingRequestCount') || 0;
   }
 
   user() {
