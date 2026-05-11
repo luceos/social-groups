@@ -10,6 +10,7 @@ A modern social groups extension for Flarum 2. Members can create communities, p
 - **Group directory** at `/groups` — responsive card grid with banner images, member counts, and server-side search
 - **Group detail pages** at `/groups/{slug}` — full-width hero banner, group avatar, member list, about panel
 - **Create & edit groups** — name, description, accent color, privacy toggle, membership type, group avatar, and banner image
+- **Quick-action menu** — a vertical ⋮ menu on each group card lets authorized users edit or delete a group without navigating to the group page first
 - **Image uploads** — group avatar and banner stored directly on your server; no third-party service needed (JPEG, PNG, GIF, WebP · max 5 MB)
 - **Permission-controlled creation** — admins decide which user groups can create social groups
 - **Groups navigation link** — added automatically to the primary forum navigation bar
@@ -66,8 +67,13 @@ Go to **Admin → Permissions** and find the **Social Groups** section:
 | Permission | Controls |
 |---|---|
 | **Create social groups** | Which user groups can create new social groups |
+| **Edit & delete any social group** | Which user groups can edit or delete any group, not just their own |
 
-Set this to `Members` to let anyone create groups, or restrict it to `Moderators` / `Admins`.
+**Create social groups** — set this to `Members` to let anyone create groups, or restrict it to `Moderators` / `Admins`.
+
+**Edit & delete any social group** — grant this to your `Moderators` group (or any custom group) to allow them to edit group details or delete groups they did not create. Site admins always have this ability regardless of this setting.
+
+> Group creators can always edit and delete their own group — this permission only extends that ability to other trusted users.
 
 ### Membership types
 
