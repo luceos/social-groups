@@ -91,7 +91,7 @@ export default class GroupsPage extends Page {
         this.loading
           ? m('div.GroupsPage-loading', m(LoadingIndicator, { display: 'block' }))
           : this.error
-          ? m('div.GroupsPage-error', 'Failed to load groups. Please try again.')
+          ? m('div.GroupsPage-error', app.translator.trans('ernestdefoe-social-groups.forum.groups.load_error'))
           : !this.filteredGroups || this.filteredGroups.length === 0
           ? m('div.GroupsPage-empty', [
               m('i.fas.fa-users'),

@@ -116,9 +116,9 @@ export default class MemberList extends Component {
       this.loading
         ? m('div.MemberList-loading', m(LoadingIndicator, { size: 'small', display: 'block' }))
         : this.error
-        ? m('div.MemberList-error', 'Could not load members.')
+        ? m('div.MemberList-error', app.translator.trans('ernestdefoe-social-groups.forum.group.members_load_error'))
         : this.members.length === 0
-        ? m('div.MemberList-empty', 'No members yet.')
+        ? m('div.MemberList-empty', app.translator.trans('ernestdefoe-social-groups.forum.group.members_empty'))
         : m('div.MemberList-list',
             this.members.map((member) => this.renderMember(member, isCreator))
           ),

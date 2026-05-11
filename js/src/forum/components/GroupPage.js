@@ -46,7 +46,7 @@ export default class GroupPage extends Page {
         m.redraw();
       })
       .catch(() => {
-        this.error   = 'Failed to load group.';
+        this.error   = app.translator.trans('ernestdefoe-social-groups.forum.group.load_error');
         this.loading = false;
         m.redraw();
       });
@@ -58,7 +58,7 @@ export default class GroupPage extends Page {
     }
 
     if (this.error || !this.group) {
-      return m('.GroupPage', m('.container', m('p.GroupPage-error', this.error || 'Group not found.')));
+      return m('.GroupPage', m('.container', m('p.GroupPage-error', this.error || app.translator.trans('ernestdefoe-social-groups.forum.group.not_found'))));
     }
 
     const group      = this.group;

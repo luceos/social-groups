@@ -52,10 +52,25 @@ class SocialGroup extends AbstractModel
 
     public static function createSlug(string $name): string
     {
-        $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $name));
+        // Transliterate Unicode (Cyrillic, Arabic, CJK, etc.) → Latin → ASCII
+        if (function_exists('transliterator_transliterate')) {
+            $ascii = transliterator_transliterate('Any-Latin; Latin-ASCII; Lower()', $name);
+            $ascii = $ascii !== false ? $ascii : $name;
+        } else {
+            $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name) ?: $name;
+        }
+
+        $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $ascii));
         $slug = trim($slug, '-');
+
+        // If the name was entirely non-Latin (e.g. emoji, unsupported script)
+        // the slug may be empty after stripping — fall back to a short hash.
+        if ($slug === '') {
+            $slug = 'group-' . substr(md5($name . uniqid('', true)), 0, 8);
+        }
+
         $base = $slug;
-        $i = 1;
+        $i    = 1;
 
         while (static::where('slug', $slug)->exists()) {
             $slug = $base . '-' . $i++;
