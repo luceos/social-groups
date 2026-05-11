@@ -166,8 +166,7 @@ export default class GroupDiscussionThread extends Page {
             m('.SGThread-header', [
               m('h1.SGThread-title', this.discussion.title),
               m('.SGThread-meta', [
-                m('span', `${this.discussion.commentCount} `,
-                  app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_count')),
+                m('span', app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_count', { count: this.discussion.commentCount })),
                 this.discussion.isLocked
                   ? m('span.SGThread-locked', [m('i.fas.fa-lock'), ' ',
                       app.translator.trans('ernestdefoe-social-groups.forum.discussions.locked')])
