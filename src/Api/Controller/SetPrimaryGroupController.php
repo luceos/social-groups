@@ -16,8 +16,8 @@ class SetPrimaryGroupController implements RequestHandlerInterface
         $actor = RequestUtil::getActor($request);
         $actor->assertRegistered();
 
-        $body      = json_decode((string) $request->getBody(), true) ?? [];
-        $groupId   = $body['groupId'] ?? null;
+        $body    = (array) ($request->getParsedBody() ?? []);
+        $groupId = $body['groupId'] ?? null;
 
         if ($groupId === null) {
             // Clear primary group
@@ -46,6 +46,7 @@ class SetPrimaryGroupController implements RequestHandlerInterface
             'primaryGroupId'    => $group->id,
             'primaryGroupName'  => $group->name,
             'primaryGroupColor' => $group->color,
+            'primaryGroupSlug'  => $group->slug,
         ]);
     }
 }

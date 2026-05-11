@@ -23,16 +23,14 @@ export default class PrimaryGroupSelector extends Component {
   }
 
   loadGroups() {
-    const userId = app.session.user && app.session.user.id();
-    if (!userId) { this.loading = false; return; }
+    if (!app.session.user) { this.loading = false; return; }
 
+    // Fetch all groups and keep only the ones the current user is a member of.
+    // (The API resource sets isMember per-actor so client-side filtering is safe.)
     app.store
-      .find('social-groups', {
-        filter: { member: userId },
-        'page[limit]': 100,
-      })
+      .find('social-groups', { 'page[limit]': 100 })
       .then((groups) => {
-        this.groups  = groups;
+        this.groups  = groups.filter((g) => g.isMember());
         this.loading = false;
         m.redraw();
       })
