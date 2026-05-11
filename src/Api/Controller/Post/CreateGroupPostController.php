@@ -51,7 +51,7 @@ class CreateGroupPostController implements RequestHandlerInterface
 
         // Update discussion metadata
         $discussion->increment('comment_count');
-        $discussion->last_posted_at      = now();
+        $discussion->last_posted_at      = \Carbon\Carbon::now();
         $discussion->last_posted_user_id = $actor->id;
         $discussion->save();
 

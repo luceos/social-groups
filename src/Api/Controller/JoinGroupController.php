@@ -46,7 +46,7 @@ class JoinGroupController implements RequestHandlerInterface
         $group->members()->create([
             'user_id'   => $actor->id,
             'role'      => 'member',
-            'joined_at' => now(),
+            'joined_at' => \Carbon\Carbon::now(),
         ]);
         $group->increment('member_count');
 

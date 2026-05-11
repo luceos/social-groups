@@ -48,7 +48,7 @@ class CreateGroupDiscussionController implements RequestHandlerInterface
             'user_id'              => $actor->id,
             'title'                => $title,
             'comment_count'        => 1,
-            'last_posted_at'       => now(),
+            'last_posted_at'       => \Carbon\Carbon::now(),
             'last_posted_user_id'  => $actor->id,
         ]);
 

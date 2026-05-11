@@ -44,7 +44,7 @@ class ApproveJoinRequestController implements RequestHandlerInterface
             $group->members()->create([
                 'user_id'   => $joinRequest->user_id,
                 'role'      => 'member',
-                'joined_at' => now(),
+                'joined_at' => \Carbon\Carbon::now(),
             ]);
             $group->increment('member_count');
         }

@@ -97,8 +97,7 @@ export default class GroupDiscussionList extends Component {
                   m.redraw();
                 },
               }),
-            }, [m('i.fas.fa-plus'), ' ',
-                app.translator.trans('ernestdefoe-social-groups.forum.discussions.new_button')])
+            }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.new_button'))
           : null,
       ]),
 
