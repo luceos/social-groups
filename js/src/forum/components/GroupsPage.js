@@ -79,7 +79,7 @@ export default class GroupsPage extends Page {
                       m.redraw();
                     },
                   }),
-                }, [m('i.fas.fa-plus'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.create_button')])
+                }, app.translator.trans('ernestdefoe-social-groups.forum.groups.create_button'))
               : null,
           ]),
         ]),
