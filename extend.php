@@ -30,8 +30,8 @@ return [
         ->js(__DIR__ . '/js/dist/forum.js')
         ->css(__DIR__ . '/less/forum.less')
         ->route('/groups', 'ernestdefoe-social-groups.index')
-        ->route('/groups/:slug', 'ernestdefoe-social-groups.show')
-        ->route('/groups/:slug/d/:discussionId', 'ernestdefoe-social-groups.discussion')
+        ->route('/groups/{slug}', 'ernestdefoe-social-groups.show')
+        ->route('/groups/{slug}/d/{discussionId}', 'ernestdefoe-social-groups.discussion')
         ->content(function (Document $document, ServerRequestInterface $request) {
             $actor = RequestUtil::getActor($request);
             $document->payload['canCreateSocialGroup'] = $actor->can('ernestdefoe-social-groups.create');
