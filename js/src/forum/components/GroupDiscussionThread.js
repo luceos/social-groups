@@ -17,6 +17,10 @@ export default class GroupDiscussionThread extends Page {
     this.editingId   = null;
     this.editText    = '';
     this.deletingId  = null;
+
+    // Pending uploads for the reply composer
+    // Each entry: { id, name, previewUrl, uploading, error, uuid }
+    this.uploads = [];
   }
 
   oncreate(vnode) {
@@ -28,6 +32,12 @@ export default class GroupDiscussionThread extends Page {
     if (vnode.attrs.discussionId !== this.attrs.discussionId) {
       this.load();
     }
+  }
+
+  onremove(vnode) {
+    super.onremove(vnode);
+    // Free any object URLs still held
+    this.uploads.forEach((u) => { if (u.previewUrl) URL.revokeObjectURL(u.previewUrl); });
   }
 
   load() {
@@ -56,6 +66,62 @@ export default class GroupDiscussionThread extends Page {
       });
   }
 
+  // ── File uploads ─────────────────────────────────────────────────────────
+
+  handleFiles(files) {
+    for (const file of files) {
+      const id         = Math.random().toString(36).slice(2);
+      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+
+      this.uploads.push({ id, name: file.name, previewUrl, uploading: true, error: null, uuid: null });
+      m.redraw();
+
+      const fd = new FormData();
+      fd.append('file', file);
+
+      fetch(`${app.forum.attribute('apiUrl')}/fof/upload`, {
+        method:  'POST',
+        headers: { 'X-CSRF-Token': app.session.csrfToken || '' },
+        body:    fd,
+      })
+        .then((r) => {
+          if (!r.ok) return r.json().then((e) => { throw new Error(e.errors?.[0]?.detail || e.error || 'Upload failed'); });
+          return r.json();
+        })
+        .then((data) => {
+          const uuid   = data.data?.attributes?.uuid || data.data?.id;
+          const upload = this.uploads.find((u) => u.id === id);
+          if (upload) {
+            upload.uuid      = uuid;
+            upload.uploading = false;
+            // Append the BBCode fof/upload expects
+            const tag = `[upl-file uuid="${uuid}"][/upl-file]`;
+            this.replyText = this.replyText ? `${this.replyText}\n${tag}` : tag;
+          }
+          m.redraw();
+        })
+        .catch((err) => {
+          const upload = this.uploads.find((u) => u.id === id);
+          if (upload) { upload.uploading = false; upload.error = err.message; }
+          m.redraw();
+        });
+    }
+  }
+
+  removeUpload(id) {
+    const upload = this.uploads.find((u) => u.id === id);
+    if (!upload) return;
+    if (upload.previewUrl) URL.revokeObjectURL(upload.previewUrl);
+    if (upload.uuid) {
+      const tag = `[upl-file uuid="${upload.uuid}"][/upl-file]`;
+      this.replyText = this.replyText.replace(`\n${tag}`, '').replace(tag, '').trim();
+    }
+    this.uploads = this.uploads.filter((u) => u.id !== id);
+    m.redraw();
+  }
+
+  // ── Posts ─────────────────────────────────────────────────────────────────
+
   submitReply() {
     const content = this.replyText.trim();
     if (!content || this.submitting) return;
@@ -80,8 +146,10 @@ export default class GroupDiscussionThread extends Page {
         if (this.discussion) this.discussion.commentCount = (this.discussion.commentCount || 0) + 1;
         this.replyText  = '';
         this.submitting = false;
+        // Clear upload previews
+        this.uploads.forEach((u) => { if (u.previewUrl) URL.revokeObjectURL(u.previewUrl); });
+        this.uploads = [];
         m.redraw();
-        // Scroll to bottom
         requestAnimationFrame(() => {
           const el = document.querySelector('.SGThread-posts');
           if (el) el.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -143,12 +211,13 @@ export default class GroupDiscussionThread extends Page {
     });
   }
 
+  // ── Views ─────────────────────────────────────────────────────────────────
+
   view() {
     const { slug } = this.attrs;
     const actor    = app.session.user;
 
     return m('.SGThread', [
-      // Breadcrumb / back button
       m('.SGThread-back.container', [
         m('a.SGThread-backLink', {
           href: app.route('ernestdefoe-social-groups.show', { slug }),
@@ -162,7 +231,6 @@ export default class GroupDiscussionThread extends Page {
         : this.error
         ? m('.SGThread-error.container', this.error)
         : m('.SGThread-body.container', [
-            // Discussion title
             m('.SGThread-header', [
               m('h1.SGThread-title', this.discussion.title),
               m('.SGThread-meta', [
@@ -174,12 +242,10 @@ export default class GroupDiscussionThread extends Page {
               ]),
             ]),
 
-            // Posts
             m('.SGThread-posts',
               this.posts.map((post) => this.viewPost(post))
             ),
 
-            // Reply composer
             actor && !this.discussion.isLocked
               ? m('.SGThread-composer', [
                   m('.SGThread-composerAvatar', [
@@ -198,11 +264,30 @@ export default class GroupDiscussionThread extends Page {
                       rows:        3,
                       disabled:    this.submitting,
                     }),
+                    this.uploads.length
+                      ? m('.SGThread-uploads', this.uploads.map((u) => this.viewUpload(u)))
+                      : null,
                     m('.SGThread-composerActions', [
+                      m('label.SGThread-uploadBtn', {
+                        title: app.translator.trans('ernestdefoe-social-groups.forum.discussions.upload_image'),
+                        class: this.submitting ? 'disabled' : '',
+                      }, [
+                        m('input[type=file]', {
+                          accept:   'image/*,video/*,.pdf,.doc,.docx,.zip',
+                          multiple: true,
+                          style:    'display:none',
+                          disabled: this.submitting,
+                          onchange: (e) => {
+                            if (e.target.files.length) this.handleFiles(Array.from(e.target.files));
+                            e.target.value = '';
+                          },
+                        }),
+                        m('i.fas.fa-paperclip'),
+                      ]),
                       m(Button, {
                         class:    'Button Button--primary',
                         loading:  this.submitting,
-                        disabled: this.submitting || !this.replyText.trim(),
+                        disabled: this.submitting || !this.replyText.trim() || this.uploads.some((u) => u.uploading),
                         onclick:  () => this.submitReply(),
                       }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_button')),
                     ]),
@@ -213,12 +298,34 @@ export default class GroupDiscussionThread extends Page {
     ]);
   }
 
+  viewUpload(u) {
+    const cls = 'SGThread-upload' +
+      (u.error ? '.SGThread-upload--error' : u.uploading ? '.SGThread-upload--loading' : '.SGThread-upload--done');
+
+    return m(cls, { key: u.id }, [
+      u.uploading
+        ? m('i.fas.fa-spinner.fa-spin.SGThread-uploadSpinner')
+        : u.error
+        ? m('i.fas.fa-exclamation-circle.SGThread-uploadErrIcon')
+        : u.previewUrl
+        ? m('img.SGThread-uploadThumb', { src: u.previewUrl, alt: u.name })
+        : m('i.fas.fa-file.SGThread-uploadFileIcon'),
+      m('span.SGThread-uploadName', u.error ? `${u.name}: ${u.error}` : u.name),
+      !u.uploading
+        ? m('button.SGThread-uploadRemove', {
+            type:    'button',
+            title:   app.translator.trans('ernestdefoe-social-groups.forum.discussions.upload_remove'),
+            onclick: () => this.removeUpload(u.id),
+          }, '×')
+        : null,
+    ]);
+  }
+
   viewPost(post) {
     const isEditing  = this.editingId === post.id;
     const isDeleting = this.deletingId === post.id;
 
     return m('.SGThread-post', { key: post.id, class: isDeleting ? 'is-deleting' : '' }, [
-      // Avatar
       m('.SGThread-postAvatar', [
         post.user && post.user.avatarUrl
           ? m('img', { src: post.user.avatarUrl, alt: post.user.displayName })
@@ -227,7 +334,6 @@ export default class GroupDiscussionThread extends Page {
       ]),
 
       m('.SGThread-postMain', [
-        // Header
         m('.SGThread-postHeader', [
           m('span.SGThread-postAuthor', post.user?.displayName || ''),
           m('span.SGThread-postTime', { title: post.createdAt },
@@ -238,7 +344,6 @@ export default class GroupDiscussionThread extends Page {
             : null,
         ]),
 
-        // Body
         isEditing
           ? m('.SGThread-postEdit', [
               m('textarea.FormControl.SGThread-editTextarea', {
@@ -248,8 +353,8 @@ export default class GroupDiscussionThread extends Page {
               }),
               m('.SGThread-editActions', [
                 m(Button, {
-                  class:   'Button Button--primary Button--sm',
-                  onclick: () => this.saveEdit(post),
+                  class:    'Button Button--primary Button--sm',
+                  onclick:  () => this.saveEdit(post),
                   disabled: !this.editText.trim(),
                 }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.save_edit')),
                 m(Button, {
@@ -260,7 +365,6 @@ export default class GroupDiscussionThread extends Page {
             ])
           : m('.SGThread-postContent', m.trust(post.contentParsed)),
 
-        // Actions
         !isEditing && (post.canEdit || post.canDelete)
           ? m('.SGThread-postActions', [
               post.canEdit
