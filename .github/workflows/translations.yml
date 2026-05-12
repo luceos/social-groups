@@ -1,0 +1,16 @@
+name: Translations
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'locale/en.yml'
+
+jobs:
+  notify-weblate:
+    name: Notify Weblate of source changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Weblate repository update
+        run: curl -fsS "${{ secrets.WEBLATE_HOOK_URL }}"

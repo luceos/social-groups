@@ -1,0 +1,22 @@
+format_version: 1
+
+project:
+  name: Social Groups for Flarum
+  slug: ernestdefoe-social-groups
+  web: https://github.com/ernestdefoe/social-groups
+
+components:
+  - name: Social Groups
+    slug: social-groups
+    vcs: github
+    repo: https://github.com/ernestdefoe/social-groups
+    push: git@github.com:ernestdefoe/social-groups.git
+    branch: main
+    filemask: locale/*.yml
+    template: locale/en.yml
+    new_base: locale/en.yml
+    file_format: yaml-nested
+    source_language: en
+    license: MIT
+    push_on_commit: true
+    commit_pending_age: 24
