@@ -27,8 +27,13 @@ A modern social groups extension for Flarum 2. Members can create communities, p
 ### Group Discussions
 - **In-group discussion feed** — fully independent from Flarum's tags system; posts stay inside the group
 - **Thread view** at `/groups/{slug}/d/{discussionId}` — full post list, inline reply composer
+- **Rich text formatting** — post content is processed through Flarum's formatter, so BBCode and Markdown work out of the box
+- **File & image attachments** — attach images, videos, PDFs, and other files directly to posts via the paperclip button in the reply composer; handled by [fof/upload](https://github.com/FriendsOfFlarum/upload), including WebP conversion when your server supports it
 - **Edit & delete** — authors can edit or delete their own posts; group moderators can delete any post or discussion
 - **Paginated feed** — 20 discussions per page with Previous / Next navigation
+
+### Security
+- Post content is run through Flarum's formatter on save and only sanitized HTML is served to clients — raw user input is never rendered directly
 
 ### Theme Compatibility
 - All colors use CSS custom properties (`var(--primary-color)`, `var(--body-bg)`, `var(--control-bg)`, `var(--muted-color)`, etc.) so the extension adapts to any Flarum 2 theme, including **Avocado**
@@ -42,7 +47,10 @@ A modern social groups extension for Flarum 2. Members can create communities, p
 |---|---|
 | PHP | ≥ 8.3 |
 | Flarum | ^2.0 |
+| [fof/upload](https://github.com/FriendsOfFlarum/upload) | ^2.0 |
 | PHP extensions | `fileinfo`, `curl` |
+
+> **fof/upload** is a required dependency and will be installed automatically by Composer. After installation, go to **Admin → Extensions → FoF Upload** and configure your storage adapter and allowed file types. WebP image conversion is an option in that settings panel.
 
 ---
 
@@ -54,7 +62,7 @@ php flarum migrate
 php flarum cache:clear
 ```
 
-Then go to **Admin → Extensions** and enable **Social Groups**.
+Then go to **Admin → Extensions** and enable **Social Groups** and **FoF Upload**.
 
 ---
 
@@ -86,9 +94,20 @@ When creating or editing a group, choose:
 
 > Group creators and moderators can always **invite** a user directly regardless of the membership type — the invite bypasses both open-join and approval flows.
 
-### Image uploads
+### Group avatar & banner images
 
 Images are stored in `public/assets/social-groups/` and served directly. Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 5 MB.
+
+### Post attachments (fof/upload)
+
+File attachments in group post threads are handled entirely by fof/upload. To configure:
+
+1. Go to **Admin → Extensions → FoF Upload**
+2. Choose a storage adapter (local disk, S3, etc.)
+3. Set allowed MIME types and maximum file size
+4. Enable **Convert images to WebP** if your server has GD or Imagick with WebP support
+
+The attachment button appears in the reply composer for all group members. Uploaded files are stored by fof/upload and referenced in posts via BBCode (`[upl-file uuid="..."]`), which Flarum's formatter renders into the correct HTML.
 
 ---
 
@@ -115,14 +134,17 @@ The page is divided into:
 
 Creators and moderators see an **Invite** button at the top of the Members sidebar. Clicking it opens a modal where you type the exact Flarum username of the person to invite. The user is added immediately as a `member` — no join request, no approval step needed — and the member list updates live.
 
-### Group discussions
+### Group discussions & post attachments
 
 Discussions are completely separate from Flarum's core discussion/tag system. Each discussion lives at `/groups/{slug}/d/{id}`. Members (and moderators) can:
 
 - Start new discussions with a title and first post
-- Reply inline at the bottom of the thread
-- Edit or delete their own posts
+- Reply inline at the bottom of the thread using the full reply composer
+- Attach files by clicking the **paperclip** button — a preview chip appears below the textarea while the upload is in progress; images show as thumbnails; the Reply button stays disabled until all uploads complete
+- Edit or delete their own posts (raw BBCode is shown in the edit textarea, including any attachment tags)
 - Group moderators can delete any post or discussion
+
+Post content is processed through Flarum's formatter on the server before it reaches the browser, so BBCode, Markdown, and fof/upload's image rendering all work. Sanitized HTML is stored alongside the raw source; the raw source is only sent back to the author when they open the edit form.
 
 ---
 
