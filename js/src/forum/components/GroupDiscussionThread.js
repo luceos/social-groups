@@ -18,8 +18,8 @@ export default class GroupDiscussionThread extends Page {
     this.editingId   = null;
     this.editText    = '';
     this.deletingId  = null;
+    this.openMenuId  = null;
 
-    // Pending upload chips for each composer (reply vs. edit)
     this.uploads     = [];
     this.editUploads = [];
   }
@@ -27,6 +27,14 @@ export default class GroupDiscussionThread extends Page {
   oncreate(vnode) {
     super.oncreate(vnode);
     this.load();
+
+    this._closeMenu = (e) => {
+      if (this.openMenuId !== null && !e.target.closest('.SGThread-postMenu')) {
+        this.openMenuId = null;
+        m.redraw();
+      }
+    };
+    document.addEventListener('click', this._closeMenu);
   }
 
   onupdate(vnode) {
@@ -39,6 +47,7 @@ export default class GroupDiscussionThread extends Page {
     super.onremove(vnode);
     this._revokeAll(this.uploads);
     this._revokeAll(this.editUploads);
+    document.removeEventListener('click', this._closeMenu);
   }
 
   _revokeAll(uploads) {
@@ -73,9 +82,6 @@ export default class GroupDiscussionThread extends Page {
   }
 
   // ── File uploads ─────────────────────────────────────────────────────────
-  //
-  // uploadsKey: 'uploads' (reply) or 'editUploads' (edit)
-  // textKey:    'replyText' or 'editText'
 
   handleFiles(files, uploadsKey, textKey) {
     for (const file of files) {
@@ -130,6 +136,36 @@ export default class GroupDiscussionThread extends Page {
     m.redraw();
   }
 
+  // ── Likes ─────────────────────────────────────────────────────────────────
+
+  toggleLike(post) {
+    if (!app.session.user) return;
+    const wasLiked = post.isLiked;
+
+    // Optimistic update
+    post.isLiked   = !wasLiked;
+    post.likeCount = Math.max(0, (post.likeCount || 0) + (wasLiked ? -1 : 1));
+    m.redraw();
+
+    fetch(`${apiBase()}/sg-posts/${post.id}/like`, {
+      method:      wasLiked ? 'DELETE' : 'POST',
+      credentials: 'same-origin',
+      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        post.likeCount = data.likeCount;
+        post.isLiked   = data.isLiked;
+        m.redraw();
+      })
+      .catch(() => {
+        // Revert on failure
+        post.isLiked   = wasLiked;
+        post.likeCount = Math.max(0, (post.likeCount || 0) + (wasLiked ? 1 : -1));
+        m.redraw();
+      });
+  }
+
   // ── Posts ─────────────────────────────────────────────────────────────────
 
   submitReply() {
@@ -177,6 +213,7 @@ export default class GroupDiscussionThread extends Page {
     this.editUploads = [];
     this.editingId   = post.id;
     this.editText    = post.content;
+    this.openMenuId  = null;
   }
 
   cancelEdit() {
@@ -202,7 +239,7 @@ export default class GroupDiscussionThread extends Page {
       .then((r) => r.json())
       .then((updated) => {
         const idx = this.posts.findIndex((p) => p.id === post.id);
-        if (idx !== -1) this.posts[idx] = updated;
+        if (idx !== -1) this.posts[idx] = { ...this.posts[idx], ...updated };
         this._revokeAll(this.editUploads);
         this.editUploads = [];
         this.cancelEdit();
@@ -213,6 +250,7 @@ export default class GroupDiscussionThread extends Page {
   deletePost(post) {
     if (!confirm(app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete_post_confirm'))) return;
     this.deletingId = post.id;
+    this.openMenuId = null;
 
     fetch(`${apiBase()}/sg-posts/${post.id}`, {
       method:      'DELETE',
@@ -236,7 +274,7 @@ export default class GroupDiscussionThread extends Page {
     const actor    = app.session.user;
 
     return m('.SGThread', [
-      m('.SGThread-back.container', [
+      m('.SGThread-back', [
         m('a.SGThread-backLink', {
           href: app.route('ernestdefoe-social-groups.show', { slug }),
           onclick: (e) => { e.preventDefault(); m.route.set(app.route('ernestdefoe-social-groups.show', { slug })); },
@@ -247,12 +285,16 @@ export default class GroupDiscussionThread extends Page {
       this.loading
         ? m('.SGThread-loading', m(LoadingIndicator, { display: 'block' }))
         : this.error
-        ? m('.SGThread-error.container', this.error)
-        : m('.SGThread-body.container', [
-            m('.SGThread-header', [
+        ? m('.SGThread-error', this.error)
+        : m('.SGThread-body', [
+            m('.SGThread-headerCard', [
               m('h1.SGThread-title', this.discussion.title),
               m('.SGThread-meta', [
-                m('span', app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_count', { count: this.discussion.commentCount })),
+                m('span', [
+                  m('i.fas.fa-comment-alt'),
+                  ' ',
+                  app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_count', { count: this.discussion.commentCount }),
+                ]),
                 this.discussion.isLocked
                   ? m('span.SGThread-locked', [m('i.fas.fa-lock'), ' ',
                       app.translator.trans('ernestdefoe-social-groups.forum.discussions.locked')])
@@ -265,37 +307,47 @@ export default class GroupDiscussionThread extends Page {
             ),
 
             actor && !this.discussion.isLocked
-              ? m('.SGThread-composer', [
-                  m('.SGThread-composerAvatar', [
-                    actor.attribute('avatarUrl')
-                      ? m('img', { src: actor.attribute('avatarUrl'), alt: actor.attribute('displayName') })
-                      : m('span.SGThread-composerInitial', (actor.attribute('displayName') || '?')[0].toUpperCase()),
-                  ]),
-                  m('.SGThread-composerInput', [
-                    this.replyError ? m('.Alert.Alert--error', this.replyError) : null,
-                    m('textarea.FormControl.SGThread-textarea', {
-                      placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_placeholder'),
-                      value:       this.replyText,
-                      oninput:     (e) => { this.replyText = e.target.value; },
-                      rows:        3,
-                      disabled:    this.submitting,
-                    }),
-                    this.uploads.length
-                      ? m('.SGThread-uploads', this.uploads.map((u) => this.viewUpload(u, 'uploads', 'replyText')))
-                      : null,
-                    m('.SGThread-composerActions', [
-                      this.viewUploadBtn('uploads', 'replyText', this.submitting),
-                      m(Button, {
-                        class:    'Button Button--primary',
-                        loading:  this.submitting,
-                        disabled: this.submitting || !this.replyText.trim() || this.uploads.some((u) => u.uploading),
-                        onclick:  () => this.submitReply(),
-                      }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_button')),
-                    ]),
-                  ]),
-                ])
+              ? this.viewReplyBox(actor)
               : null,
           ]),
+    ]);
+  }
+
+  viewReplyBox(actor) {
+    return m('.SGThread-replyBox', [
+      m('.SGThread-replyBoxAvatar', [
+        actor.attribute('avatarUrl')
+          ? m('img', { src: actor.attribute('avatarUrl'), alt: actor.attribute('displayName') })
+          : m('span.SGThread-replyBoxInitial', (actor.attribute('displayName') || '?')[0].toUpperCase()),
+      ]),
+      m('.SGThread-replyBoxRight', [
+        this.replyError ? m('.Alert.Alert--error', this.replyError) : null,
+        m('textarea.SGThread-replyTextarea', {
+          placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_placeholder'),
+          value:       this.replyText,
+          oninput:     (e) => {
+            this.replyText = e.target.value;
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+          },
+          rows:     1,
+          disabled: this.submitting,
+        }),
+        this.uploads.length
+          ? m('.SGThread-uploads', this.uploads.map((u) => this.viewUpload(u, 'uploads', 'replyText')))
+          : null,
+        m('.SGThread-replyFooter', [
+          m('.SGThread-replyFooterLeft', [
+            this.viewUploadBtn('uploads', 'replyText', this.submitting),
+          ]),
+          m('button.SGThread-postBtn', {
+            disabled: this.submitting || !this.replyText.trim() || this.uploads.some((u) => u.uploading),
+            onclick:  () => this.submitReply(),
+          }, this.submitting
+            ? m('i.fas.fa-spinner.fa-spin')
+            : app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_button')),
+        ]),
+      ]),
     ]);
   }
 
@@ -344,67 +396,108 @@ export default class GroupDiscussionThread extends Page {
   viewPost(post) {
     const isEditing  = this.editingId === post.id;
     const isDeleting = this.deletingId === post.id;
+    const menuOpen   = this.openMenuId === post.id;
+    const actor      = app.session.user;
 
     return m('.SGThread-post', { key: post.id, class: isDeleting ? 'is-deleting' : '' }, [
-      m('.SGThread-postAvatar', [
-        post.user && post.user.avatarUrl
-          ? m('img', { src: post.user.avatarUrl, alt: post.user.displayName })
-          : m('span.SGThread-postInitial',
-              (post.user?.displayName || '?')[0].toUpperCase()),
-      ]),
 
-      m('.SGThread-postMain', [
-        m('.SGThread-postHeader', [
-          m('span.SGThread-postAuthor', post.user?.displayName || ''),
-          m('span.SGThread-postTime', { title: post.createdAt },
-            humanTime(new Date(post.createdAt))),
-          post.updatedAt !== post.createdAt
-            ? m('span.SGThread-postEdited',
-                app.translator.trans('ernestdefoe-social-groups.forum.discussions.edited'))
-            : null,
+      // ── Post header: avatar + name/time + menu ──
+      m('.SGThread-postHeader', [
+        m('.SGThread-postAvatar', [
+          post.user && post.user.avatarUrl
+            ? m('img', { src: post.user.avatarUrl, alt: post.user.displayName })
+            : m('span.SGThread-postInitial',
+                (post.user?.displayName || '?')[0].toUpperCase()),
         ]),
-
-        isEditing
-          ? m('.SGThread-postEdit', [
-              m('textarea.FormControl.SGThread-editTextarea', {
-                value:   this.editText,
-                oninput: (e) => { this.editText = e.target.value; },
-                rows:    4,
-              }),
-              this.editUploads.length
-                ? m('.SGThread-uploads', this.editUploads.map((u) => this.viewUpload(u, 'editUploads', 'editText')))
-                : null,
-              m('.SGThread-editActions', [
-                this.viewUploadBtn('editUploads', 'editText', false),
-                m(Button, {
-                  class:    'Button Button--primary Button--sm',
-                  onclick:  () => this.saveEdit(post),
-                  disabled: !this.editText.trim() || this.editUploads.some((u) => u.uploading),
-                }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.save_edit')),
-                m(Button, {
-                  class:   'Button Button--sm',
-                  onclick: () => this.cancelEdit(),
-                }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.cancel_edit')),
-              ]),
-            ])
-          : m('.SGThread-postContent', m.trust(post.contentParsed)),
-
+        m('.SGThread-postMeta', [
+          m('span.SGThread-postAuthor', post.user?.displayName || ''),
+          m('span.SGThread-postTime', { title: post.createdAt }, [
+            humanTime(new Date(post.createdAt)),
+            post.updatedAt !== post.createdAt
+              ? m('span.SGThread-postEdited', ' · ' + app.translator.trans('ernestdefoe-social-groups.forum.discussions.edited'))
+              : null,
+          ]),
+        ]),
         !isEditing && (post.canEdit || post.canDelete)
-          ? m('.SGThread-postActions', [
-              post.canEdit
-                ? m('button.SGThread-actionBtn', { onclick: () => this.startEdit(post) },
-                    [m('i.fas.fa-pencil-alt'), ' ',
-                     app.translator.trans('ernestdefoe-social-groups.forum.discussions.edit')])
-                : null,
-              post.canDelete
-                ? m('button.SGThread-actionBtn.SGThread-actionBtn--danger', {
-                    onclick: () => this.deletePost(post),
-                  }, [m('i.fas.fa-trash'), ' ',
-                      app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete_post')])
+          ? m('.SGThread-postMenu', [
+              m('button.SGThread-postMenuBtn', {
+                onclick: (e) => {
+                  e.stopPropagation();
+                  this.openMenuId = menuOpen ? null : post.id;
+                  m.redraw();
+                },
+                title: 'More options',
+              }, m('i.fas.fa-ellipsis-h')),
+              menuOpen
+                ? m('.SGThread-postDropdown', [
+                    post.canEdit
+                      ? m('button.SGThread-dropdownItem', { onclick: () => this.startEdit(post) }, [
+                          m('i.fas.fa-pencil-alt'), ' ',
+                          app.translator.trans('ernestdefoe-social-groups.forum.discussions.edit'),
+                        ])
+                      : null,
+                    post.canDelete
+                      ? m('button.SGThread-dropdownItem.SGThread-dropdownItem--danger', { onclick: () => this.deletePost(post) }, [
+                          m('i.fas.fa-trash'), ' ',
+                          app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete_post'),
+                        ])
+                      : null,
+                  ])
                 : null,
             ])
           : null,
       ]),
+
+      // ── Content or edit form ──
+      isEditing
+        ? m('.SGThread-postEdit', [
+            m('textarea.FormControl.SGThread-editTextarea', {
+              value:   this.editText,
+              oninput: (e) => { this.editText = e.target.value; },
+              rows:    4,
+            }),
+            this.editUploads.length
+              ? m('.SGThread-uploads', this.editUploads.map((u) => this.viewUpload(u, 'editUploads', 'editText')))
+              : null,
+            m('.SGThread-editActions', [
+              this.viewUploadBtn('editUploads', 'editText', false),
+              m(Button, {
+                class:    'Button Button--primary Button--sm',
+                onclick:  () => this.saveEdit(post),
+                disabled: !this.editText.trim() || this.editUploads.some((u) => u.uploading),
+              }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.save_edit')),
+              m(Button, {
+                class:   'Button Button--sm',
+                onclick: () => this.cancelEdit(),
+              }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.cancel_edit')),
+            ]),
+          ])
+        : m('.SGThread-postContent', m.trust(post.contentParsed)),
+
+      // ── Like count bar ──
+      post.likeCount > 0
+        ? m('.SGThread-postStatBar', [
+            m('span.SGThread-statLikes', [
+              m('span.SGThread-likeIcon', '👍'),
+              ' ',
+              post.likeCount,
+            ]),
+          ])
+        : null,
+
+      // ── Like action bar ──
+      !isEditing && actor
+        ? m('.SGThread-postActionBar', [
+            m('button.SGThread-likeBtn', {
+              class:   post.isLiked ? 'SGThread-likeBtn--liked' : '',
+              onclick: () => this.toggleLike(post),
+            }, [
+              m('i.fas.fa-thumbs-up'),
+              ' ',
+              app.translator.trans('ernestdefoe-social-groups.forum.discussions.like'),
+            ]),
+          ])
+        : null,
     ]);
   }
 }

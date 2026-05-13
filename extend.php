@@ -13,6 +13,7 @@ use Ernestdefoe\SocialGroups\Api\Controller\ListJoinRequestsController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\CreateGroupPostController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\DeleteGroupPostController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\ListGroupPostsController;
+use Ernestdefoe\SocialGroups\Api\Controller\Post\TogglePostLikeController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\UpdateGroupPostController;
 use Ernestdefoe\SocialGroups\Api\Controller\PromoteMemberController;
 use Ernestdefoe\SocialGroups\Api\Controller\RejectJoinRequestController;
@@ -55,10 +56,12 @@ return [
         ->post('/sg-discussions',                    'sg-discussions.create', CreateGroupDiscussionController::class)
         ->delete('/sg-discussions/{discussionId}',   'sg-discussions.delete', DeleteGroupDiscussionController::class)
         // Posts
-        ->get('/sg-posts/{discussionId}',    'sg-posts.list',   ListGroupPostsController::class)
-        ->post('/sg-posts',                  'sg-posts.create', CreateGroupPostController::class)
-        ->patch('/sg-posts/{postId}',        'sg-posts.update', UpdateGroupPostController::class)
-        ->delete('/sg-posts/{postId}',       'sg-posts.delete', DeleteGroupPostController::class)
+        ->get('/sg-posts/{discussionId}',     'sg-posts.list',   ListGroupPostsController::class)
+        ->post('/sg-posts',                   'sg-posts.create', CreateGroupPostController::class)
+        ->patch('/sg-posts/{postId}',         'sg-posts.update', UpdateGroupPostController::class)
+        ->delete('/sg-posts/{postId}',        'sg-posts.delete', DeleteGroupPostController::class)
+        ->post('/sg-posts/{postId}/like',     'sg-posts.like',   TogglePostLikeController::class)
+        ->delete('/sg-posts/{postId}/like',   'sg-posts.unlike', TogglePostLikeController::class)
         // Join requests
         ->get('/social-groups/{id}/requests',                        'sg.join-requests.list',    ListJoinRequestsController::class)
         ->post('/social-groups/{id}/requests/{requestId}/approve',   'sg.join-requests.approve', ApproveJoinRequestController::class)

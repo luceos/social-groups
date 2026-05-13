@@ -4,6 +4,7 @@ namespace Ernestdefoe\SocialGroups\Api\Controller\Post;
 
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
+use Ernestdefoe\SocialGroups\Model\SocialGroupPostLike;
 use Flarum\Formatter\Formatter;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -46,6 +47,21 @@ class ListGroupPostsController implements RequestHandlerInterface
             $actorId = $actor->exists ? $actor->id : null;
             $now     = \Carbon\Carbon::now()->toIso8601String();
 
+            // Batch-load like counts and actor's liked set for this page of posts
+            $postIds    = $posts->pluck('id')->all();
+            $likeCounts = SocialGroupPostLike::whereIn('post_id', $postIds)
+                ->selectRaw('post_id, COUNT(*) as cnt')
+                ->groupBy('post_id')
+                ->pluck('cnt', 'post_id')
+                ->all();
+            $likedByActor = $actorId
+                ? SocialGroupPostLike::whereIn('post_id', $postIds)
+                    ->where('user_id', $actorId)
+                    ->pluck('post_id')
+                    ->flip()
+                    ->all()
+                : [];
+
             return new JsonResponse([
                 'discussion' => [
                     'id'           => $discussion->id,
@@ -56,7 +72,7 @@ class ListGroupPostsController implements RequestHandlerInterface
                     'createdAt'    => ($discussion->created_at ?? $discussion->last_posted_at)?->toIso8601String() ?? $now,
                     'canDelete'    => $actorId && ($actorId === $discussion->user_id || $actor->isAdmin()),
                 ],
-                'data' => $posts->map(fn ($p) => $this->serializePost($p, $actorId, $now))->values(),
+                'data' => $posts->map(fn ($p) => $this->serializePost($p, $actorId, $now, $likeCounts, $likedByActor))->values(),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Discussion not found.'], 404);
@@ -65,7 +81,7 @@ class ListGroupPostsController implements RequestHandlerInterface
         }
     }
 
-    private function serializePost(SocialGroupPost $p, ?int $actorId, string $fallbackTime): array
+    private function serializePost(SocialGroupPost $p, ?int $actorId, string $fallbackTime, array $likeCounts = [], array $likedByActor = []): array
     {
         $createdAt = $p->created_at?->toIso8601String() ?? $fallbackTime;
         $updatedAt = $p->updated_at?->toIso8601String() ?? $createdAt;
@@ -83,6 +99,8 @@ class ListGroupPostsController implements RequestHandlerInterface
             'contentParsed' => $contentParsed,
             'createdAt'     => $createdAt,
             'updatedAt'     => $updatedAt,
+            'likeCount'     => (int) ($likeCounts[$p->id] ?? 0),
+            'isLiked'       => isset($likedByActor[$p->id]),
             'canEdit'       => $actorId && $actorId === $p->user_id,
             'canDelete'     => $actorId && $actorId === $p->user_id,
             'user'          => $p->user ? [
