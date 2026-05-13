@@ -101,12 +101,12 @@ export default class GroupDiscussionThread extends Page {
         .then((data) => {
           const fileData = Array.isArray(data.data) ? data.data[0] : data.data;
           const uuid     = fileData?.attributes?.uuid || fileData?.id;
+          const bbcode   = fileData?.attributes?.bbcode || `[upl-file uuid="${uuid}"][/upl-file]`;
           const upload   = this[uploadsKey].find((u) => u.id === id);
           if (upload) {
             upload.uuid      = uuid;
             upload.uploading = false;
-            const tag        = `[upl-file uuid="${uuid}"][/upl-file]`;
-            this[textKey]    = this[textKey] ? `${this[textKey]}\n${tag}` : tag;
+            this[textKey]    = this[textKey] ? `${this[textKey]}\n${bbcode}` : bbcode;
           }
           m.redraw();
         })
