@@ -1,13 +1,10 @@
 <?php
 
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Builder;
 
-return new class extends Migration {
-    public function up(): void
-    {
-        $schema = $this->getSchemaBuilder();
-
+return [
+    'up' => function (Builder $schema) {
         if (! $schema->hasTable('social_group_post_likes')) {
             $schema->create('social_group_post_likes', function (Blueprint $table) {
                 $table->unsignedBigInteger('post_id');
@@ -16,12 +13,15 @@ return new class extends Migration {
 
                 $table->primary(['post_id', 'user_id']);
                 $table->index('post_id');
+
+                $table->foreign('post_id')
+                      ->references('id')->on('social_group_posts')
+                      ->onDelete('cascade');
             });
         }
-    }
+    },
 
-    public function down(): void
-    {
-        $this->getSchemaBuilder()->dropIfExists('social_group_post_likes');
-    }
-};
+    'down' => function (Builder $schema) {
+        $schema->dropIfExists('social_group_post_likes');
+    },
+];
