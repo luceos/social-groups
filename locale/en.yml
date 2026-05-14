@@ -70,6 +70,12 @@ ernestdefoe-social-groups:
       delete_post: Delete
       delete_post_confirm: Delete this post?
       like: Like
+      react_like: Like
+      react_heart: Love
+      react_haha: Haha
+      react_wow: Wow
+      react_sad: Sad
+      react_angry: Angry
       view_comments: Comments
       feed_placeholder: "What's on your mind?"
       comments_count: "{count, plural, one {# comment} other {# comments}}"

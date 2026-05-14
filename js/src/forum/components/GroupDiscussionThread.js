@@ -23,6 +23,9 @@ export default class GroupDiscussionThread extends Page {
 
     this.uploads     = [];
     this.editUploads = [];
+
+    this.pickerPostId = null;
+    this._pickerTimer = null;
   }
 
   oncreate(vnode) {
@@ -49,6 +52,7 @@ export default class GroupDiscussionThread extends Page {
     this._revokeAll(this.uploads);
     this._revokeAll(this.editUploads);
     document.removeEventListener('click', this._closeMenu);
+    clearTimeout(this._pickerTimer);
   }
 
   _revokeAll(uploads) {
@@ -137,32 +141,57 @@ export default class GroupDiscussionThread extends Page {
     m.redraw();
   }
 
-  // ── Likes ─────────────────────────────────────────────────────────────────
+  // ── Reactions ─────────────────────────────────────────────────────────────
 
-  toggleLike(post) {
+  openPicker(postId) {
+    clearTimeout(this._pickerTimer);
+    this._pickerTimer = setTimeout(() => { this.pickerPostId = postId; m.redraw(); }, 500);
+  }
+
+  closePicker() {
+    clearTimeout(this._pickerTimer);
+    this._pickerTimer = setTimeout(() => { this.pickerPostId = null; m.redraw(); }, 300);
+  }
+
+  keepPicker() {
+    clearTimeout(this._pickerTimer);
+  }
+
+  toggleReaction(post, reactionKey) {
     if (!app.session.user) return;
-    const wasLiked = post.isLiked;
+
+    const prevReaction  = post.actorReaction;
+    const prevReactions = { ...(post.reactions || {}) };
+    const nextReaction  = prevReaction === reactionKey ? null : reactionKey;
 
     // Optimistic update
-    post.isLiked   = !wasLiked;
-    post.likeCount = Math.max(0, (post.likeCount || 0) + (wasLiked ? -1 : 1));
+    post.actorReaction = nextReaction;
+    const updated = { ...prevReactions };
+    if (prevReaction) { updated[prevReaction] = Math.max(0, (updated[prevReaction] || 0) - 1); if (!updated[prevReaction]) delete updated[prevReaction]; }
+    if (nextReaction) { updated[nextReaction] = (updated[nextReaction] || 0) + 1; }
+    post.reactions    = updated;
+    this.pickerPostId = null;
     m.redraw();
 
-    fetch(`${apiBase()}/sg-posts/${post.id}/like`, {
-      method:      wasLiked ? 'DELETE' : 'POST',
+    const method = nextReaction ? 'POST' : 'DELETE';
+    fetch(`${apiBase()}/sg-posts/${post.id}/react`, {
+      method,
       credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
+      headers: {
+        ...(nextReaction ? { 'Content-Type': 'application/json' } : {}),
+        'X-CSRF-Token': app.session.csrfToken || '',
+      },
+      body: nextReaction ? JSON.stringify({ reaction: nextReaction }) : undefined,
     })
       .then((r) => r.json())
       .then((data) => {
-        post.likeCount = data.likeCount;
-        post.isLiked   = data.isLiked;
+        post.reactions     = data.reactions || {};
+        post.actorReaction = data.actorReaction || null;
         m.redraw();
       })
       .catch(() => {
-        // Revert on failure
-        post.isLiked   = wasLiked;
-        post.likeCount = Math.max(0, (post.likeCount || 0) + (wasLiked ? 1 : -1));
+        post.reactions     = prevReactions;
+        post.actorReaction = prevReaction;
         m.redraw();
       });
   }
@@ -398,6 +427,73 @@ export default class GroupDiscussionThread extends Page {
     ]);
   }
 
+  static REACTIONS = [
+    { key: 'like',  emoji: '👍', label: 'Like' },
+    { key: 'heart', emoji: '❤️', label: 'Love' },
+    { key: 'haha',  emoji: '😂', label: 'Haha' },
+    { key: 'wow',   emoji: '😮', label: 'Wow' },
+    { key: 'sad',   emoji: '😢', label: 'Sad' },
+    { key: 'angry', emoji: '😡', label: 'Angry' },
+  ];
+
+  viewReactionStatBar(post) {
+    const reactions = post.reactions || {};
+    const total     = Object.values(reactions).reduce((s, c) => s + Number(c), 0);
+    if (!total) return null;
+
+    const topEmojis = Object.entries(reactions)
+      .filter(([, c]) => Number(c) > 0)
+      .sort(([, a], [, b]) => Number(b) - Number(a))
+      .slice(0, 3)
+      .map(([key]) => GroupDiscussionThread.REACTIONS.find((r) => r.key === key)?.emoji || '👍');
+
+    return m('.SGThread-postStatBar', [
+      m('span.SGThread-statLikes', [
+        topEmojis.map((emoji) => m('span.SGThread-reactionEmoji', emoji)),
+        ' ',
+        total,
+      ]),
+    ]);
+  }
+
+  viewReactionActionBar(post) {
+    const actor         = app.session.user;
+    const pickerOpen    = this.pickerPostId === post.id;
+    const actorReaction = post.actorReaction || null;
+    const active        = actorReaction
+      ? GroupDiscussionThread.REACTIONS.find((r) => r.key === actorReaction)
+      : null;
+
+    return m('.SGThread-postActionBar', [
+      actor
+        ? m('.SGThread-reactWrap', {
+            onmouseenter: () => this.openPicker(post.id),
+            onmouseleave: () => this.closePicker(),
+          }, [
+            pickerOpen
+              ? m('.SGThread-reactionPicker', {
+                  onmouseenter: () => this.keepPicker(),
+                  onmouseleave: () => this.closePicker(),
+                }, GroupDiscussionThread.REACTIONS.map((r) =>
+                  m('button.SGThread-pickerBtn', {
+                    key:     r.key,
+                    title:   r.label,
+                    class:   actorReaction === r.key ? 'is-active' : '',
+                    onclick: () => this.toggleReaction(post, r.key),
+                  }, [m('span.SGThread-pickerEmoji', r.emoji), m('span.SGThread-pickerLabel', r.label)])
+                ))
+              : null,
+            m('button.SGThread-likeBtn', {
+              class:   active ? 'SGThread-likeBtn--liked' : '',
+              onclick: () => this.toggleReaction(post, actorReaction || 'like'),
+            }, active
+                ? [active.emoji, ' ', active.label]
+                : [m('i.fas.fa-thumbs-up'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.like')]),
+          ])
+        : null,
+    ]);
+  }
+
   viewPost(post) {
     const isEditing  = this.editingId === post.id;
     const isDeleting = this.deletingId === post.id;
@@ -483,30 +579,11 @@ export default class GroupDiscussionThread extends Page {
           ])
         : m('.SGThread-postContent', m.trust(post.contentParsed)),
 
-      // ── Like count bar ──
-      post.likeCount > 0
-        ? m('.SGThread-postStatBar', [
-            m('span.SGThread-statLikes', [
-              m('span.SGThread-likeIcon', '👍'),
-              ' ',
-              post.likeCount,
-            ]),
-          ])
-        : null,
+      // ── Reaction count bar ──
+      this.viewReactionStatBar(post),
 
-      // ── Like action bar ──
-      !isEditing && actor
-        ? m('.SGThread-postActionBar', [
-            m('button.SGThread-likeBtn', {
-              class:   post.isLiked ? 'SGThread-likeBtn--liked' : '',
-              onclick: () => this.toggleLike(post),
-            }, [
-              m('i.fas.fa-thumbs-up'),
-              ' ',
-              app.translator.trans('ernestdefoe-social-groups.forum.discussions.like'),
-            ]),
-          ])
-        : null,
+      // ── Reaction action bar ──
+      !isEditing ? this.viewReactionActionBar(post) : null,
     ]);
   }
 }

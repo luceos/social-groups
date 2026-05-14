@@ -68,8 +68,8 @@ class CreateGroupPostController implements RequestHandlerInterface
             'contentParsed'  => $this->formatter->render($post->content_parsed),
             'createdAt'      => $post->created_at->toIso8601String(),
             'updatedAt'      => $post->updated_at->toIso8601String(),
-            'likeCount'      => 0,
-            'isLiked'        => false,
+            'reactions'      => (object) [],
+            'actorReaction'  => null,
             'canEdit'        => $actor->id === $post->user_id,
             'canDelete'      => $actor->id === $post->user_id,
             'user'           => [

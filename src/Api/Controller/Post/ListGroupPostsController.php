@@ -4,7 +4,7 @@ namespace Ernestdefoe\SocialGroups\Api\Controller\Post;
 
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
-use Ernestdefoe\SocialGroups\Model\SocialGroupPostLike;
+use Ernestdefoe\SocialGroups\Model\SocialGroupPostReaction;
 use Flarum\Formatter\Formatter;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -30,7 +30,6 @@ class ListGroupPostsController implements RequestHandlerInterface
             $discussion = SocialGroupDiscussion::with('group')->findOrFail($discussionId);
             $group      = $discussion->group;
 
-            // Private groups: only members can view posts
             if ($group->is_private) {
                 $actor->assertRegistered();
                 $isMember = $group->members()->where('user_id', $actor->id)->exists();
@@ -47,18 +46,20 @@ class ListGroupPostsController implements RequestHandlerInterface
             $actorId = $actor->exists ? $actor->id : null;
             $now     = \Carbon\Carbon::now()->toIso8601String();
 
-            // Batch-load like counts and actor's liked set for this page of posts
-            $postIds    = $posts->pluck('id')->all();
-            $likeCounts = SocialGroupPostLike::whereIn('post_id', $postIds)
-                ->selectRaw('post_id, COUNT(*) as cnt')
+            // Batch-load reaction counts grouped by (post_id, reaction)
+            $postIds = $posts->pluck('id')->all();
+
+            $reactionsByPost = SocialGroupPostReaction::whereIn('post_id', $postIds)
+                ->selectRaw('post_id, reaction, COUNT(*) as cnt')
+                ->groupBy('post_id', 'reaction')
+                ->get()
                 ->groupBy('post_id')
-                ->pluck('cnt', 'post_id')
-                ->all();
-            $likedByActor = $actorId
-                ? SocialGroupPostLike::whereIn('post_id', $postIds)
+                ->map(fn ($rows) => $rows->pluck('cnt', 'reaction')->all());
+
+            $actorReactions = $actorId
+                ? SocialGroupPostReaction::whereIn('post_id', $postIds)
                     ->where('user_id', $actorId)
-                    ->pluck('post_id')
-                    ->flip()
+                    ->pluck('reaction', 'post_id')
                     ->all()
                 : [];
 
@@ -72,7 +73,7 @@ class ListGroupPostsController implements RequestHandlerInterface
                     'createdAt'    => ($discussion->created_at ?? $discussion->last_posted_at)?->toIso8601String() ?? $now,
                     'canDelete'    => $actorId && ($actorId === $discussion->user_id || $actor->isAdmin()),
                 ],
-                'data' => $posts->map(fn ($p) => $this->serializePost($p, $actorId, $now, $likeCounts, $likedByActor))->values(),
+                'data' => $posts->map(fn ($p) => $this->serializePost($p, $actorId, $now, $reactionsByPost->all(), $actorReactions))->values(),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Discussion not found.'], 404);
@@ -82,13 +83,11 @@ class ListGroupPostsController implements RequestHandlerInterface
         }
     }
 
-    private function serializePost(SocialGroupPost $p, ?int $actorId, string $fallbackTime, array $likeCounts = [], array $likedByActor = []): array
+    private function serializePost(SocialGroupPost $p, ?int $actorId, string $fallbackTime, array $reactionsByPost = [], array $actorReactions = []): array
     {
         $createdAt = $p->created_at?->toIso8601String() ?? $fallbackTime;
         $updatedAt = $p->updated_at?->toIso8601String() ?? $createdAt;
 
-        // Render sanitized HTML; fall back to escaped plain text for posts that
-        // pre-date the content_parsed column (no re-parse required at read time).
         $contentParsed = $p->content_parsed !== null
             ? $this->formatter->render($p->content_parsed)
             : nl2br(htmlspecialchars($p->content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
@@ -100,8 +99,8 @@ class ListGroupPostsController implements RequestHandlerInterface
             'contentParsed' => $contentParsed,
             'createdAt'     => $createdAt,
             'updatedAt'     => $updatedAt,
-            'likeCount'     => (int) ($likeCounts[$p->id] ?? 0),
-            'isLiked'       => isset($likedByActor[$p->id]),
+            'reactions'     => (object) ($reactionsByPost[$p->id] ?? []),
+            'actorReaction' => $actorReactions[$p->id] ?? null,
             'canEdit'       => $actorId && $actorId === $p->user_id,
             'canDelete'     => $actorId && $actorId === $p->user_id,
             'user'          => $p->user ? [

@@ -90,8 +90,8 @@ class CreateGroupDiscussionController implements RequestHandlerInterface
                     'id'            => $firstPost->id,
                     'content'       => $firstPost->content,
                     'contentParsed' => $renderedContent,
-                    'likeCount'     => 0,
-                    'isLiked'       => false,
+                    'reactions'     => (object) [],
+                    'actorReaction' => null,
                     'canEdit'       => true,
                     'createdAt'     => ($firstPost->created_at ?? $now)->toIso8601String(),
                     'user'          => [

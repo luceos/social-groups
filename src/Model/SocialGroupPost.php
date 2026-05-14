@@ -38,8 +38,8 @@ class SocialGroupPost extends AbstractModel
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function likes()
+    public function reactions()
     {
-        return $this->hasMany(SocialGroupPostLike::class, 'post_id');
+        return $this->hasMany(SocialGroupPostReaction::class, 'post_id');
     }
 }

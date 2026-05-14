@@ -27,6 +27,9 @@ export default class GroupFeed extends Component {
     // Per-post comment reply state: { [discussionId]: text }
     this.replyTexts     = {};
     this.replySubmitting = {};
+
+    this.pickerDiscId = null;
+    this._pickerTimer = null;
   }
 
   oncreate(vnode) {
@@ -54,6 +57,7 @@ export default class GroupFeed extends Component {
   onremove() {
     document.removeEventListener('click', this._closeMenu);
     revokeAll(this.postUploads);
+    clearTimeout(this._pickerTimer);
   }
 
   load(page = 1) {
@@ -80,31 +84,66 @@ export default class GroupFeed extends Component {
       });
   }
 
-  // ── Like toggle ──────────────────────────────────────────────────────────
+  static REACTIONS = [
+    { key: 'like',  emoji: '👍', label: 'Like' },
+    { key: 'heart', emoji: '❤️', label: 'Love' },
+    { key: 'haha',  emoji: '😂', label: 'Haha' },
+    { key: 'wow',   emoji: '😮', label: 'Wow' },
+    { key: 'sad',   emoji: '😢', label: 'Sad' },
+    { key: 'angry', emoji: '😡', label: 'Angry' },
+  ];
 
-  toggleLike(d) {
+  // ── Reaction picker ───────────────────────────────────────────────────────
+
+  openPicker(discId) {
+    clearTimeout(this._pickerTimer);
+    this._pickerTimer = setTimeout(() => { this.pickerDiscId = discId; m.redraw(); }, 500);
+  }
+
+  closePicker() {
+    clearTimeout(this._pickerTimer);
+    this._pickerTimer = setTimeout(() => { this.pickerDiscId = null; m.redraw(); }, 300);
+  }
+
+  keepPicker() {
+    clearTimeout(this._pickerTimer);
+  }
+
+  toggleReaction(d, reactionKey) {
     if (!app.session.user || !d.firstPost) return;
-    const fp       = d.firstPost;
-    const wasLiked = fp.isLiked;
+    const fp = d.firstPost;
 
-    fp.isLiked   = !wasLiked;
-    fp.likeCount = Math.max(0, (fp.likeCount || 0) + (wasLiked ? -1 : 1));
+    const prevReaction  = fp.actorReaction;
+    const prevReactions = { ...(fp.reactions || {}) };
+    const nextReaction  = prevReaction === reactionKey ? null : reactionKey;
+
+    fp.actorReaction = nextReaction;
+    const updated = { ...prevReactions };
+    if (prevReaction) { updated[prevReaction] = Math.max(0, (updated[prevReaction] || 0) - 1); if (!updated[prevReaction]) delete updated[prevReaction]; }
+    if (nextReaction) { updated[nextReaction] = (updated[nextReaction] || 0) + 1; }
+    fp.reactions      = updated;
+    this.pickerDiscId = null;
     m.redraw();
 
-    fetch(`${apiBase()}/sg-posts/${fp.id}/like`, {
-      method:      wasLiked ? 'DELETE' : 'POST',
+    const method = nextReaction ? 'POST' : 'DELETE';
+    fetch(`${apiBase()}/sg-posts/${fp.id}/react`, {
+      method,
       credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
+      headers: {
+        ...(nextReaction ? { 'Content-Type': 'application/json' } : {}),
+        'X-CSRF-Token': app.session.csrfToken || '',
+      },
+      body: nextReaction ? JSON.stringify({ reaction: nextReaction }) : undefined,
     })
       .then((r) => r.json())
       .then((data) => {
-        fp.likeCount = data.likeCount;
-        fp.isLiked   = data.isLiked;
+        fp.reactions     = data.reactions || {};
+        fp.actorReaction = data.actorReaction || null;
         m.redraw();
       })
       .catch(() => {
-        fp.isLiked   = wasLiked;
-        fp.likeCount = Math.max(0, (fp.likeCount || 0) + (wasLiked ? 1 : -1));
+        fp.reactions     = prevReactions;
+        fp.actorReaction = prevReaction;
         m.redraw();
       });
   }
@@ -370,28 +409,66 @@ export default class GroupFeed extends Component {
         ? m('.SGFeed-postContent', m.trust(fp.contentParsed))
         : m('.SGFeed-postContent', m('.SGFeed-noContent', d.title)),
 
-      // Like count + comment count stat bar
-      (fp?.likeCount > 0 || d.commentCount > 0)
-        ? m('.SGFeed-postStatBar', [
-            fp?.likeCount > 0
-              ? m('span.SGFeed-statLikes', [m('span.SGFeed-likeIcon', '👍'), ' ', fp.likeCount])
-              : null,
-            fp?.likeCount > 0 && d.commentCount > 0 ? m('span.SGFeed-statDot', '·') : null,
-            d.commentCount > 1
-              ? m('button.SGFeed-statComments', { onclick: () => this.openThread(d) },
-                  app.translator.trans('ernestdefoe-social-groups.forum.discussions.comments_count', { count: d.commentCount - 1 }))
-              : null,
-          ])
-        : null,
+      // Reaction count + comment count stat bar
+      (() => {
+        const reactions  = fp?.reactions || {};
+        const totalReact = Object.values(reactions).reduce((s, c) => s + Number(c), 0);
+        const hasComments = d.commentCount > 1;
+        if (!totalReact && !hasComments) return null;
 
-      // Like | Comment | View action bar
+        const topEmojis = Object.entries(reactions)
+          .filter(([, c]) => Number(c) > 0)
+          .sort(([, a], [, b]) => Number(b) - Number(a))
+          .slice(0, 3)
+          .map(([key]) => GroupFeed.REACTIONS.find((r) => r.key === key)?.emoji || '👍');
+
+        return m('.SGFeed-postStatBar', [
+          totalReact > 0
+            ? m('span.SGFeed-statLikes', [
+                topEmojis.map((emoji) => m('span.SGFeed-reactionEmoji', emoji)),
+                ' ', totalReact,
+              ])
+            : null,
+          totalReact > 0 && hasComments ? m('span.SGFeed-statDot', '·') : null,
+          hasComments
+            ? m('button.SGFeed-statComments', { onclick: () => this.openThread(d) },
+                app.translator.trans('ernestdefoe-social-groups.forum.discussions.comments_count', { count: d.commentCount - 1 }))
+            : null,
+        ]);
+      })(),
+
+      // Reaction | Comment action bar
       m('.SGFeed-postActionBar', [
         actor && fp
-          ? m('button.SGFeed-likeBtn', {
-              class:   fp.isLiked ? 'SGFeed-likeBtn--liked' : '',
-              onclick: () => this.toggleLike(d),
-            }, [m('i.fas.fa-thumbs-up'), ' ',
-                app.translator.trans('ernestdefoe-social-groups.forum.discussions.like')])
+          ? m('.SGFeed-reactWrap', {
+              onmouseenter: () => this.openPicker(d.id),
+              onmouseleave: () => this.closePicker(),
+            }, [
+              this.pickerDiscId === d.id
+                ? m('.SGFeed-reactionPicker', {
+                    onmouseenter: () => this.keepPicker(),
+                    onmouseleave: () => this.closePicker(),
+                  }, GroupFeed.REACTIONS.map((r) =>
+                    m('button.SGFeed-pickerBtn', {
+                      key:     r.key,
+                      title:   r.label,
+                      class:   fp.actorReaction === r.key ? 'is-active' : '',
+                      onclick: () => this.toggleReaction(d, r.key),
+                    }, [m('span.SGFeed-pickerEmoji', r.emoji), m('span.SGFeed-pickerLabel', r.label)])
+                  ))
+                : null,
+              (() => {
+                const active = fp.actorReaction
+                  ? GroupFeed.REACTIONS.find((r) => r.key === fp.actorReaction)
+                  : null;
+                return m('button.SGFeed-likeBtn', {
+                  class:   active ? 'SGFeed-likeBtn--liked' : '',
+                  onclick: () => this.toggleReaction(d, fp.actorReaction || 'like'),
+                }, active
+                    ? [active.emoji, ' ', active.label]
+                    : [m('i.fas.fa-thumbs-up'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.like')]);
+              })(),
+            ])
           : null,
         m('button.SGFeed-commentBtn', {
           onclick: () => this.openThread(d),

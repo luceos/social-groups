@@ -5,7 +5,7 @@ namespace Ernestdefoe\SocialGroups\Api\Controller\Discussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
-use Ernestdefoe\SocialGroups\Model\SocialGroupPostLike;
+use Ernestdefoe\SocialGroups\Model\SocialGroupPostReaction;
 use Flarum\Formatter\Formatter;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -53,7 +53,7 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             $actorId       = $actor->exists ? $actor->id : null;
             $discussionIds = $discussions->pluck('id')->all();
 
-            // Batch-load the first post for each discussion
+            // Batch-load first post for each discussion
             $firstPostsByDiscussion = SocialGroupPost::with('user')
                 ->whereIn('discussion_id', $discussionIds)
                 ->orderBy('created_at')
@@ -61,28 +61,28 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 ->groupBy('discussion_id')
                 ->map(fn ($posts) => $posts->first());
 
-            // Batch-load like counts and actor likes for those posts
             $firstPostIds = $firstPostsByDiscussion->map(fn ($p) => $p?->id)->filter()->values()->all();
 
-            $likeCounts = SocialGroupPostLike::whereIn('post_id', $firstPostIds)
-                ->selectRaw('post_id, COUNT(*) as cnt')
+            // Batch-load reaction counts per post, grouped by (post_id, reaction)
+            $reactionsByPost = SocialGroupPostReaction::whereIn('post_id', $firstPostIds)
+                ->selectRaw('post_id, reaction, COUNT(*) as cnt')
+                ->groupBy('post_id', 'reaction')
+                ->get()
                 ->groupBy('post_id')
-                ->pluck('cnt', 'post_id')
-                ->all();
+                ->map(fn ($rows) => $rows->pluck('cnt', 'reaction')->all());
 
-            $likedByActor = $actorId
-                ? SocialGroupPostLike::whereIn('post_id', $firstPostIds)
+            $actorReactions = $actorId
+                ? SocialGroupPostReaction::whereIn('post_id', $firstPostIds)
                     ->where('user_id', $actorId)
-                    ->pluck('post_id')
-                    ->flip()
+                    ->pluck('reaction', 'post_id')
                     ->all()
                 : [];
 
             $now = \Carbon\Carbon::now()->toIso8601String();
 
             return new JsonResponse([
-                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $likeCounts, $likedByActor, $actorId, $now) {
-                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $likeCounts, $likedByActor, $actorId, $now);
+                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $now) {
+                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost->all(), $actorReactions, $actorId, $now);
                 })->values(),
                 'total' => $total,
                 'page'  => $page,
@@ -99,8 +99,8 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
     private function serialize(
         SocialGroupDiscussion $d,
         ?SocialGroupPost $firstPost,
-        array $likeCounts,
-        array $likedByActor,
+        array $reactionsByPost,
+        array $actorReactions,
         ?int $actorId,
         string $now
     ): array {
@@ -115,8 +115,8 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 'id'            => $firstPost->id,
                 'content'       => $firstPost->content,
                 'contentParsed' => $contentParsed,
-                'likeCount'     => (int) ($likeCounts[$firstPost->id] ?? 0),
-                'isLiked'       => isset($likedByActor[$firstPost->id]),
+                'reactions'     => (object) ($reactionsByPost[$firstPost->id] ?? []),
+                'actorReaction' => $actorReactions[$firstPost->id] ?? null,
                 'canEdit'       => $actorId && $actorId === $firstPost->user_id,
                 'createdAt'     => $firstPost->created_at?->toIso8601String() ?? $now,
                 'user'          => $firstPost->user ? [
