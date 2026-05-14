@@ -251,6 +251,33 @@ export default class GroupFeed extends Component {
     });
   }
 
+  pinDiscussion(d) {
+    const wasPinned = d.isPinned;
+    d.isPinned = !wasPinned;
+    this.openMenuId = null;
+    m.redraw();
+
+    fetch(`${apiBase()}/sg-discussions/${d.id}/pin`, {
+      method:      'PATCH',
+      credentials: 'same-origin',
+      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        d.isPinned = data.isPinned;
+        // Re-sort: pinned items first
+        this.discussions = [
+          ...this.discussions.filter((x) => x.isPinned),
+          ...this.discussions.filter((x) => !x.isPinned),
+        ];
+        m.redraw();
+      })
+      .catch(() => {
+        d.isPinned = wasPinned;
+        m.redraw();
+      });
+  }
+
   openThread(d) {
     m.route.set(app.route('ernestdefoe-social-groups.discussion', {
       slug:         this.attrs.groupSlug,
@@ -394,8 +421,9 @@ export default class GroupFeed extends Component {
         m('.SGFeed-postMeta', [
           m('span.SGFeed-postAuthor', postUser?.displayName || ''),
           m('span.SGFeed-postTime', { title: postTime }, humanTime(new Date(postTime))),
+          d.isPinned ? m('span.SGFeed-pinnedBadge', [m('i.fas.fa-thumbtack'), ' Pinned']) : null,
         ]),
-        d.canDelete
+        d.canDelete || d.canPin
           ? m('.SGFeed-postMenu', [
               m('button.SGFeed-postMenuBtn', {
                 onclick: (e) => {
@@ -406,10 +434,19 @@ export default class GroupFeed extends Component {
               }, m('i.fas.fa-ellipsis-h')),
               menuOpen
                 ? m('.SGFeed-postDropdown', [
-                    m('button.SGFeed-dropdownItem.SGFeed-dropdownItem--danger', {
-                      onclick: () => this.deleteDiscussion(d),
-                    }, [m('i.fas.fa-trash'), ' ',
-                        app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete')]),
+                    d.canPin
+                      ? m('button.SGFeed-dropdownItem', {
+                          onclick: () => this.pinDiscussion(d),
+                        }, d.isPinned
+                            ? [m('i.fas.fa-thumbtack'), ' Unpin post']
+                            : [m('i.fas.fa-thumbtack'), ' Pin post'])
+                      : null,
+                    d.canDelete
+                      ? m('button.SGFeed-dropdownItem.SGFeed-dropdownItem--danger', {
+                          onclick: () => this.deleteDiscussion(d),
+                        }, [m('i.fas.fa-trash'), ' ',
+                            app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete')])
+                      : null,
                   ])
                 : null,
             ])

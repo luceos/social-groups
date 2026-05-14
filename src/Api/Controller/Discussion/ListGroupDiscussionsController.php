@@ -45,12 +45,21 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
 
             $discussions = SocialGroupDiscussion::where('group_id', $groupId)
                 ->with(['user', 'lastPostedUser'])
+                ->orderByDesc('is_pinned')
                 ->orderByDesc('last_posted_at')
                 ->skip($offset)
                 ->take($limit)
                 ->get();
 
             $actorId       = $actor->exists ? $actor->id : null;
+
+            $actorCanPin = $actorId
+                ? ($actor->isAdmin() || $group->members()
+                    ->where('user_id', $actorId)
+                    ->whereIn('role', ['creator', 'moderator'])
+                    ->exists())
+                : false;
+
             $discussionIds = $discussions->pluck('id')->all();
 
             // Batch-load first post for each discussion
@@ -81,8 +90,8 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             $now = \Carbon\Carbon::now()->toIso8601String();
 
             return new JsonResponse([
-                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $now) {
-                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost->all(), $actorReactions, $actorId, $now);
+                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $actorCanPin, $now) {
+                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost->all(), $actorReactions, $actorId, $actorCanPin, $now);
                 })->values(),
                 'total' => $total,
                 'page'  => $page,
@@ -102,6 +111,7 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
         array $reactionsByPost,
         array $actorReactions,
         ?int $actorId,
+        bool $actorCanPin,
         string $now
     ): array {
         $serializedFirstPost = null;
@@ -134,6 +144,8 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             'title'          => $d->title,
             'commentCount'   => $d->comment_count,
             'isLocked'       => (bool) $d->is_locked,
+            'isPinned'       => (bool) $d->is_pinned,
+            'canPin'         => $actorCanPin,
             'lastPostedAt'   => $d->last_posted_at?->toIso8601String(),
             'createdAt'      => ($d->created_at ?? $d->last_posted_at)?->toIso8601String() ?? $now,
             'canDelete'      => $actorId && ($actorId === $d->user_id || \Flarum\User\User::find($actorId)?->isAdmin()),
