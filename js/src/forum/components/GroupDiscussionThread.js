@@ -26,6 +26,10 @@ export default class GroupDiscussionThread extends Page {
 
     this.pickerPostId = null;
     this._pickerTimer = null;
+
+    this.replyingToId          = null;
+    this.inlineReplyText       = '';
+    this.inlineReplySubmitting = false;
   }
 
   oncreate(vnode) {
@@ -287,14 +291,58 @@ export default class GroupDiscussionThread extends Page {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     }).then(() => {
-      this.posts = this.posts.filter((p) => p.id !== post.id);
-      if (this.discussion) this.discussion.commentCount = Math.max(0, (this.discussion.commentCount || 1) - 1);
+      // Also remove any child replies (DB cascade handles the data side)
+      const removed = new Set([post.id]);
+      this.posts.filter((p) => p.parentPostId && removed.has(p.parentPostId)).forEach((p) => removed.add(p.id));
+      const removedCount = removed.size;
+      this.posts = this.posts.filter((p) => !removed.has(p.id));
+      if (this.discussion) this.discussion.commentCount = Math.max(0, (this.discussion.commentCount || removedCount) - removedCount);
       this.deletingId = null;
       m.redraw();
     }).catch(() => {
       this.deletingId = null;
       m.redraw();
     });
+  }
+
+  startInlineReply(post) {
+    const targetId     = post.parentPostId ?? post.id;
+    this.replyingToId  = this.replyingToId === targetId ? null : targetId;
+    this.inlineReplyText = '';
+    m.redraw();
+  }
+
+  submitInlineReply() {
+    const content = this.inlineReplyText.trim();
+    if (!content || this.inlineReplySubmitting) return;
+
+    this.inlineReplySubmitting = true;
+
+    fetch(`${apiBase()}/sg-posts`, {
+      method:      'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': app.session.csrfToken || '',
+      },
+      body: JSON.stringify({ discussionId: this.discussion.id, content, parentPostId: this.replyingToId }),
+    })
+      .then((r) => {
+        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
+        return r.json();
+      })
+      .then((post) => {
+        this.posts.push(post);
+        if (this.discussion) this.discussion.commentCount = (this.discussion.commentCount || 0) + 1;
+        this.inlineReplyText       = '';
+        this.inlineReplySubmitting = false;
+        this.replyingToId          = null;
+        m.redraw();
+      })
+      .catch(() => {
+        this.inlineReplySubmitting = false;
+        m.redraw();
+      });
   }
 
   // ── Views ─────────────────────────────────────────────────────────────────
@@ -332,9 +380,16 @@ export default class GroupDiscussionThread extends Page {
               ]),
             ]),
 
-            m('.SGThread-posts',
-              this.posts.map((post) => this.viewPost(post))
-            ),
+            m('.SGThread-posts', (() => {
+              const topLevel = this.posts.filter((p) => !p.parentPostId);
+              const nested   = this.posts.filter((p) => !!p.parentPostId);
+              const repliesByParent = {};
+              nested.forEach((p) => {
+                if (!repliesByParent[p.parentPostId]) repliesByParent[p.parentPostId] = [];
+                repliesByParent[p.parentPostId].push(p);
+              });
+              return topLevel.map((post) => this.viewPost(post, repliesByParent));
+            })()),
 
             actor && !this.discussion.isLocked
               ? this.viewReplyBox(actor)
@@ -491,16 +546,59 @@ export default class GroupDiscussionThread extends Page {
                 : [m('i.fas.fa-thumbs-up'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.like')]),
           ])
         : null,
+      actor && !this.discussion?.isLocked
+        ? m('button.SGThread-replyBtn', {
+            class:   this.replyingToId === (post.parentPostId ?? post.id) ? 'is-active' : '',
+            onclick: () => this.startInlineReply(post),
+          }, [m('i.fas.fa-reply'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_button')])
+        : null,
     ]);
   }
 
-  viewPost(post) {
+  viewInlineReplyComposer() {
+    const actor = app.session.user;
+    return m('.SGThread-inlineReply', [
+      m('.SGThread-inlineReplyAvatar', [
+        actor.attribute('avatarUrl')
+          ? m('img', { src: actor.attribute('avatarUrl'), alt: actor.attribute('displayName') })
+          : m('span', (actor.attribute('displayName') || '?')[0].toUpperCase()),
+      ]),
+      m('.SGThread-inlineReplyInputWrap', [
+        m('textarea.SGThread-inlineReplyInput', {
+          placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_placeholder'),
+          value:       this.inlineReplyText,
+          rows:        1,
+          disabled:    this.inlineReplySubmitting,
+          oninput:     (e) => {
+            this.inlineReplyText = e.target.value;
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+          },
+          onkeydown: (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.submitInlineReply(); }
+          },
+        }),
+        m('button.SGThread-inlineReplySendBtn', {
+          disabled: this.inlineReplySubmitting || !this.inlineReplyText.trim(),
+          onclick:  () => this.submitInlineReply(),
+          title:    'Post reply',
+        }, this.inlineReplySubmitting
+            ? m('i.fas.fa-spinner.fa-spin')
+            : m('i.fas.fa-paper-plane')),
+      ]),
+    ]);
+  }
+
+  viewPost(post, repliesByParent = {}, nested = false) {
     const isEditing  = this.editingId === post.id;
     const isDeleting = this.deletingId === post.id;
     const menuOpen   = this.openMenuId === post.id;
     const actor      = app.session.user;
+    const cls = '.SGThread-post'
+      + (nested    ? '.SGThread-post--nested' : '')
+      + (isDeleting ? '.is-deleting'          : '');
 
-    return m('.SGThread-post', { key: post.id, class: isDeleting ? 'is-deleting' : '' }, [
+    return m(cls, { key: post.id }, [
 
       // ── Post header: avatar + name/time + menu ──
       m('.SGThread-postHeader', [
@@ -582,8 +680,19 @@ export default class GroupDiscussionThread extends Page {
       // ── Reaction count bar ──
       this.viewReactionStatBar(post),
 
-      // ── Reaction action bar ──
+      // ── Reaction + reply action bar ──
       !isEditing ? this.viewReactionActionBar(post) : null,
+
+      // ── Nested replies + inline composer (top-level posts only) ──
+      !nested ? (() => {
+        const replies      = repliesByParent[post.id] || [];
+        const showComposer = this.replyingToId === post.id;
+        if (!replies.length && !showComposer) return null;
+        return m('.SGThread-replies', [
+          replies.map((r) => this.viewPost(r, {}, true)),
+          showComposer ? this.viewInlineReplyComposer() : null,
+        ]);
+      })() : null,
     ]);
   }
 }

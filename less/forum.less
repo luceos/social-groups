@@ -2154,6 +2154,96 @@
 }
 
 // ============================================================
+// Nested replies in SGThread
+// ============================================================
+
+.SGThread-replies {
+  margin-left: 52px;
+  border-left: 2px solid var(--control-bg);
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+}
+
+.SGThread-post--nested {
+  background: var(--control-bg);
+  border-radius: 10px;
+  padding: 0;
+
+  .SGThread-postHeader   { padding: 10px 12px 0; }
+  .SGThread-postContent  { padding: 6px 12px 8px; font-size: 0.88rem; }
+  .SGThread-postStatBar  { padding: 3px 12px; }
+  .SGThread-postActionBar {
+    border-radius: 0 0 10px 10px;
+    background: var(--control-bg);
+  }
+  .SGThread-postAvatar { width: 32px; height: 32px; font-size: 0.8rem; }
+  .SGThread-postMeta   { font-size: 0.9em; }
+}
+
+.SGThread-replyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted-color);
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: background @sg-transition, color @sg-transition;
+
+  &:hover, &.is-active { background: var(--control-bg); color: var(--primary-color, @sg-primary-hex); }
+}
+
+.SGThread-inlineReply {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0 4px;
+}
+
+.SGThread-inlineReplyAvatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--primary-color, @sg-primary-hex);
+  flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; color: #fff;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.SGThread-inlineReplyInputWrap {
+  flex: 1;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--body-bg);
+  border-radius: 18px;
+  padding: 6px 10px 6px 14px;
+}
+
+.SGThread-inlineReplyInput {
+  flex: 1;
+  background: none; border: none; outline: none;
+  font-size: 0.88rem; font-family: inherit;
+  color: var(--text-color); resize: none;
+  min-height: 18px; overflow: hidden;
+  &::placeholder { color: var(--muted-color); }
+}
+
+.SGThread-inlineReplySendBtn {
+  background: none; border: none; cursor: pointer;
+  color: var(--primary-color, @sg-primary-hex);
+  font-size: 0.9rem; flex-shrink: 0; padding: 2px 4px;
+  transition: opacity @sg-transition;
+  &:disabled { opacity: 0.35; cursor: default; }
+}
+
+// ============================================================
 // Reaction picker (shared by SGThread and SGFeed)
 // ============================================================
 

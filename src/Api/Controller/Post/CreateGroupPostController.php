@@ -23,6 +23,7 @@ class CreateGroupPostController implements RequestHandlerInterface
         $body         = (array) ($request->getParsedBody() ?? []);
         $discussionId = (int) ($body['discussionId'] ?? 0);
         $content      = trim((string) ($body['content'] ?? ''));
+        $parentPostId = isset($body['parentPostId']) ? (int) $body['parentPostId'] : null;
 
         if (! $discussionId || ! $content) {
             return new JsonResponse(['error' => 'discussionId and content are required.'], 422);
@@ -45,6 +46,18 @@ class CreateGroupPostController implements RequestHandlerInterface
             return new JsonResponse(['error' => 'You must be a member of this group to reply.'], 403);
         }
 
+        // Validate and flatten parent to 1 level of nesting
+        if ($parentPostId) {
+            $parent = SocialGroupPost::where('id', $parentPostId)
+                ->where('discussion_id', $discussion->id)
+                ->first();
+            if (! $parent) {
+                return new JsonResponse(['error' => 'Parent post not found.'], 422);
+            }
+            // If the parent is itself a reply, attach to its parent (stay at 1 level)
+            $parentPostId = $parent->parent_post_id ?? $parent->id;
+        }
+
         $contentParsed = $this->formatter->parse($content);
 
         $post = SocialGroupPost::create([
@@ -53,6 +66,7 @@ class CreateGroupPostController implements RequestHandlerInterface
             'user_id'        => $actor->id,
             'content'        => $content,
             'content_parsed' => $contentParsed,
+            'parent_post_id' => $parentPostId,
         ]);
 
         // Update discussion metadata
@@ -70,6 +84,7 @@ class CreateGroupPostController implements RequestHandlerInterface
             'updatedAt'      => $post->updated_at->toIso8601String(),
             'reactions'      => (object) [],
             'actorReaction'  => null,
+            'parentPostId'   => $post->parent_post_id,
             'canEdit'        => $actor->id === $post->user_id,
             'canDelete'      => $actor->id === $post->user_id,
             'user'           => [
