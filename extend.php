@@ -78,10 +78,10 @@ return [
         ->patch('/sg-discussions/{discussionId}/pin',   'sg-discussions.pin',   PinGroupDiscussionController::class)
         ->post('/sg-discussions/{discussionId}/share',  'sg-discussions.share', ShareGroupDiscussionController::class)
         // Posts
-        ->get('/sg-posts/{discussionId}',     'sg-posts.list',   ListGroupPostsController::class)
-        ->post('/sg-posts',                   'sg-posts.create', CreateGroupPostController::class)
-        ->patch('/sg-posts/{postId}',          'sg-posts.update', UpdateGroupPostController::class)
-        ->post('/sg-posts/{postId}/delete',   'sg-posts.delete', DeleteGroupPostController::class)
+        ->get('/sg-thread-posts/{discussionId}', 'sg-posts.list',   ListGroupPostsController::class)
+        ->post('/sg-posts',                      'sg-posts.create', CreateGroupPostController::class)
+        ->patch('/sg-posts/{postId}',             'sg-posts.update', UpdateGroupPostController::class)
+        ->post('/sg-posts/{postId}/delete',      'sg-posts.delete', DeleteGroupPostController::class)
         ->post('/sg-posts/{postId}/react',   'sg-posts.react',   TogglePostReactionController::class)
         ->post('/sg-posts/{postId}/unreact', 'sg-posts.unreact', TogglePostReactionController::class)
         // Join requests
@@ -109,5 +109,8 @@ return [
 
     (new Extend\Settings())
         ->default('ernestdefoe-social-groups.create_permission', 'member'),
+
+    (new Extend\User())
+        ->registerPreference('sgFeaturedGroupId'),
 
 ];

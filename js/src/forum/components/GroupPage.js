@@ -100,6 +100,7 @@ export default class GroupPage extends Page {
             ? m(GroupMediaGallery, {
                 groupId:   group.id(),
                 groupSlug: group.slug(),
+                isMember,
               })
             : m(GroupFeed, {
                 groupId:   group.id(),

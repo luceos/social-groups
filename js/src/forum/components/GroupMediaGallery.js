@@ -15,6 +15,10 @@ export default class GroupMediaGallery extends Component {
 
     this.lightboxIndex = null;
     this._brokenIndexes = new Set();
+
+    this.uploading    = false;
+    this.uploadError  = null;
+    this._pendingFiles = [];
   }
 
   oncreate(vnode) {
@@ -65,6 +69,67 @@ export default class GroupMediaGallery extends Component {
       });
   }
 
+  // ── Upload ──────────────────────────────────────────────────────────────────
+
+  handleUploadFiles(files) {
+    if (!files.length || this.uploading) return;
+    this.uploading   = true;
+    this.uploadError = null;
+    m.redraw();
+
+    const uploads = Array.from(files).map((file) => {
+      const fd = new FormData();
+      fd.append('files[]', file);
+      return fetch(`${apiBase()}/fof/upload`, {
+        method:      'POST',
+        credentials: 'same-origin',
+        headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
+        body:        fd,
+      })
+        .then((r) => {
+          if (!r.ok) return r.json().then((e) => { throw new Error(e.errors?.[0]?.detail || e.error || 'Upload failed'); });
+          return r.json();
+        })
+        .then((data) => {
+          const fileData = Array.isArray(data.data) ? data.data[0] : data.data;
+          return fileData?.attributes?.bbcode || `[upl-file uuid="${fileData?.attributes?.uuid || fileData?.id}"][/upl-file]`;
+        });
+    });
+
+    Promise.all(uploads)
+      .then((bbcodes) => {
+        const content = bbcodes.join('\n');
+        return fetch(`${apiBase()}/sg-discussions`, {
+          method:      'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': app.session.csrfToken || '',
+          },
+          body: JSON.stringify({
+            groupId: this.attrs.groupId,
+            content,
+          }),
+        });
+      })
+      .then((r) => {
+        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Failed to save to gallery'); });
+        return r.json();
+      })
+      .then(() => {
+        this.uploading = false;
+        this._brokenIndexes = new Set();
+        this.load(1);
+      })
+      .catch((err) => {
+        this.uploading   = false;
+        this.uploadError = err.message || 'Upload failed.';
+        m.redraw();
+      });
+  }
+
+  // ── Lightbox ────────────────────────────────────────────────────────────────
+
   lightboxOpen(index) {
     this.lightboxIndex = index;
     m.redraw();
@@ -99,6 +164,8 @@ export default class GroupMediaGallery extends Component {
     m.redraw();
   }
 
+  // ── Views ───────────────────────────────────────────────────────────────────
+
   view() {
     return m('.SGMedia', [
       this.viewGallery(),
@@ -107,51 +174,82 @@ export default class GroupMediaGallery extends Component {
   }
 
   viewGallery() {
-    if (this.loading) {
-      return m('.SGMedia-loading', m(LoadingIndicator, { display: 'block' }));
-    }
-
-    if (!this.items || this.items.length === 0) {
-      return m('.SGMedia-empty', [
-        m('i.fas.fa-photo-video'),
-        m('p', 'No media found in this group yet.'),
-      ]);
-    }
+    const { isMember } = this.attrs;
+    const actor = app.session.user;
 
     return [
-      m('.SGMedia-grid',
-        this.items.map((item, i) =>
-          m('.SGMedia-thumb', {
-            key:     `${item.postId}-${i}`,
-            onclick: () => this.lightboxOpen(i),
-          }, [
-            m('img', {
-              src:     item.url,
-              alt:     '',
-              loading: 'lazy',
-              onerror: (e) => {
-                this._brokenIndexes.add(i);
-                e.target.closest('.SGMedia-thumb').style.display = 'none';
-              },
-            }),
-          ])
-        )
-      ),
-      this.pages > 1
-        ? m('.SGMedia-pagination', [
-            m(Button, {
-              class:    'Button',
-              disabled: this.page <= 1,
-              onclick:  () => this.load(this.page - 1),
-            }, m('i.fas.fa-chevron-left')),
-            m('span.SGMedia-pageInfo', `${this.page} / ${this.pages}`),
-            m(Button, {
-              class:    'Button',
-              disabled: this.page >= this.pages,
-              onclick:  () => this.load(this.page + 1),
-            }, m('i.fas.fa-chevron-right')),
+      // Upload bar — visible to members
+      actor && isMember
+        ? m('.SGMedia-uploadBar', [
+            this.uploadError
+              ? m('.Alert.Alert--error.SGMedia-uploadError', [
+                  this.uploadError,
+                  m('button.SGMedia-uploadErrorDismiss', { onclick: () => { this.uploadError = null; m.redraw(); } }, '×'),
+                ])
+              : null,
+            m('label.Button.Button--primary.SGMedia-uploadBtn', {
+              class: this.uploading ? 'disabled' : '',
+              title: 'Upload images to gallery',
+            }, [
+              m('input[type=file]', {
+                accept:   'image/*',
+                multiple: true,
+                style:    'display:none',
+                disabled: this.uploading,
+                onchange: (e) => {
+                  if (e.target.files.length) this.handleUploadFiles(e.target.files);
+                  e.target.value = '';
+                },
+              }),
+              this.uploading
+                ? [m('i.fas.fa-spinner.fa-spin'), ' Uploading…']
+                : [m('i.fas.fa-upload'), ' Upload Images'],
+            ]),
           ])
         : null,
+
+      this.loading
+        ? m('.SGMedia-loading', m(LoadingIndicator, { display: 'block' }))
+        : !this.items || this.items.length === 0
+        ? m('.SGMedia-empty', [
+            m('i.fas.fa-photo-video'),
+            m('p', 'No media found in this group yet.'),
+          ])
+        : [
+            m('.SGMedia-grid',
+              this.items.map((item, i) =>
+                m('.SGMedia-thumb', {
+                  key:     `${item.postId}-${i}`,
+                  onclick: () => this.lightboxOpen(i),
+                }, [
+                  m('img', {
+                    src:     item.url,
+                    alt:     '',
+                    loading: 'lazy',
+                    onerror: (e) => {
+                      this._brokenIndexes.add(i);
+                      e.target.closest('.SGMedia-thumb').style.display = 'none';
+                    },
+                  }),
+                ])
+              )
+            ),
+            this.pages > 1
+              ? m('.SGMedia-pagination', [
+                  m(Button, {
+                    class:    'Button',
+                    disabled: this.page <= 1,
+                    onclick:  () => this.load(this.page - 1),
+                  }, m('i.fas.fa-chevron-left')),
+                  m('span.SGMedia-pageInfo', `${this.page} / ${this.pages}`),
+                  m(Button, {
+                    class:    'Button',
+                    disabled: this.page >= this.pages,
+                    onclick:  () => this.load(this.page + 1),
+                  }, m('i.fas.fa-chevron-right')),
+                ])
+              : null,
+          ],
     ];
   }
 

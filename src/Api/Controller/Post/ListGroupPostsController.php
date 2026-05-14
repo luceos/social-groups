@@ -23,7 +23,7 @@ class ListGroupPostsController implements RequestHandlerInterface
             $params       = $request->getQueryParams();
             $discussionId = $request->getAttribute('discussionId') ?? ($params['discussionId'] ?? null);
             if (! $discussionId) {
-                preg_match('#/sg-posts/(\d+)#', $request->getUri()->getPath(), $m);
+                preg_match('#/sg-thread-posts/(\d+)#', $request->getUri()->getPath(), $m);
                 $discussionId = $m[1] ?? null;
             }
 

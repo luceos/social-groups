@@ -77,7 +77,7 @@ export default class GroupDiscussionThread extends Page {
     this.loading = true;
     this.error   = null;
 
-    fetch(`${apiBase()}/sg-posts/${discussionId}`, {
+    fetch(`${apiBase()}/sg-thread-posts/${discussionId}`, {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     })
@@ -565,7 +565,15 @@ export default class GroupDiscussionThread extends Page {
               : null,
             m('button.SGThread-likeBtn', {
               class:   active ? 'SGThread-likeBtn--liked' : '',
-              onclick: () => this.toggleReaction(post, actorReaction || 'like'),
+              onclick: () => {
+                if (actorReaction) {
+                  this.toggleReaction(post, actorReaction);
+                } else {
+                  clearTimeout(this._pickerTimer);
+                  this.pickerPostId = this.pickerPostId === post.id ? null : post.id;
+                  m.redraw();
+                }
+              },
             }, active
                 ? [active.emoji, ' ', active.label]
                 : [m('i.fas.fa-thumbs-up'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.like')]),
