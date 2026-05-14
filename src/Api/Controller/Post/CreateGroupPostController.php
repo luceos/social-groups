@@ -70,8 +70,8 @@ class CreateGroupPostController implements RequestHandlerInterface
             'updatedAt'      => $post->updated_at->toIso8601String(),
             'likeCount'      => 0,
             'isLiked'        => false,
-            'canEdit'        => true,
-            'canDelete'      => true,
+            'canEdit'        => $actor->id === $post->user_id,
+            'canDelete'      => $actor->id === $post->user_id,
             'user'           => [
                 'id'          => $actor->id,
                 'displayName' => $actor->display_name,

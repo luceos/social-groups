@@ -13,8 +13,10 @@
     ],
     "require": {
         "php": "^8.3",
-        "flarum/core": "^2.0",
-        "fof/upload": "^2.0"
+        "flarum/core": "^2.0"
+    },
+    "suggest": {
+        "fof/upload": "^2.0 — required for file/image attachments in group posts (the attach button in the post composer calls /api/fof/upload)"
     },
     "autoload": {
         "psr-4": {

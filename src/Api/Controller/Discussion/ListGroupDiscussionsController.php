@@ -91,7 +91,8 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Group not found.'], 404);
         } catch (\Throwable $e) {
-            return new JsonResponse(['error' => $e->getMessage(), 'trace' => $e->getFile().':'.$e->getLine()], 500);
+            resolve('log')->error('[social-groups] ListGroupDiscussionsController: ' . $e->getMessage(), ['exception' => $e]);
+            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }
 

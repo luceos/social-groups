@@ -348,7 +348,7 @@ export default class GroupFeed extends Component {
             fp?.likeCount > 0 && d.commentCount > 0 ? m('span.SGFeed-statDot', '·') : null,
             d.commentCount > 1
               ? m('button.SGFeed-statComments', { onclick: () => this.openThread(d) },
-                  `${d.commentCount - 1} ${d.commentCount - 1 === 1 ? 'comment' : 'comments'}`)
+                  app.translator.trans('ernestdefoe-social-groups.forum.discussions.comments_count', { count: d.commentCount - 1 }))
               : null,
           ])
         : null,

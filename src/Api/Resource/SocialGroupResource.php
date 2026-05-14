@@ -139,7 +139,8 @@ class SocialGroupResource extends AbstractDatabaseResource
                 ->get(fn ($g) => $g->membership_type ?? 'open')
                 ->set(fn ($model, $value) => $model->membership_type = $value)
                 ->writable()
-                ->nullable(),
+                ->nullable()
+                ->in(['open', 'approval', 'invite']),
 
             Schema\Boolean::make('isPending')
                 ->get(function ($g, Context $context) {
