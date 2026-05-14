@@ -143,11 +143,12 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 }
             }
 
-            $now = \Carbon\Carbon::now()->toIso8601String();
+            $now          = \Carbon\Carbon::now()->toIso8601String();
+            $actorIsAdmin = $actorId ? $actor->isAdmin() : false;
 
             return new JsonResponse([
-                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $actorCanPin, $sharedFromMap, $now) {
-                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost->all(), $actorReactions, $actorId, $actorCanPin, $sharedFromMap, $now);
+                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $actorIsAdmin, $actorCanPin, $sharedFromMap, $now) {
+                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost->all(), $actorReactions, $actorId, $actorIsAdmin, $actorCanPin, $sharedFromMap, $now);
                 })->values(),
                 'total' => $total,
                 'page'  => $page,
@@ -168,6 +169,7 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
         array $reactionsByPost,
         array $actorReactions,
         ?int $actorId,
+        bool $actorIsAdmin,
         bool $actorCanPin,
         array $sharedFromMap,
         string $now
@@ -206,7 +208,7 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             'canPin'         => $actorCanPin,
             'lastPostedAt'   => $d->last_posted_at?->toIso8601String(),
             'createdAt'      => ($d->created_at ?? $d->last_posted_at)?->toIso8601String() ?? $now,
-            'canDelete'      => $actorId && ($actorId === $d->user_id || \Flarum\User\User::find($actorId)?->isAdmin()),
+            'canDelete'      => $actorId && ($actorId === $d->user_id || $actorIsAdmin),
             'canShare'       => $actorId !== null,
             'sharedFrom'     => $d->shared_from_discussion_id
                 ? ($sharedFromMap[$d->shared_from_discussion_id] ?? null)

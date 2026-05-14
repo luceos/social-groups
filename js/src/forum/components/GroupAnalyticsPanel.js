@@ -25,7 +25,10 @@ export default class GroupAnalyticsPanel extends Component {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
+        return r.json();
+      })
       .then((data) => {
         this.data    = data;
         this.loading = false;

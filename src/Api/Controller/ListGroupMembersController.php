@@ -27,6 +27,7 @@ class ListGroupMembersController implements RequestHandlerInterface
 
         $members = $group->members()->with('user')->whereNull('banned_at')->get()->map(function ($member) use ($actorCanMod, $isCreator, $actor) {
             $user = $member->user;
+            if (! $user) return null;
 
             return [
                 'userId'      => $user->id,
@@ -38,8 +39,8 @@ class ListGroupMembersController implements RequestHandlerInterface
                 'canModerate' => $isCreator,
                 'canRemove'   => $actorCanMod && $member->role !== 'creator' && $user->id !== $actor->id,
             ];
-        });
+        })->filter()->values();
 
-        return new JsonResponse(['data' => $members->values()->toArray()]);
+        return new JsonResponse(['data' => $members->toArray()]);
     }
 }

@@ -14,6 +14,7 @@ export default class GroupMediaGallery extends Component {
     this.total   = 0;
 
     this.lightboxIndex = null;
+    this._brokenIndexes = new Set();
   }
 
   oncreate(vnode) {
@@ -76,13 +77,25 @@ export default class GroupMediaGallery extends Component {
 
   lightboxNext() {
     if (this.lightboxIndex === null || !this.items) return;
-    this.lightboxIndex = (this.lightboxIndex + 1) % this.items.length;
+    let next = (this.lightboxIndex + 1) % this.items.length;
+    const start = next;
+    while (this._brokenIndexes.has(next)) {
+      next = (next + 1) % this.items.length;
+      if (next === start) break;
+    }
+    this.lightboxIndex = next;
     m.redraw();
   }
 
   lightboxPrev() {
     if (this.lightboxIndex === null || !this.items) return;
-    this.lightboxIndex = (this.lightboxIndex - 1 + this.items.length) % this.items.length;
+    let prev = (this.lightboxIndex - 1 + this.items.length) % this.items.length;
+    const start = prev;
+    while (this._brokenIndexes.has(prev)) {
+      prev = (prev - 1 + this.items.length) % this.items.length;
+      if (prev === start) break;
+    }
+    this.lightboxIndex = prev;
     m.redraw();
   }
 
@@ -116,7 +129,10 @@ export default class GroupMediaGallery extends Component {
               src:     item.url,
               alt:     '',
               loading: 'lazy',
-              onerror: (e) => { e.target.closest('.SGMedia-thumb').style.display = 'none'; },
+              onerror: (e) => {
+                this._brokenIndexes.add(i);
+                e.target.closest('.SGMedia-thumb').style.display = 'none';
+              },
             }),
           ])
         )
@@ -185,7 +201,11 @@ export default class GroupMediaGallery extends Component {
               }, [m('i.fas.fa-external-link-alt'), ' View post']),
             ])
           : null,
-        m('.SGMedia-lightboxCounter', `${this.lightboxIndex + 1} / ${this.items.length}`),
+        m('.SGMedia-lightboxCounter', (() => {
+          const visible = this.items.length - this._brokenIndexes.size;
+          const pos = this.items.slice(0, this.lightboxIndex + 1).filter((_, j) => !this._brokenIndexes.has(j)).length;
+          return `${pos} / ${visible}`;
+        })()),
       ]),
 
       this.items.length > 1

@@ -50,9 +50,13 @@ export default class MemberList extends Component {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     })
-      .then(() => {
+      .then((r) => {
+        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
+        return r.json();
+      })
+      .then((data) => {
         const idx = this.members.findIndex((m) => m.userId === member.userId);
-        if (idx !== -1) this.members[idx] = { ...this.members[idx], role: 'admin' };
+        if (idx !== -1) this.members[idx] = { ...this.members[idx], role: data.role || 'moderator' };
         delete this.actioning[member.userId];
         m.redraw();
       })
@@ -71,9 +75,13 @@ export default class MemberList extends Component {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     })
-      .then(() => {
+      .then((r) => {
+        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
+        return r.json();
+      })
+      .then((data) => {
         const idx = this.members.findIndex((m) => m.userId === member.userId);
-        if (idx !== -1) this.members[idx] = { ...this.members[idx], role: 'member' };
+        if (idx !== -1) this.members[idx] = { ...this.members[idx], role: data.role || 'member' };
         delete this.actioning[member.userId];
         m.redraw();
       })
@@ -84,7 +92,7 @@ export default class MemberList extends Component {
   }
 
   removeMember(member) {
-    if (!confirm(`Remove ${member.displayName} from this group? They will not be able to rejoin.`)) return;
+    if (!confirm(app.translator.trans('ernestdefoe-social-groups.forum.group.remove_member_confirm', { displayName: member.displayName }))) return;
 
     this.actioning[member.userId] = 'remove';
     m.redraw();
@@ -94,8 +102,11 @@ export default class MemberList extends Component {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     })
-      .then((r) => r.json())
-      .then((data) => {
+      .then((r) => {
+        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
+        return r.json();
+      })
+      .then(() => {
         this.members = this.members.filter((m) => m.userId !== member.userId);
         delete this.actioning[member.userId];
         m.redraw();

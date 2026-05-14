@@ -19,6 +19,7 @@ export default class GroupDiscussionThread extends Page {
     this.replyError  = null;
     this.editingId   = null;
     this.editText    = '';
+    this.editError   = null;
     this.deletingId  = null;
     this.openMenuId  = null;
 
@@ -264,6 +265,7 @@ export default class GroupDiscussionThread extends Page {
     this.editUploads = [];
     this.editingId   = null;
     this.editText    = '';
+    this.editError   = null;
   }
 
   saveEdit(post) {
@@ -279,13 +281,20 @@ export default class GroupDiscussionThread extends Page {
       },
       body: JSON.stringify({ content }),
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
+        return r.json();
+      })
       .then((updated) => {
         const idx = this.posts.findIndex((p) => p.id === post.id);
         if (idx !== -1) this.posts[idx] = { ...this.posts[idx], ...updated };
         this._revokeAll(this.editUploads);
         this.editUploads = [];
         this.cancelEdit();
+        m.redraw();
+      })
+      .catch((err) => {
+        this.editError = err.message || 'Failed to save edit.';
         m.redraw();
       });
   }
@@ -661,6 +670,7 @@ export default class GroupDiscussionThread extends Page {
       // ── Content or edit form ──
       isEditing
         ? m('.SGThread-postEdit', [
+            this.editError ? m('.Alert.Alert--error', { style: 'margin-bottom:8px;font-size:.85em' }, this.editError) : null,
             m('textarea.FormControl.SGThread-editTextarea', {
               value:   this.editText,
               oninput: (e) => { this.editText = e.target.value; },

@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller\Discussion;
 
+use Ernestdefoe\SocialGroups\Api\Concern\SanitizesLinkPreview;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
@@ -14,6 +15,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class CreateGroupDiscussionController implements RequestHandlerInterface
 {
+    use SanitizesLinkPreview;
+
     public function __construct(private Formatter $formatter) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -123,18 +126,4 @@ class CreateGroupDiscussionController implements RequestHandlerInterface
         }
     }
 
-    private function sanitizeLinkPreview(array $raw): ?array
-    {
-        $url = filter_var($raw['url'] ?? '', FILTER_VALIDATE_URL);
-        if (! $url || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
-            return null;
-        }
-        return [
-            'url'         => $url,
-            'title'       => mb_substr(strip_tags($raw['title']       ?? ''), 0, 200),
-            'description' => mb_substr(strip_tags($raw['description'] ?? ''), 0, 500),
-            'image'       => filter_var($raw['image'] ?? '', FILTER_VALIDATE_URL) ?: null,
-            'siteName'    => mb_substr(strip_tags($raw['siteName']    ?? ''), 0, 100),
-        ];
-    }
 }

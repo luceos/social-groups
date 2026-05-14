@@ -93,6 +93,7 @@ ernestdefoe-social-groups:
       role_creator: Creator
       role_admin: Moderator
       remove_member: Remove
+      remove_member_confirm: "Remove {displayName} from this group? They will not be able to rejoin."
       load_error: Failed to load group.
       not_found: Group not found.
       members_load_error: Could not load members.

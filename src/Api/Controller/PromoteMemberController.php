@@ -28,7 +28,7 @@ class PromoteMemberController implements RequestHandlerInterface
             return new JsonResponse(['error' => 'Only the group creator can promote members'], 403);
         }
 
-        $targetMembership = $group->members()->where('user_id', $userId)->first();
+        $targetMembership = $group->members()->where('user_id', $userId)->whereNull('banned_at')->first();
         if (! $targetMembership) {
             return new JsonResponse(['error' => 'User is not a member of this group'], 404);
         }
@@ -37,9 +37,9 @@ class PromoteMemberController implements RequestHandlerInterface
             return new JsonResponse(['error' => 'Cannot promote another creator'], 422);
         }
 
-        $targetMembership->role = 'admin';
+        $targetMembership->role = 'moderator';
         $targetMembership->save();
 
-        return new JsonResponse(['role' => 'admin']);
+        return new JsonResponse(['role' => 'moderator']);
     }
 }

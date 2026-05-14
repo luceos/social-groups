@@ -79,13 +79,13 @@ class GroupAnalyticsController implements RequestHandlerInterface
                 ]);
 
             // ── Summary stats ─────────────────────────────────────────────
-            $postIds        = SocialGroupPost::where('group_id', $groupId)->pluck('id');
-            $totalReactions = SocialGroupPostReaction::whereIn('post_id', $postIds)->count();
+            $totalPosts     = SocialGroupPost::where('group_id', $groupId)->count();
+            $totalReactions = SocialGroupPostReaction::whereHas('post', fn ($q) => $q->where('group_id', $groupId))->count();
 
             return new JsonResponse([
                 'summary' => [
                     'totalMembers'   => (int) $group->member_count,
-                    'totalPosts'     => $postIds->count(),
+                    'totalPosts'     => $totalPosts,
                     'totalReactions' => $totalReactions,
                 ],
                 'memberGrowth' => $memberGrowth,

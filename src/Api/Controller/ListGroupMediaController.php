@@ -22,7 +22,7 @@ class ListGroupMediaController implements RequestHandlerInterface
         try {
             $actor   = RequestUtil::getActor($request);
             $params  = $request->getQueryParams();
-            $groupId = $request->getAttribute('groupId');
+            $groupId = (int) $request->getAttribute('groupId');
             $page    = max(1, (int) ($params['page'] ?? 1));
             $offset  = ($page - 1) * self::PER_PAGE;
 

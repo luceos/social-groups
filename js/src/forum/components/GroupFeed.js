@@ -13,6 +13,7 @@ export default class GroupFeed extends Component {
     super.oninit(vnode);
     this.discussions  = null;
     this.loading      = true;
+    this.loadError    = false;
     this.page         = 1;
     this.pages        = 1;
     this.total        = 0;
@@ -85,16 +86,21 @@ export default class GroupFeed extends Component {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
+        return r.json();
+      })
       .then((data) => {
         this.discussions = data.data || [];
         this.total       = data.total || 0;
         this.pages       = data.pages || 1;
+        this.loadError   = false;
         this.loading     = false;
         m.redraw();
       })
       .catch(() => {
         this.discussions = [];
+        this.loadError   = true;
         this.loading     = false;
         m.redraw();
       });
@@ -313,10 +319,10 @@ export default class GroupFeed extends Component {
           oninput:     (e) => {
             this.searchQuery = e.target.value;
             clearTimeout(this._searchTimer);
-            this._searchTimer = setTimeout(() => this.load(1), 400);
+            this._searchTimer = setTimeout(() => this.load(1, this.searchQuery.trim()), 400);
           },
         }),
-        this.searchQuery
+        this.searchQuery.trim()
           ? m('button.SGFeed-searchClear', {
               onclick: () => {
                 this.searchQuery = '';
@@ -329,6 +335,11 @@ export default class GroupFeed extends Component {
       // Feed
       this.loading
         ? m('.SGFeed-loading', m(LoadingIndicator, { display: 'block' }))
+        : this.loadError
+        ? m('.SGFeed-empty', [
+            m('i.fas.fa-exclamation-circle'),
+            m('p', 'Failed to load posts. Please try refreshing the page.'),
+          ])
         : !this.discussions || this.discussions.length === 0
         ? m('.SGFeed-empty', [
             m('i.fas.fa-search'),

@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller\Post;
 
+use Ernestdefoe\SocialGroups\Api\Concern\SanitizesLinkPreview;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Ernestdefoe\SocialGroups\Notification\SocialGroupNewPostBlueprint;
@@ -17,6 +18,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class CreateGroupPostController implements RequestHandlerInterface
 {
+    use SanitizesLinkPreview;
+
     public function __construct(
         private Formatter           $formatter,
         private NotificationSyncer  $notifications
@@ -134,23 +137,6 @@ class CreateGroupPostController implements RequestHandlerInterface
                 'slug'        => $actor->username,
             ],
         ], 201);
-    }
-
-    private function sanitizeLinkPreview(array $raw): ?array
-    {
-        $url = filter_var($raw['url'] ?? '', FILTER_VALIDATE_URL);
-        if (! $url || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
-            return null;
-        }
-        $image = filter_var($raw['image'] ?? '', FILTER_VALIDATE_URL) ?: null;
-
-        return [
-            'url'         => $url,
-            'title'       => mb_substr(strip_tags($raw['title']       ?? ''), 0, 200),
-            'description' => mb_substr(strip_tags($raw['description'] ?? ''), 0, 500),
-            'image'       => $image,
-            'siteName'    => mb_substr(strip_tags($raw['siteName']    ?? ''), 0, 100),
-        ];
     }
 
     private function discussionParticipants(SocialGroupDiscussion $discussion, int $actorId): array

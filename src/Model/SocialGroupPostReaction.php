@@ -18,4 +18,9 @@ class SocialGroupPostReaction extends AbstractModel
     protected $guarded = [];
 
     public $incrementing = false;
+
+    public function post()
+    {
+        return $this->belongsTo(SocialGroupPost::class, 'post_id');
+    }
 }
