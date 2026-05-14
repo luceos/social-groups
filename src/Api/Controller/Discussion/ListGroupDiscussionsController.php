@@ -28,6 +28,10 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             $actor   = RequestUtil::getActor($request);
             $params  = $request->getQueryParams();
             $groupId = $request->getAttribute('groupId') ?? ($params['groupId'] ?? null);
+            if (! $groupId) {
+                preg_match('#/sg-discussions/(\d+)#', $request->getUri()->getPath(), $m);
+                $groupId = $m[1] ?? null;
+            }
             $page    = max(1, (int) ($params['page'] ?? 1));
             $limit   = 20;
             $offset  = ($page - 1) * $limit;

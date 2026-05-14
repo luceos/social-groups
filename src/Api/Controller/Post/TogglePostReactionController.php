@@ -21,6 +21,10 @@ class TogglePostReactionController implements RequestHandlerInterface
             $actor->assertRegistered();
 
             $postId = (int) $request->getAttribute('postId');
+            if (! $postId) {
+                preg_match('#/sg-posts/(\d+)/#', $request->getUri()->getPath(), $m);
+                $postId = (int) ($m[1] ?? 0);
+            }
 
             if (! $postId || ! SocialGroupPost::where('id', $postId)->exists()) {
                 return new JsonResponse(['error' => 'Post not found.'], 404);
