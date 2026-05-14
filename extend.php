@@ -3,6 +3,7 @@
 use Ernestdefoe\SocialGroups\Api\Controller\ApproveJoinRequestController;
 use Ernestdefoe\SocialGroups\Api\Controller\FeatureGroupController;
 use Ernestdefoe\SocialGroups\Api\Controller\GroupRssFeedController;
+use Ernestdefoe\SocialGroups\Api\Controller\ListGroupMediaController;
 use Ernestdefoe\SocialGroups\Api\Controller\FetchLinkPreviewController;
 use Ernestdefoe\SocialGroups\Api\Controller\ListGroupMembersController;
 use Ernestdefoe\SocialGroups\Api\Controller\DemoteMemberController;
@@ -64,6 +65,7 @@ return [
         ->post('/social-groups/{id}/invite',  'social-groups.invite',        InviteUserController::class)
         // Link preview proxy
         ->get('/sg-link-preview', 'sg-link-preview', FetchLinkPreviewController::class)
+        ->get('/sg-media/{groupId}',  'sg-media.list',   ListGroupMediaController::class)
         // Discussions
         ->get('/sg-discussions/{groupId}',           'sg-discussions.list',   ListGroupDiscussionsController::class)
         ->post('/sg-discussions',                    'sg-discussions.create', CreateGroupDiscussionController::class)

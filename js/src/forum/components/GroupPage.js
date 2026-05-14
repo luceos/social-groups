@@ -3,6 +3,7 @@ import Page from 'flarum/common/components/Page';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import GroupHero from './GroupHero';
 import GroupFeed from './GroupFeed';
+import GroupMediaGallery from './GroupMediaGallery';
 import MemberList from './MemberList';
 import JoinRequestsPanel from './JoinRequestsPanel';
 import EditGroupModal from './EditGroupModal';
@@ -10,9 +11,10 @@ import EditGroupModal from './EditGroupModal';
 export default class GroupPage extends Page {
   oninit(vnode) {
     super.oninit(vnode);
-    this.group   = null;
-    this.loading = true;
-    this.error   = null;
+    this.group     = null;
+    this.loading   = true;
+    this.error     = null;
+    this.activeTab = 'posts';
   }
 
   oncreate(vnode) {
@@ -81,13 +83,28 @@ export default class GroupPage extends Page {
 
       // Two-column body
       m('.GroupPage-body', [
-        // Main column — discussion feed
+        // Main column — tabs + content
         m('.GroupPage-main', [
-          m(GroupFeed, {
-            groupId:   group.id(),
-            groupSlug: group.slug(),
-            isMember,
-          }),
+          m('.GroupPage-tabs', [
+            m('button.GroupPage-tab', {
+              class:   this.activeTab === 'posts' ? 'is-active' : '',
+              onclick: () => { this.activeTab = 'posts'; m.redraw(); },
+            }, [m('i.fas.fa-stream'), ' Posts']),
+            m('button.GroupPage-tab', {
+              class:   this.activeTab === 'media' ? 'is-active' : '',
+              onclick: () => { this.activeTab = 'media'; m.redraw(); },
+            }, [m('i.fas.fa-photo-video'), ' Media']),
+          ]),
+          this.activeTab === 'media'
+            ? m(GroupMediaGallery, {
+                groupId:   group.id(),
+                groupSlug: group.slug(),
+              })
+            : m(GroupFeed, {
+                groupId:   group.id(),
+                groupSlug: group.slug(),
+                isMember,
+              }),
         ]),
 
         // Sidebar — join requests (approval) + about + members
