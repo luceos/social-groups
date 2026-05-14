@@ -37,6 +37,9 @@ export default class GroupFeed extends Component {
 
     this.pickerDiscId = null;
     this._pickerTimer = null;
+
+    this.searchQuery  = '';
+    this._searchTimer = null;
   }
 
   oncreate(vnode) {
@@ -66,14 +69,18 @@ export default class GroupFeed extends Component {
     revokeAll(this.postUploads);
     clearTimeout(this._pickerTimer);
     clearTimeout(this._previewTimer);
+    clearTimeout(this._searchTimer);
   }
 
-  load(page = 1) {
+  load(page = 1, q = this.searchQuery) {
     const groupId = this.attrs.groupId;
     this.loading  = true;
     this.page     = page;
 
-    fetch(`${apiBase()}/sg-discussions/${groupId}?page=${page}`, {
+    const qs = new URLSearchParams({ page });
+    if (q) qs.set('q', q);
+
+    fetch(`${apiBase()}/sg-discussions/${groupId}?${qs}`, {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     })
@@ -295,13 +302,38 @@ export default class GroupFeed extends Component {
       // Composer
       actor && isMember ? this.viewComposer(actor) : null,
 
+      // Search bar
+      m('.SGFeed-search', [
+        m('i.fas.fa-search.SGFeed-searchIcon'),
+        m('input.SGFeed-searchInput', {
+          type:        'text',
+          placeholder: 'Search posts…',
+          value:       this.searchQuery,
+          oninput:     (e) => {
+            this.searchQuery = e.target.value;
+            clearTimeout(this._searchTimer);
+            this._searchTimer = setTimeout(() => this.load(1), 400);
+          },
+        }),
+        this.searchQuery
+          ? m('button.SGFeed-searchClear', {
+              onclick: () => {
+                this.searchQuery = '';
+                this.load(1);
+              },
+            }, m('i.fas.fa-times'))
+          : null,
+      ]),
+
       // Feed
       this.loading
         ? m('.SGFeed-loading', m(LoadingIndicator, { display: 'block' }))
         : !this.discussions || this.discussions.length === 0
         ? m('.SGFeed-empty', [
-            m('i.fas.fa-stream'),
-            m('p', app.translator.trans('ernestdefoe-social-groups.forum.discussions.empty')),
+            m('i.fas.fa-search'),
+            m('p', this.searchQuery
+                ? `No posts found for "${this.searchQuery}".`
+                : app.translator.trans('ernestdefoe-social-groups.forum.discussions.empty')),
           ])
         : [
             m('.SGFeed-list',

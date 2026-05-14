@@ -41,12 +41,32 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 }
             }
 
-            $total = SocialGroupDiscussion::where('group_id', $groupId)->count();
+            $search = trim((string) ($params['q'] ?? ''));
 
-            $discussions = SocialGroupDiscussion::where('group_id', $groupId)
-                ->with(['user', 'lastPostedUser'])
-                ->orderByDesc('is_pinned')
-                ->orderByDesc('last_posted_at')
+            $applySearch = function ($query) use ($search) {
+                if ($search === '') return;
+                $like = '%' . addcslashes($search, '%_\\') . '%';
+                $query->leftJoin('social_group_posts as sgp_s', function ($join) {
+                    $join->on('sgp_s.discussion_id', '=', 'social_group_discussions.id')
+                         ->whereRaw('sgp_s.id = (SELECT MIN(id) FROM social_group_posts WHERE discussion_id = social_group_discussions.id)');
+                })
+                ->where(function ($q) use ($like) {
+                    $q->where('social_group_discussions.title', 'like', $like)
+                      ->orWhere('sgp_s.content', 'like', $like);
+                })
+                ->select('social_group_discussions.*');
+            };
+
+            $countQuery = SocialGroupDiscussion::where('social_group_discussions.group_id', $groupId);
+            $applySearch($countQuery);
+            $total = $countQuery->count();
+
+            $discussionsQuery = SocialGroupDiscussion::where('social_group_discussions.group_id', $groupId)
+                ->with(['user', 'lastPostedUser']);
+            $applySearch($discussionsQuery);
+            $discussions = $discussionsQuery
+                ->orderByDesc('social_group_discussions.is_pinned')
+                ->orderByDesc('social_group_discussions.last_posted_at')
                 ->skip($offset)
                 ->take($limit)
                 ->get();
@@ -96,6 +116,7 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 'total' => $total,
                 'page'  => $page,
                 'pages' => (int) ceil($total / $limit),
+                'q'     => $search !== '' ? $search : null,
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Group not found.'], 404);
