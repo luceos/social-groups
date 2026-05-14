@@ -110,7 +110,4 @@ return [
     (new Extend\Settings())
         ->default('ernestdefoe-social-groups.create_permission', 'member'),
 
-    (new Extend\User())
-        ->registerPreference('sgFeaturedGroupId'),
-
 ];
