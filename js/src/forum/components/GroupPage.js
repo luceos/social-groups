@@ -4,6 +4,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import GroupHero from './GroupHero';
 import GroupFeed from './GroupFeed';
 import GroupMediaGallery from './GroupMediaGallery';
+import GroupAnalyticsPanel from './GroupAnalyticsPanel';
 import MemberList from './MemberList';
 import JoinRequestsPanel from './JoinRequestsPanel';
 import EditGroupModal from './EditGroupModal';
@@ -135,6 +136,13 @@ export default class GroupPage extends Page {
               ? m('.GroupPage-approvalTag', [m('i.fas.fa-user-check'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.approval_required')])
               : null,
           ]),
+
+          canEdit || isCreator
+            ? m(GroupAnalyticsPanel, {
+                groupId:   group.id(),
+                groupSlug: group.slug(),
+              })
+            : null,
 
           m(MemberList, {
             groupId:   group.id(),

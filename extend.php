@@ -2,6 +2,7 @@
 
 use Ernestdefoe\SocialGroups\Api\Controller\ApproveJoinRequestController;
 use Ernestdefoe\SocialGroups\Api\Controller\FeatureGroupController;
+use Ernestdefoe\SocialGroups\Api\Controller\GroupAnalyticsController;
 use Ernestdefoe\SocialGroups\Api\Controller\KickGroupMemberController;
 use Ernestdefoe\SocialGroups\Api\Controller\GroupRssFeedController;
 use Ernestdefoe\SocialGroups\Api\Controller\ListGroupMediaController;
@@ -58,7 +59,8 @@ return [
 
     (new Extend\Routes('api'))
         // Groups
-        ->patch('/social-groups/{id}/feature', 'social-groups.feature',       FeatureGroupController::class)
+        ->patch('/social-groups/{id}/feature',    'social-groups.feature',    FeatureGroupController::class)
+        ->get('/social-groups/{id}/analytics',  'social-groups.analytics',  GroupAnalyticsController::class)
         ->post('/social-groups/{id}/join',    'social-groups.join',          JoinGroupController::class)
         ->delete('/social-groups/{id}/join',  'social-groups.leave',         LeaveGroupController::class)
         ->post('/social-groups/{id}/image',   'social-groups.upload-image',  UploadGroupImageController::class)
