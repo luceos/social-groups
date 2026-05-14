@@ -5,16 +5,18 @@ use Illuminate\Database\Schema\Builder;
 
 return [
     'up' => function (Builder $schema) {
-        $schema->create('sg_poll_options', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->unsignedBigInteger('poll_id')->index();
-            $table->string('text', 255);
-            $table->unsignedTinyInteger('sort_order')->default(0);
+        if (! $schema->hasTable('sg_poll_options')) {
+            $schema->create('sg_poll_options', function (Blueprint $table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('poll_id')->index();
+                $table->string('text', 255);
+                $table->unsignedTinyInteger('sort_order')->default(0);
 
-            $table->foreign('poll_id')
-                  ->references('id')->on('sg_polls')
-                  ->onDelete('cascade');
-        });
+                $table->foreign('poll_id')
+                      ->references('id')->on('sg_polls')
+                      ->onDelete('cascade');
+            });
+        }
     },
 
     'down' => function (Builder $schema) {

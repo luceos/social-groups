@@ -29,7 +29,6 @@ use Ernestdefoe\SocialGroups\Api\Controller\PromoteMemberController;
 use Ernestdefoe\SocialGroups\Api\Controller\RejectJoinRequestController;
 use Ernestdefoe\SocialGroups\Api\Controller\UploadGroupImageController;
 use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupResource;
-use Ernestdefoe\SocialGroups\Api\Serializer\SocialGroupPostSerializer;
 use Ernestdefoe\SocialGroups\Access\SocialGroupPolicy;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Notification\SocialGroupNewPostBlueprint;
@@ -105,8 +104,8 @@ return [
         ->modelPolicy(SocialGroup::class, SocialGroupPolicy::class),
 
     (new Extend\Notification())
-        ->type(SocialGroupNewPostBlueprint::class,  SocialGroupPostSerializer::class, ['alert'])
-        ->type(SocialGroupNewReplyBlueprint::class, SocialGroupPostSerializer::class, ['alert']),
+        ->type(SocialGroupNewPostBlueprint::class,  ['alert'])
+        ->type(SocialGroupNewReplyBlueprint::class, ['alert']),
 
     (new Extend\Settings())
         ->default('ernestdefoe-social-groups.create_permission', 'member'),
