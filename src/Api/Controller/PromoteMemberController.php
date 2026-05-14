@@ -19,6 +19,14 @@ class PromoteMemberController implements RequestHandlerInterface
         $params = $request->getQueryParams();
         $id     = $params['id'] ?? null;
         $userId = $params['userId'] ?? null;
+        if (! $id) {
+            preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
+            $id = $m[1] ?? null;
+        }
+        if (! $userId) {
+            preg_match('#/members/(\d+)#', $request->getUri()->getPath(), $m);
+            $userId = $m[1] ?? null;
+        }
 
         $group = SocialGroup::findOrFail($id);
 

@@ -22,6 +22,10 @@ class VotePollController implements RequestHandlerInterface
             $actor->assertRegistered();
 
             $pollId = (int) $request->getAttribute('pollId');
+            if (! $pollId) {
+                preg_match('#/sg-polls/(\d+)#', $request->getUri()->getPath(), $m);
+                $pollId = (int) ($m[1] ?? 0);
+            }
             $body   = (array) ($request->getParsedBody() ?? []);
             $optionIds = array_map('intval', (array) ($body['optionIds'] ?? []));
 

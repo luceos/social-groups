@@ -25,6 +25,10 @@ class UploadGroupImageController implements RequestHandlerInterface
 
         $queryParams = $request->getQueryParams();
         $id = $queryParams['id'] ?? null;
+        if (! $id) {
+            preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
+            $id = $m[1] ?? null;
+        }
 
         // Determine upload type from URL path (route params are in query params in Flarum 2)
         // or from an explicit 'type' query param override

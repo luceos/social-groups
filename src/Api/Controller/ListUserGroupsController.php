@@ -17,8 +17,12 @@ class ListUserGroupsController implements RequestHandlerInterface
         try {
             $actor  = RequestUtil::getActor($request);
             $userId = (int) $request->getAttribute('userId');
+            if (! $userId) {
+                preg_match('#/sg-user-groups/(\d+)#', $request->getUri()->getPath(), $m);
+                $userId = (int) ($m[1] ?? 0);
+            }
 
-            if (! User::where('id', $userId)->exists()) {
+            if (! $userId || ! User::where('id', $userId)->exists()) {
                 return new JsonResponse(['error' => 'User not found.'], 404);
             }
 

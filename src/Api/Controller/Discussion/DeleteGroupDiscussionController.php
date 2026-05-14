@@ -19,6 +19,10 @@ class DeleteGroupDiscussionController implements RequestHandlerInterface
 
         $params       = $request->getQueryParams();
         $discussionId = $params['discussionId'] ?? null;
+        if (! $discussionId) {
+            preg_match('#/sg-discussions/(\d+)#', $request->getUri()->getPath(), $m);
+            $discussionId = $m[1] ?? null;
+        }
         $discussion   = SocialGroupDiscussion::findOrFail($discussionId);
 
         $isModerator = $discussion->group->members()

@@ -18,6 +18,10 @@ class ListJoinRequestsController implements RequestHandlerInterface
 
         $params = $request->getQueryParams();
         $id     = $params['id'] ?? null;
+        if (! $id) {
+            preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
+            $id = $m[1] ?? null;
+        }
         $group = SocialGroup::findOrFail($id);
 
         if ($actor->id !== $group->user_id && ! $actor->isAdmin()) {

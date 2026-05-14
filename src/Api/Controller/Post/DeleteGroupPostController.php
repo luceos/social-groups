@@ -20,6 +20,10 @@ class DeleteGroupPostController implements RequestHandlerInterface
 
         $params = $request->getQueryParams();
         $postId = $params['postId'] ?? null;
+        if (! $postId) {
+            preg_match('#/sg-posts/(\d+)#', $request->getUri()->getPath(), $m);
+            $postId = $m[1] ?? null;
+        }
         $post   = SocialGroupPost::findOrFail($postId);
 
         $isModerator = $post->group->members()

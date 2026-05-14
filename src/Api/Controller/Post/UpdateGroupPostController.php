@@ -21,6 +21,10 @@ class UpdateGroupPostController implements RequestHandlerInterface
 
         $params  = $request->getQueryParams();
         $postId  = $params['postId'] ?? null;
+        if (! $postId) {
+            preg_match('#/sg-posts/(\d+)#', $request->getUri()->getPath(), $m);
+            $postId = $m[1] ?? null;
+        }
         $post    = SocialGroupPost::findOrFail($postId);
 
         if ($actor->id !== $post->user_id) {

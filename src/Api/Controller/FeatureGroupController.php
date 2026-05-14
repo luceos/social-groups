@@ -22,6 +22,10 @@ class FeatureGroupController implements RequestHandlerInterface
             }
 
             $id    = $request->getAttribute('id');
+            if (! $id) {
+            preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
+            $id = $m[1] ?? null;
+            }
             $group = SocialGroup::findOrFail($id);
 
             $group->is_featured = ! $group->is_featured;

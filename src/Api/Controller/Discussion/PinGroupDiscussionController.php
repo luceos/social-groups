@@ -18,6 +18,10 @@ class PinGroupDiscussionController implements RequestHandlerInterface
             $actor->assertRegistered();
 
             $discussionId = $request->getAttribute('discussionId');
+            if (! $discussionId) {
+                preg_match('#/sg-discussions/(\d+)#', $request->getUri()->getPath(), $m);
+                $discussionId = $m[1] ?? null;
+            }
             $discussion   = SocialGroupDiscussion::with('group')->findOrFail($discussionId);
             $group        = $discussion->group;
 

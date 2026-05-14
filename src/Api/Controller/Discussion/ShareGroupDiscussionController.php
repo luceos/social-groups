@@ -24,6 +24,10 @@ class ShareGroupDiscussionController implements RequestHandlerInterface
             $actor->assertRegistered();
 
             $sourceId    = $request->getAttribute('discussionId');
+            if (! $sourceId) {
+                preg_match('#/sg-discussions/(\d+)#', $request->getUri()->getPath(), $m);
+                $sourceId = $m[1] ?? null;
+            }
             $body        = (array) ($request->getParsedBody() ?? []);
             $targetGroupId = (int) ($body['targetGroupId'] ?? 0);
             $content     = trim((string) ($body['content'] ?? ''));

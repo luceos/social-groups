@@ -20,6 +20,10 @@ class InviteUserController implements RequestHandlerInterface
 
             $params  = $request->getQueryParams();
             $groupId = $params['id'] ?? null;
+            if (! $groupId) {
+                preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
+                $groupId = $m[1] ?? null;
+            }
 
             $body     = (array) ($request->getParsedBody() ?? []);
             $username = trim((string) ($body['username'] ?? ''));

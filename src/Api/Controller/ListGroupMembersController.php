@@ -16,6 +16,10 @@ class ListGroupMembersController implements RequestHandlerInterface
         $actor = RequestUtil::getActor($request);
         $params = $request->getQueryParams();
         $id     = $params['id'] ?? null;
+        if (! $id) {
+            preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
+            $id = $m[1] ?? null;
+        }
         $group = SocialGroup::findOrFail($id);
 
         $actorMember = $actor->exists

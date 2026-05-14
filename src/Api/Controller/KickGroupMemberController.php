@@ -19,6 +19,14 @@ class KickGroupMemberController implements RequestHandlerInterface
 
             $groupId      = $request->getAttribute('id');
             $targetUserId = (int) $request->getAttribute('userId');
+            if (! $groupId) {
+                preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
+                $groupId = $m[1] ?? null;
+            }
+            if (! $targetUserId) {
+                preg_match('#/members/(\d+)#', $request->getUri()->getPath(), $m);
+                $targetUserId = (int) ($m[1] ?? 0);
+            }
 
             $group = SocialGroup::findOrFail($groupId);
 

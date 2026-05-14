@@ -23,6 +23,10 @@ class ListGroupMediaController implements RequestHandlerInterface
             $actor   = RequestUtil::getActor($request);
             $params  = $request->getQueryParams();
             $groupId = (int) $request->getAttribute('groupId');
+            if (! $groupId) {
+                preg_match('#/sg-media/(\d+)#', $request->getUri()->getPath(), $m);
+                $groupId = (int) ($m[1] ?? 0);
+            }
             $page    = max(1, (int) ($params['page'] ?? 1));
             $offset  = ($page - 1) * self::PER_PAGE;
 
