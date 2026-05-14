@@ -26,9 +26,10 @@ class TogglePostReactionController implements RequestHandlerInterface
                 return new JsonResponse(['error' => 'Post not found.'], 404);
             }
 
-            $method = $request->getMethod();
+            $path = $request->getUri()->getPath();
+            $isUnreact = str_ends_with($path, '/unreact');
 
-            if ($method === 'DELETE') {
+            if ($isUnreact) {
                 SocialGroupPostReaction::where('post_id', $postId)
                     ->where('user_id', $actor->id)
                     ->delete();

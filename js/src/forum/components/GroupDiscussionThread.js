@@ -186,9 +186,11 @@ export default class GroupDiscussionThread extends Page {
     this.pickerPostId = null;
     m.redraw();
 
-    const method = nextReaction ? 'POST' : 'DELETE';
-    fetch(`${apiBase()}/sg-posts/${post.id}/react`, {
-      method,
+    const reactUrl = nextReaction
+      ? `${apiBase()}/sg-posts/${post.id}/react`
+      : `${apiBase()}/sg-posts/${post.id}/unreact`;
+    fetch(reactUrl, {
+      method: 'POST',
       credentials: 'same-origin',
       headers: {
         ...(nextReaction ? { 'Content-Type': 'application/json' } : {}),

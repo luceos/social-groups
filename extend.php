@@ -82,8 +82,8 @@ return [
         ->post('/sg-posts',                   'sg-posts.create', CreateGroupPostController::class)
         ->patch('/sg-posts/{postId}',         'sg-posts.update', UpdateGroupPostController::class)
         ->delete('/sg-posts/{postId}',        'sg-posts.delete', DeleteGroupPostController::class)
-        ->post('/sg-posts/{postId}/react',    'sg-posts.react',   TogglePostReactionController::class)
-        ->delete('/sg-posts/{postId}/react', 'sg-posts.unreact', TogglePostReactionController::class)
+        ->post('/sg-posts/{postId}/react',   'sg-posts.react',   TogglePostReactionController::class)
+        ->post('/sg-posts/{postId}/unreact', 'sg-posts.unreact', TogglePostReactionController::class)
         // Join requests
         ->get('/social-groups/{id}/requests',                        'sg.join-requests.list',    ListJoinRequestsController::class)
         ->post('/social-groups/{id}/requests/{requestId}/approve',   'sg.join-requests.approve', ApproveJoinRequestController::class)

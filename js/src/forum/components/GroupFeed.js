@@ -150,9 +150,11 @@ export default class GroupFeed extends Component {
     this.pickerDiscId = null;
     m.redraw();
 
-    const method = nextReaction ? 'POST' : 'DELETE';
-    fetch(`${apiBase()}/sg-posts/${fp.id}/react`, {
-      method,
+    const reactUrl = nextReaction
+      ? `${apiBase()}/sg-posts/${fp.id}/react`
+      : `${apiBase()}/sg-posts/${fp.id}/unreact`;
+    fetch(reactUrl, {
+      method: 'POST',
       credentials: 'same-origin',
       headers: {
         ...(nextReaction ? { 'Content-Type': 'application/json' } : {}),
