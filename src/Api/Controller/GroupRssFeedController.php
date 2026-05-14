@@ -18,7 +18,11 @@ class GroupRssFeedController implements RequestHandlerInterface
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         try {
-            $slug  = $request->getAttribute('slug');
+            $slug = $request->getAttribute('slug');
+            if (! $slug) {
+                preg_match('#/groups/([^/]+)/feed\.rss#', $request->getUri()->getPath(), $m);
+                $slug = $m[1] ?? null;
+            }
             $group = SocialGroup::where('slug', $slug)->firstOrFail();
 
             if ($group->is_private) {

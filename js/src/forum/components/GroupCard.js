@@ -102,7 +102,7 @@ export default class GroupCard extends Component {
   }
 
   renderKebabMenu(group) {
-    const canFeature = group.canFeature?.() ?? false;
+    const canFeature = group.canFeature();
 
     return m('div.GroupCard-kebab', [
       m('button.GroupCard-kebabBtn', {
@@ -204,11 +204,12 @@ export default class GroupCard extends Component {
     if (this.joining) return;
     this.joining = true;
 
-    const method = this.isMember ? 'DELETE' : 'POST';
-    const url = `${apiBase()}/social-groups/${group.id()}/join`;
+    const url = this.isMember
+      ? `${apiBase()}/social-groups/${group.id()}/leave`
+      : `${apiBase()}/social-groups/${group.id()}/join`;
 
     fetch(url, {
-      method,
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': app.session.csrfToken,
@@ -238,8 +239,8 @@ export default class GroupCard extends Component {
     if (this.joining) return;
     this.joining = true;
 
-    fetch(`${apiBase()}/social-groups/${group.id()}/join`, {
-      method: 'DELETE',
+    fetch(`${apiBase()}/social-groups/${group.id()}/leave`, {
+      method: 'POST',
       headers: { 'X-CSRF-Token': app.session.csrfToken },
     })
       .then(() => {

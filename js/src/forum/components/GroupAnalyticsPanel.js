@@ -6,10 +6,15 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 export default class GroupAnalyticsPanel extends Component {
   oninit(vnode) {
     super.oninit(vnode);
-    this.expanded = false;
+    this.expanded = true;
     this.data     = null;
     this.loading  = false;
     this.error    = false;
+  }
+
+  oncreate(vnode) {
+    super.oncreate(vnode);
+    this.load();
   }
 
   toggle() {

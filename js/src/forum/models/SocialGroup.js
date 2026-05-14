@@ -57,6 +57,10 @@ export default class SocialGroup extends Model {
     return this.attribute('isFeatured') || false;
   }
 
+  canFeature() {
+    return this.attribute('canFeature') || false;
+  }
+
   isPending() {
     return this.attribute('isPending') || false;
   }
