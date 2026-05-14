@@ -1,6 +1,7 @@
 import { apiBase } from '../utils/api';
 import { pastedImages, handleFiles, removeUpload, revokeAll, viewUploadChips } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview, viewPostLinkPreview } from '../utils/linkPreview';
+import ShareDiscussionModal from './ShareDiscussionModal';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -455,7 +456,7 @@ export default class GroupFeed extends Component {
           m('span.SGFeed-postTime', { title: postTime }, humanTime(new Date(postTime))),
           d.isPinned ? m('span.SGFeed-pinnedBadge', [m('i.fas.fa-thumbtack'), ' Pinned']) : null,
         ]),
-        d.canDelete || d.canPin
+        d.canDelete || d.canPin || (actor && d.canShare)
           ? m('.SGFeed-postMenu', [
               m('button.SGFeed-postMenuBtn', {
                 onclick: (e) => {
@@ -466,6 +467,17 @@ export default class GroupFeed extends Component {
               }, m('i.fas.fa-ellipsis-h')),
               menuOpen
                 ? m('.SGFeed-postDropdown', [
+                    actor && d.canShare
+                      ? m('button.SGFeed-dropdownItem', {
+                          onclick: () => {
+                            this.openMenuId = null;
+                            app.modal.show(ShareDiscussionModal, {
+                              discussionId:   d.id,
+                              currentGroupId: this.attrs.groupId,
+                            });
+                          },
+                        }, [m('i.fas.fa-share'), ' Share post'])
+                      : null,
                     d.canPin
                       ? m('button.SGFeed-dropdownItem', {
                           onclick: () => this.pinDiscussion(d),
@@ -490,6 +502,27 @@ export default class GroupFeed extends Component {
         ? m('.SGFeed-postContent', m.trust(fp.contentParsed))
         : m('.SGFeed-postContent', m('.SGFeed-noContent', d.title)),
       fp ? viewPostLinkPreview(fp) : null,
+
+      // Shared-from quoted card
+      d.sharedFrom
+        ? m('a.SGFeed-sharedCard', {
+            href: `/groups/${d.sharedFrom.groupSlug}/d/${d.sharedFrom.discussionId}`,
+            onclick: (e) => { e.preventDefault(); m.route.set(`/groups/${d.sharedFrom.groupSlug}/d/${d.sharedFrom.discussionId}`); },
+          }, [
+            m('.SGFeed-sharedCard-header', [
+              d.sharedFrom.user?.avatarUrl
+                ? m('img.SGFeed-sharedCard-avatar', { src: d.sharedFrom.user.avatarUrl, alt: '' })
+                : m('span.SGFeed-sharedCard-initial',
+                    (d.sharedFrom.user?.displayName || '?')[0].toUpperCase()),
+              m('span.SGFeed-sharedCard-author', d.sharedFrom.user?.displayName || ''),
+              m('span.SGFeed-sharedCard-group', [m('i.fas.fa-users'), ' ', d.sharedFrom.groupName]),
+            ]),
+            m('.SGFeed-sharedCard-title', d.sharedFrom.title),
+            d.sharedFrom.snippet
+              ? m('.SGFeed-sharedCard-snippet', d.sharedFrom.snippet)
+              : null,
+          ])
+        : null,
 
       // Reaction count + comment count stat bar
       (() => {

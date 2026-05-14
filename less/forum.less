@@ -2963,3 +2963,74 @@
     &:hover { color: var(--text-color, #111827); }
   }
 }
+
+// Shared-from quoted card
+.SGFeed-sharedCard {
+  display: block;
+  margin: 8px 0 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--control-bg, #e5e7eb);
+  border-left: 3px solid var(--primary-color, #4A90E2);
+  border-radius: 6px;
+  background: var(--control-bg, #f9fafb);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+
+  &:hover { background: var(--secondary-bg, #f3f4f6); text-decoration: none; }
+
+  &-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 0.82em;
+    color: var(--muted-color, #6b7280);
+  }
+
+  &-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  &-initial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color, #4A90E2);
+    color: #fff;
+    font-size: 0.7em;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  &-author { font-weight: 600; color: var(--text-color, #374151); }
+
+  &-group {
+    margin-left: auto;
+    font-size: 0.85em;
+
+    i { font-size: 0.9em; }
+  }
+
+  &-title {
+    font-weight: 600;
+    font-size: 0.9em;
+    color: var(--text-color, #111827);
+    margin-bottom: 3px;
+  }
+
+  &-snippet {
+    font-size: 0.82em;
+    color: var(--muted-color, #6b7280);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}

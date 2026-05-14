@@ -107,11 +107,47 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                     ->all()
                 : [];
 
+            // Batch-load sharedFrom data
+            $sharedIds = $discussions->pluck('shared_from_discussion_id')->filter()->unique()->values()->all();
+            $sharedFromMap = [];
+
+            if (! empty($sharedIds)) {
+                $sharedDiscussions = SocialGroupDiscussion::whereIn('id', $sharedIds)
+                    ->with(['group', 'user'])
+                    ->get()
+                    ->keyBy('id');
+
+                $sharedFirstPosts = SocialGroupPost::with('user')
+                    ->whereIn('discussion_id', $sharedIds)
+                    ->orderBy('created_at')
+                    ->get()
+                    ->groupBy('discussion_id')
+                    ->map(fn ($posts) => $posts->first());
+
+                foreach ($sharedIds as $sharedId) {
+                    $orig = $sharedDiscussions[$sharedId] ?? null;
+                    if (! $orig) continue;
+                    $fp = $sharedFirstPosts[$sharedId] ?? null;
+                    $sharedFromMap[$sharedId] = [
+                        'discussionId' => $orig->id,
+                        'title'        => $orig->title,
+                        'groupId'      => $orig->group_id,
+                        'groupName'    => $orig->group?->name,
+                        'groupSlug'    => $orig->group?->slug,
+                        'snippet'      => $fp ? mb_substr(strip_tags($fp->content), 0, 200) : '',
+                        'user'         => $orig->user ? [
+                            'displayName' => $orig->user->display_name,
+                            'avatarUrl'   => $orig->user->avatar_url,
+                        ] : null,
+                    ];
+                }
+            }
+
             $now = \Carbon\Carbon::now()->toIso8601String();
 
             return new JsonResponse([
-                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $actorCanPin, $now) {
-                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost->all(), $actorReactions, $actorId, $actorCanPin, $now);
+                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $actorCanPin, $sharedFromMap, $now) {
+                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost->all(), $actorReactions, $actorId, $actorCanPin, $sharedFromMap, $now);
                 })->values(),
                 'total' => $total,
                 'page'  => $page,
@@ -133,6 +169,7 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
         array $actorReactions,
         ?int $actorId,
         bool $actorCanPin,
+        array $sharedFromMap,
         string $now
     ): array {
         $serializedFirstPost = null;
@@ -170,6 +207,10 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             'lastPostedAt'   => $d->last_posted_at?->toIso8601String(),
             'createdAt'      => ($d->created_at ?? $d->last_posted_at)?->toIso8601String() ?? $now,
             'canDelete'      => $actorId && ($actorId === $d->user_id || \Flarum\User\User::find($actorId)?->isAdmin()),
+            'canShare'       => $actorId !== null,
+            'sharedFrom'     => $d->shared_from_discussion_id
+                ? ($sharedFromMap[$d->shared_from_discussion_id] ?? null)
+                : null,
             'firstPost'      => $serializedFirstPost,
             'user'           => $d->user ? [
                 'id'          => $d->user->id,

@@ -27,6 +27,7 @@ class SocialGroupDiscussion extends AbstractModel
 
     protected $casts = [
         'is_locked'      => 'boolean',
+        'is_pinned'      => 'boolean',
         'last_posted_at' => 'datetime',
     ];
 
@@ -48,5 +49,10 @@ class SocialGroupDiscussion extends AbstractModel
     public function lastPostedUser()
     {
         return $this->belongsTo(User::class, 'last_posted_user_id');
+    }
+
+    public function sharedFromDiscussion()
+    {
+        return $this->belongsTo(self::class, 'shared_from_discussion_id');
     }
 }

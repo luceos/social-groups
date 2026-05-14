@@ -13,6 +13,7 @@ use Ernestdefoe\SocialGroups\Api\Controller\Discussion\CreateGroupDiscussionCont
 use Ernestdefoe\SocialGroups\Api\Controller\Discussion\DeleteGroupDiscussionController;
 use Ernestdefoe\SocialGroups\Api\Controller\Discussion\ListGroupDiscussionsController;
 use Ernestdefoe\SocialGroups\Api\Controller\Discussion\PinGroupDiscussionController;
+use Ernestdefoe\SocialGroups\Api\Controller\Discussion\ShareGroupDiscussionController;
 use Ernestdefoe\SocialGroups\Api\Controller\InviteUserController;
 use Ernestdefoe\SocialGroups\Api\Controller\JoinGroupController;
 use Ernestdefoe\SocialGroups\Api\Controller\LeaveGroupController;
@@ -73,7 +74,8 @@ return [
         ->get('/sg-discussions/{groupId}',           'sg-discussions.list',   ListGroupDiscussionsController::class)
         ->post('/sg-discussions',                    'sg-discussions.create', CreateGroupDiscussionController::class)
         ->delete('/sg-discussions/{discussionId}',   'sg-discussions.delete', DeleteGroupDiscussionController::class)
-        ->patch('/sg-discussions/{discussionId}/pin', 'sg-discussions.pin',   PinGroupDiscussionController::class)
+        ->patch('/sg-discussions/{discussionId}/pin',   'sg-discussions.pin',   PinGroupDiscussionController::class)
+        ->post('/sg-discussions/{discussionId}/share',  'sg-discussions.share', ShareGroupDiscussionController::class)
         // Posts
         ->get('/sg-posts/{discussionId}',     'sg-posts.list',   ListGroupPostsController::class)
         ->post('/sg-posts',                   'sg-posts.create', CreateGroupPostController::class)
