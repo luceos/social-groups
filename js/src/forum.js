@@ -35,9 +35,9 @@ app.initializers.add('ernestdefoe-social-groups', () => {
   };
 
   // ── User card group badges ─────────────────────────────────────────────────
-  extend(UserCard.prototype, 'content', function (items) {
+  extend(UserCard.prototype, 'profileItems', function (items) {
     const user = this.attrs.user;
-    if (user && user.id()) {
+    if (user && user.id() && items && typeof items.add === 'function') {
       items.add(
         'social-group-badges',
         m(UserGroupBadges, { userId: user.id() }),

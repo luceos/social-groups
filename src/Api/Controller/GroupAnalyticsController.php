@@ -20,7 +20,7 @@ class GroupAnalyticsController implements RequestHandlerInterface
             $actor   = RequestUtil::getActor($request);
             $actor->assertRegistered();
 
-            $groupId = $request->getAttribute('id');
+            $groupId = $request->getAttribute('groupId');
             $group   = SocialGroup::findOrFail($groupId);
 
             $actorMember = $group->members()->where('user_id', $actor->id)->first();

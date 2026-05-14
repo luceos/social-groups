@@ -62,7 +62,7 @@ return [
     (new Extend\Routes('api'))
         // Groups
         ->patch('/social-groups/{id}/feature',    'social-groups.feature',    FeatureGroupController::class)
-        ->get('/social-groups/{id}/analytics',  'social-groups.analytics',  GroupAnalyticsController::class)
+        ->get('/sg-analytics/{groupId}',         'social-groups.analytics',  GroupAnalyticsController::class)
         ->post('/social-groups/{id}/join',    'social-groups.join',          JoinGroupController::class)
         ->delete('/social-groups/{id}/join',  'social-groups.leave',         LeaveGroupController::class)
         ->post('/social-groups/{id}/image',   'social-groups.upload-image',  UploadGroupImageController::class)

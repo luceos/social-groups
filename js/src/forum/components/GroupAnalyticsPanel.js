@@ -21,7 +21,7 @@ export default class GroupAnalyticsPanel extends Component {
   load() {
     this.loading = true;
 
-    fetch(`${apiBase()}/social-groups/${this.attrs.groupId}/analytics`, {
+    fetch(`${apiBase()}/sg-analytics/${this.attrs.groupId}`, {
       credentials: 'same-origin',
       headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
     })

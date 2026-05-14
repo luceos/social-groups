@@ -55,14 +55,16 @@ class CreateGroupDiscussionController implements RequestHandlerInterface
                 }
             }
 
-            if (! $groupId || ! $content) {
-                return new JsonResponse(['error' => 'groupId and content are required.'], 422);
+            if (! $groupId || (! $content && ! $pollData)) {
+                return new JsonResponse(['error' => 'groupId and either content or a poll are required.'], 422);
             }
 
             if (! $title) {
-                $title = mb_substr(preg_replace('/\s+/', ' ', $content), 0, 80);
-                if (mb_strlen($content) > 80) {
-                    $title .= '…';
+                if ($content) {
+                    $title = mb_substr(preg_replace('/\s+/', ' ', $content), 0, 80);
+                    if (mb_strlen($content) > 80) $title .= '…';
+                } else {
+                    $title = mb_substr($pollData['question'], 0, 80);
                 }
             }
 
@@ -82,7 +84,7 @@ class CreateGroupDiscussionController implements RequestHandlerInterface
             }
 
             $now           = \Carbon\Carbon::now();
-            $contentParsed = $this->formatter->parse($content);
+            $contentParsed = $content ? $this->formatter->parse($content) : null;
 
             $discussion = SocialGroupDiscussion::create([
                 'group_id'             => $group->id,
@@ -122,7 +124,7 @@ class CreateGroupDiscussionController implements RequestHandlerInterface
             }
 
             $actorId         = $actor->id;
-            $renderedContent = $this->formatter->render($contentParsed);
+            $renderedContent = $contentParsed ? $this->formatter->render($contentParsed) : '';
 
             return new JsonResponse([
                 'id'           => $discussion->id,

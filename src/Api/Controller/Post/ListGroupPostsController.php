@@ -21,7 +21,7 @@ class ListGroupPostsController implements RequestHandlerInterface
         try {
             $actor        = RequestUtil::getActor($request);
             $params       = $request->getQueryParams();
-            $discussionId = $params['discussionId'] ?? null;
+            $discussionId = $request->getAttribute('discussionId') ?? ($params['discussionId'] ?? null);
 
             if (! $discussionId) {
                 return new JsonResponse(['error' => 'discussionId is required.'], 422);

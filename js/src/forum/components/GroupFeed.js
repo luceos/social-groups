@@ -180,7 +180,7 @@ export default class GroupFeed extends Component {
 
   submitPost() {
     const content = this.postText.trim();
-    if (!content || this.postSubmitting) return;
+    if ((!content && !this.poll) || this.postSubmitting) return;
 
     this.postSubmitting = true;
     this.postError      = null;
@@ -460,7 +460,7 @@ export default class GroupFeed extends Component {
                 },
               }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.cancel_edit')),
               m('button.SGFeed-postBtn', {
-                disabled: this.postSubmitting || (!this.postText.trim() && !this.postUploads.length) || this.postUploads.some((u) => u.uploading),
+                disabled: this.postSubmitting || (!this.postText.trim() && !this.postUploads.length && !this.poll) || this.postUploads.some((u) => u.uploading),
                 onclick:  () => this.submitPost(),
               }, this.postSubmitting
                   ? m('i.fas.fa-spinner.fa-spin')
