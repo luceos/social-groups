@@ -135,7 +135,7 @@ export default class GroupFeed extends Component {
   }
 
   toggleReaction(d, reactionKey) {
-    if (!app.session.user || !d.firstPost) return;
+    if (!app.session.user || !d.firstPost || !d.firstPost.id) return;
     const fp = d.firstPost;
 
     const prevReaction  = fp.actorReaction;

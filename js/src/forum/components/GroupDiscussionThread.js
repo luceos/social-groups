@@ -171,7 +171,7 @@ export default class GroupDiscussionThread extends Page {
   }
 
   toggleReaction(post, reactionKey) {
-    if (!app.session.user) return;
+    if (!app.session.user || !post || !post.id) return;
 
     const prevReaction  = post.actorReaction;
     const prevReactions = { ...(post.reactions || {}) };
