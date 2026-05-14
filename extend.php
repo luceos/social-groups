@@ -2,6 +2,7 @@
 
 use Ernestdefoe\SocialGroups\Api\Controller\ApproveJoinRequestController;
 use Ernestdefoe\SocialGroups\Api\Controller\FeatureGroupController;
+use Ernestdefoe\SocialGroups\Api\Controller\GroupRssFeedController;
 use Ernestdefoe\SocialGroups\Api\Controller\FetchLinkPreviewController;
 use Ernestdefoe\SocialGroups\Api\Controller\ListGroupMembersController;
 use Ernestdefoe\SocialGroups\Api\Controller\DemoteMemberController;
@@ -49,6 +50,9 @@ return [
         ->css(__DIR__ . '/less/admin.less'),
 
     new Extend\Locales(__DIR__ . '/locale'),
+
+    (new Extend\Routes('forum'))
+        ->get('/groups/{slug}/feed.rss', 'ernestdefoe-social-groups.rss', GroupRssFeedController::class),
 
     (new Extend\Routes('api'))
         // Groups

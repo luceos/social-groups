@@ -58,6 +58,14 @@ export default class GroupHero extends Component {
               isApproval
                 ? m('span', [m('i.fas.fa-user-check'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.approval_required')])
                 : null,
+              !group.isPrivate()
+                ? m('a.GroupHero-rssLink', {
+                    href:   `${app.forum.attribute('baseUrl')}/groups/${group.slug()}/feed.rss`,
+                    target: '_blank',
+                    rel:    'noopener noreferrer',
+                    title:  'RSS feed',
+                  }, m('i.fas.fa-rss'))
+                : null,
             ]),
           ]),
 

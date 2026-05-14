@@ -1,0 +1,116 @@
+<?php
+
+namespace Ernestdefoe\SocialGroups\Api\Controller;
+
+use Ernestdefoe\SocialGroups\Model\SocialGroup;
+use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
+use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
+use Flarum\Formatter\Formatter;
+use Laminas\Diactoros\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+
+class GroupRssFeedController implements RequestHandlerInterface
+{
+    public function __construct(private Formatter $formatter) {}
+
+    public function handle(ServerRequestInterface $request): ResponseInterface
+    {
+        try {
+            $slug  = $request->getAttribute('slug');
+            $group = SocialGroup::where('slug', $slug)->firstOrFail();
+
+            if ($group->is_private) {
+                return $this->xmlError('This group is private.', 403);
+            }
+
+            $baseUrl  = rtrim(resolve('flarum.config')['url'], '/');
+            $groupUrl = $baseUrl . '/groups/' . rawurlencode($slug);
+            $feedUrl  = $groupUrl . '/feed.rss';
+
+            $discussions = SocialGroupDiscussion::where('group_id', $group->id)
+                ->with('user')
+                ->orderByDesc('last_posted_at')
+                ->take(20)
+                ->get();
+
+            $discussionIds = $discussions->pluck('id')->all();
+
+            $firstPostsByDiscussion = SocialGroupPost::with('user')
+                ->whereIn('discussion_id', $discussionIds)
+                ->orderBy('created_at')
+                ->get()
+                ->groupBy('discussion_id')
+                ->map(fn ($posts) => $posts->first());
+
+            $items = $discussions->map(function ($d) use ($firstPostsByDiscussion, $baseUrl, $slug) {
+                $post       = $firstPostsByDiscussion[$d->id] ?? null;
+                $threadUrl  = $baseUrl . '/groups/' . rawurlencode($slug) . '/d/' . $d->id;
+                $pubDate    = ($d->created_at ?? $d->last_posted_at)?->format(\DateTime::RSS) ?? date(\DateTime::RSS);
+                $authorName = $post?->user?->display_name ?? $d->user?->display_name ?? '';
+
+                $description = '';
+                if ($post) {
+                    $rendered    = $post->content_parsed !== null
+                        ? $this->formatter->render($post->content_parsed)
+                        : htmlspecialchars($post->content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $plain       = strip_tags($rendered);
+                    $description = mb_strlen($plain) > 500
+                        ? mb_substr($plain, 0, 500) . '…'
+                        : $plain;
+                }
+
+                return implode("\n", [
+                    '  <item>',
+                    '    <title>'       . $this->esc($d->title)       . '</title>',
+                    '    <link>'        . $this->esc($threadUrl)       . '</link>',
+                    '    <guid isPermaLink="true">' . $this->esc($threadUrl) . '</guid>',
+                    '    <pubDate>'     . $this->esc($pubDate)         . '</pubDate>',
+                    '    <author>'      . $this->esc($authorName)      . '</author>',
+                    '    <description>' . $this->esc($description)     . '</description>',
+                    '  </item>',
+                ]);
+            })->implode("\n");
+
+            $lastBuildDate = $discussions->first()?->last_posted_at?->format(\DateTime::RSS) ?? date(\DateTime::RSS);
+
+            $xml = implode("\n", [
+                '<?xml version="1.0" encoding="UTF-8"?>',
+                '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
+                '<channel>',
+                '  <title>'         . $this->esc($group->name)              . '</title>',
+                '  <link>'          . $this->esc($groupUrl)                 . '</link>',
+                '  <description>'   . $this->esc($group->description ?? '') . '</description>',
+                '  <language>en</language>',
+                '  <lastBuildDate>' . $this->esc($lastBuildDate)            . '</lastBuildDate>',
+                '  <atom:link href="' . $this->esc($feedUrl) . '" rel="self" type="application/rss+xml" />',
+                $items,
+                '</channel>',
+                '</rss>',
+            ]);
+
+            $response = new Response();
+            $response->getBody()->write($xml);
+            return $response->withHeader('Content-Type', 'application/rss+xml; charset=UTF-8');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->xmlError('Group not found.', 404);
+        } catch (\Throwable $e) {
+            resolve('log')->error('[social-groups] GroupRssFeedController: ' . $e->getMessage(), ['exception' => $e]);
+            return $this->xmlError('An unexpected error occurred.', 500);
+        }
+    }
+
+    private function esc(string $value): string
+    {
+        return htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+    }
+
+    private function xmlError(string $message, int $status): ResponseInterface
+    {
+        $body = '<?xml version="1.0"?><error>' . htmlspecialchars($message, ENT_XML1, 'UTF-8') . '</error>';
+        $response = new Response();
+        $response->getBody()->write($body);
+        return $response->withStatus($status)->withHeader('Content-Type', 'application/xml; charset=UTF-8');
+    }
+}
