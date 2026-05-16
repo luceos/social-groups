@@ -535,7 +535,7 @@ export default class GroupDiscussionThread extends Page {
         m('a.SGThread-backLink', {
           href: app.route('ernestdefoe-social-groups.show', { slug }),
           onclick: (e) => { e.preventDefault(); m.route.set(app.route('ernestdefoe-social-groups.show', { slug })); },
-        }, [m('i.fas.fa-arrow-left'), ' ',
+        }, [m('i.fa-solid.fa-arrow-left'), ' ',
             app.translator.trans('ernestdefoe-social-groups.forum.discussions.back')]),
       ]),
 
@@ -548,12 +548,12 @@ export default class GroupDiscussionThread extends Page {
               m('h1.SGThread-title', this.discussion.title),
               m('.SGThread-meta', [
                 m('span', [
-                  m('i.fas.fa-comment-alt'),
+                  m('i.fa-solid.fa-message'),
                   ' ',
                   app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_count', { count: this.discussion.commentCount }),
                 ]),
                 this.discussion.isLocked
-                  ? m('span.SGThread-locked', [m('i.fas.fa-lock'), ' ',
+                  ? m('span.SGThread-locked', [m('i.fa-solid.fa-lock'), ' ',
                       app.translator.trans('ernestdefoe-social-groups.forum.discussions.locked')])
                   : null,
               ]),
@@ -618,7 +618,7 @@ export default class GroupDiscussionThread extends Page {
             disabled: this.submitting || !this.replyText.trim() || this.uploads.some((u) => u.uploading),
             onclick:  () => this.submitReply(),
           }, this.submitting
-            ? m('i.fas.fa-spinner.fa-spin')
+            ? m('i.fa-solid.fa-spinner.fa-spin')
             : app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_button')),
         ]),
       ]),
@@ -640,7 +640,7 @@ export default class GroupDiscussionThread extends Page {
           e.target.value = '';
         },
       }),
-      m('i.fas.fa-paperclip'),
+      m('i.fa-solid.fa-paperclip'),
     ]);
   }
 
@@ -650,12 +650,12 @@ export default class GroupDiscussionThread extends Page {
 
     return m(cls, { key: u.id }, [
       u.uploading
-        ? m('i.fas.fa-spinner.fa-spin.SGThread-uploadSpinner')
+        ? m('i.fa-solid.fa-spinner.fa-spin.SGThread-uploadSpinner')
         : u.error
-        ? m('i.fas.fa-exclamation-circle.SGThread-uploadErrIcon')
+        ? m('i.fa-solid.fa-circle-exclamation.SGThread-uploadErrIcon')
         : u.previewUrl
         ? m('img.SGThread-uploadThumb', { src: u.previewUrl, alt: u.name })
-        : m('i.fas.fa-file.SGThread-uploadFileIcon'),
+        : m('i.fa-solid.fa-file.SGThread-uploadFileIcon'),
       m('span.SGThread-uploadName', u.error ? `${u.name}: ${u.error}` : u.name),
       !u.uploading
         ? m('button.SGThread-uploadRemove', {
@@ -731,14 +731,14 @@ export default class GroupDiscussionThread extends Page {
               },
             }, active
                 ? [active.emoji, ' ', active.label]
-                : [m('i.fas.fa-smile-beam'), ' React']),
+                : [m('i.fa-solid.fa-face-grin-beam'), ' React']),
           ])
         : null,
       actor && !this.discussion?.isLocked
         ? m('button.SGThread-replyBtn', {
             class:   this.replyingToId === (post.parentPostId ?? post.id) ? 'is-active' : '',
             onclick: () => this.startInlineReply(post),
-          }, [m('i.fas.fa-reply'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_button')])
+          }, [m('i.fa-solid.fa-reply'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_button')])
         : null,
     ]);
   }
@@ -773,8 +773,8 @@ export default class GroupDiscussionThread extends Page {
           onclick:  () => this.submitInlineReply(),
           title:    'Post reply',
         }, this.inlineReplySubmitting
-            ? m('i.fas.fa-spinner.fa-spin')
-            : m('i.fas.fa-paper-plane')),
+            ? m('i.fa-solid.fa-spinner.fa-spin')
+            : m('i.fa-solid.fa-paper-plane')),
       ]),
     ]);
   }
@@ -821,18 +821,18 @@ export default class GroupDiscussionThread extends Page {
                   m.redraw();
                 },
                 title: 'More options',
-              }, m('i.fas.fa-ellipsis-h')),
+              }, m('i.fa-solid.fa-ellipsis')),
               menuOpen
                 ? m('.SGThread-postDropdown', [
                     canEdit
                       ? m('button.SGThread-dropdownItem', { onclick: () => this.startEdit(post) }, [
-                          m('i.fas.fa-pencil-alt'), ' ',
+                          m('i.fa-solid.fa-pencil'), ' ',
                           app.translator.trans('ernestdefoe-social-groups.forum.discussions.edit'),
                         ])
                       : null,
                     canDelete
                       ? m('button.SGThread-dropdownItem.SGThread-dropdownItem--danger', { onclick: () => this.deletePost(post) }, [
-                          m('i.fas.fa-trash'), ' ',
+                          m('i.fa-solid.fa-trash'), ' ',
                           app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete_post'),
                         ])
                       : null,

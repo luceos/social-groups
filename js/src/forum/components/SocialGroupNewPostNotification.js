@@ -3,7 +3,7 @@ import Notification from 'flarum/forum/components/Notification';
 
 export default class SocialGroupNewPostNotification extends Notification {
   icon() {
-    return 'fas fa-comment';
+    return 'fa-solid fa-comment';
   }
 
   href() {

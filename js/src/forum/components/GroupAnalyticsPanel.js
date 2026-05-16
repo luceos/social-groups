@@ -49,7 +49,7 @@ export default class GroupAnalyticsPanel extends Component {
   view() {
     return m('.SGAnalytics', [
       m('button.SGAnalytics-toggle', { onclick: () => this.toggle() }, [
-        m('span.SGAnalytics-toggleLabel', [m('i.fas.fa-chart-bar'), ' Analytics']),
+        m('span.SGAnalytics-toggleLabel', [m('i.fa-solid.fa-chart-bar'), ' Analytics']),
         m('i.fas', { class: this.expanded ? 'fa-chevron-up' : 'fa-chevron-down' }),
       ]),
 
@@ -99,7 +99,7 @@ export default class GroupAnalyticsPanel extends Component {
                   })),
                 }, [
                   m('span.SGAnalytics-topPostReactions', [
-                    m('i.fas.fa-heart'), ' ', p.totalReactions,
+                    m('i.fa-solid.fa-heart'), ' ', p.totalReactions,
                   ]),
                   m('span.SGAnalytics-topPostSnippet', p.snippet || '—'),
                 ])
@@ -112,7 +112,7 @@ export default class GroupAnalyticsPanel extends Component {
 
   viewStat(value, label, icon) {
     return m('.SGAnalytics-stat', [
-      m('i.fas.' + icon),
+      m('i.fa-solid.' + icon),
       m('span.SGAnalytics-statValue', value),
       m('span.SGAnalytics-statLabel', label),
     ]);

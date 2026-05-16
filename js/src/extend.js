@@ -5,7 +5,7 @@ export default [
   new Admin()
     .permission(
       () => ({
-        icon: 'fas fa-users',
+        icon: 'fa-solid fa-users',
         label: app.translator.trans('ernestdefoe-social-groups.admin.permissions.create_groups'),
         permission: 'ernestdefoe-social-groups.create',
       }),
@@ -14,7 +14,7 @@ export default [
     )
     .permission(
       () => ({
-        icon: 'fas fa-shield-alt',
+        icon: 'fa-solid fa-shield',
         label: app.translator.trans('ernestdefoe-social-groups.admin.permissions.moderate_groups'),
         permission: 'ernestdefoe-social-groups.moderate',
       }),

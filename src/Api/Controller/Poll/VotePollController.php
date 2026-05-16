@@ -11,10 +11,14 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class VotePollController implements RequestHandlerInterface
 {
     use SerializesPoll;
+
+    public function __construct(private LoggerInterface $log) {}
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         try {
@@ -82,7 +86,7 @@ class VotePollController implements RequestHandlerInterface
 
             return new JsonResponse($this->serializePoll($poll, $actor->id));
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] VotePollController: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[social-groups] VotePollController: ' . $e->getMessage(), ['exception' => $e]);
             return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }

@@ -12,10 +12,12 @@ use Flarum\Formatter\Formatter;
 use Flarum\Http\RequestUtil;
 use Flarum\Notification\NotificationSyncer;
 use Flarum\User\User;
+use Illuminate\Contracts\Events\Dispatcher;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class CreateGroupPostController implements RequestHandlerInterface
 {
@@ -23,7 +25,9 @@ class CreateGroupPostController implements RequestHandlerInterface
 
     public function __construct(
         private Formatter           $formatter,
-        private NotificationSyncer  $notifications
+        private NotificationSyncer  $notifications,
+        private Dispatcher          $events,
+        private LoggerInterface     $log,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -92,9 +96,9 @@ class CreateGroupPostController implements RequestHandlerInterface
 
         // ── Realtime broadcast ───────────────────────────────────────────────
         try {
-            resolve('events')->dispatch(new SocialGroupPostWasCreated($post, $actor, $discussion));
+            $this->events->dispatch(new SocialGroupPostWasCreated($post, $actor, $discussion));
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] Realtime event dispatch failed: ' . $e->getMessage());
+            $this->log->error('[social-groups] Realtime event dispatch failed: ' . $e->getMessage());
         }
 
         // ── Notifications ────────────────────────────────────────────────────
@@ -122,7 +126,7 @@ class CreateGroupPostController implements RequestHandlerInterface
                 }
             }
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] Notification failed: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[social-groups] Notification failed: ' . $e->getMessage(), ['exception' => $e]);
         }
 
         return new JsonResponse([

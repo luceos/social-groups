@@ -48,15 +48,15 @@ export default class GroupHero extends Component {
             m('h1.GroupHero-name', name),
             m('div.GroupHero-meta', [
               m('span', [
-                m('i.fas.fa-users'),
+                m('i.fa-solid.fa-users'),
                 ' ',
                 app.translator.trans('ernestdefoe-social-groups.forum.groups.members_count', { count: memberCount }),
               ]),
               group.isPrivate()
-                ? m('span', [m('i.fas.fa-lock'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.private')])
-                : m('span', [m('i.fas.fa-globe'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.public')]),
+                ? m('span', [m('i.fa-solid.fa-lock'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.private')])
+                : m('span', [m('i.fa-solid.fa-globe'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.public')]),
               isApproval
-                ? m('span', [m('i.fas.fa-user-check'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.approval_required')])
+                ? m('span', [m('i.fa-solid.fa-user-check'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.approval_required')])
                 : null,
               !group.isPrivate()
                 ? m('a.GroupHero-rssLink', {
@@ -64,7 +64,7 @@ export default class GroupHero extends Component {
                     target: '_blank',
                     rel:    'noopener noreferrer',
                     title:  'RSS feed',
-                  }, m('i.fas.fa-rss'))
+                  }, m('i.fa-solid.fa-rss'))
                 : null,
             ]),
           ]),
@@ -74,7 +74,7 @@ export default class GroupHero extends Component {
             canEdit
               ? m(Button, {
                   class: 'Button Button--default',
-                  icon: 'fas fa-edit',
+                  icon: 'fa-solid fa-pen-to-square',
                   onclick: onEdit,
                 }, app.translator.trans('ernestdefoe-social-groups.forum.group.edit'))
               : null,
@@ -94,7 +94,7 @@ export default class GroupHero extends Component {
         class: 'Button Button--default',
         loading: this.joining,
         onclick: () => this.doLeave(group, onLeave),
-      }, [m('i.fas.fa-sign-out-alt'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.leave')]);
+      }, [m('i.fa-solid.fa-arrow-right-from-bracket'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.leave')]);
     }
 
     if (isApproval && isPending) {
@@ -102,7 +102,7 @@ export default class GroupHero extends Component {
         class: 'Button Button--default GroupHero-pendingBtn',
         loading: this.joining,
         onclick: () => this.cancelRequest(group),
-      }, [m('i.fas.fa-clock'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.pending')]);
+      }, [m('i.fa-solid.fa-clock'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.pending')]);
     }
 
     if (isApproval) {
@@ -110,14 +110,14 @@ export default class GroupHero extends Component {
         class: 'Button Button--primary',
         loading: this.joining,
         onclick: () => this.doJoin(group, onJoin),
-      }, [m('i.fas.fa-user-plus'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.request_to_join')]);
+      }, [m('i.fa-solid.fa-user-plus'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.request_to_join')]);
     }
 
     return m(Button, {
       class: 'Button Button--primary',
       loading: this.joining,
       onclick: () => this.doJoin(group, onJoin),
-    }, [m('i.fas.fa-sign-in-alt'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.join')]);
+    }, [m('i.fa-solid.fa-arrow-right-to-bracket'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.join')]);
   }
 
   doJoin(group, onJoin) {

@@ -132,7 +132,7 @@ export default class PrimaryGroupSelector extends Component {
             ),
           ]),
 
-      this.saving ? m('span.SG-PrimaryGroupSelector-saving', [m('i.fas.fa-spinner.fa-spin'), ' Saving…']) : null,
+      this.saving ? m('span.SG-PrimaryGroupSelector-saving', [m('i.fa-solid.fa-spinner.fa-spin'), ' Saving…']) : null,
     ]);
   }
 }

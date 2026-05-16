@@ -24,11 +24,11 @@ export default class InviteUserModal extends Modal {
   content() {
     return m('.Modal-body', [
       this.error
-        ? m('.Alert.Alert--error', [m('i.fas.fa-exclamation-circle'), ' ', this.error])
+        ? m('.Alert.Alert--error', [m('i.fa-solid.fa-circle-exclamation'), ' ', this.error])
         : null,
 
       this.success
-        ? m('.Alert.Alert--success', [m('i.fas.fa-check-circle'), ' ', this.success])
+        ? m('.Alert.Alert--success', [m('i.fa-solid.fa-circle-check'), ' ', this.success])
         : null,
 
       m('.Form-group', [

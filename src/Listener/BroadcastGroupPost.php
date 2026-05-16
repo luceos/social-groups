@@ -4,6 +4,7 @@ namespace Ernestdefoe\SocialGroups\Listener;
 
 use Ernestdefoe\SocialGroups\Event\SocialGroupPostWasCreated;
 use Flarum\Formatter\Formatter;
+use Psr\Log\LoggerInterface;
 
 /**
  * Broadcasts a new group post to all connected WebSocket clients
@@ -12,7 +13,10 @@ use Flarum\Formatter\Formatter;
  */
 class BroadcastGroupPost
 {
-    public function __construct(private Formatter $formatter) {}
+    public function __construct(
+        private Formatter $formatter,
+        private LoggerInterface $log,
+    ) {}
 
     public function handle(SocialGroupPostWasCreated $event): void
     {
@@ -64,7 +68,7 @@ class BroadcastGroupPost
         try {
             app('flarum-realtime.pusher')->trigger('public', 'sg-post-created', $payload);
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] Realtime broadcast failed: ' . $e->getMessage());
+            $this->log->error('[social-groups] Realtime broadcast failed: ' . $e->getMessage());
         }
     }
 }

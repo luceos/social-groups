@@ -9,10 +9,13 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class ReactGroupPostController implements RequestHandlerInterface
 {
     private const ALLOWED = ['like', 'heart', 'haha', 'wow', 'sad', 'angry'];
+
+    public function __construct(private LoggerInterface $log) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -44,7 +47,7 @@ class ReactGroupPostController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return new JsonResponse(['error' => 'Post not found.'], 404);
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] ReactGroupPostController: ' . $e->getMessage());
+            $this->log->error('[social-groups] ReactGroupPostController: ' . $e->getMessage());
             return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }

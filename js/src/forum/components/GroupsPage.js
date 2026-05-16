@@ -96,7 +96,7 @@ export default class GroupsPage extends Page {
             canCreate
               ? m(Button, {
                   class:   'Button Button--primary',
-                  icon:    'fas fa-plus',
+                  icon:    'fa-solid fa-plus',
                   onclick: () => app.modal.show(CreateGroupModal, {
                     onCreated: (group) => {
                       this.allGroups = [group, ...(this.allGroups || [])];
@@ -115,7 +115,7 @@ export default class GroupsPage extends Page {
           ? m('div.GroupsPage-error', app.translator.trans('ernestdefoe-social-groups.forum.groups.load_error'))
           : !this.filteredGroups || this.filteredGroups.length === 0
           ? m('div.GroupsPage-empty', [
-              m('i.fas.fa-users'),
+              m('i.fa-solid.fa-users'),
               m('h3', app.translator.trans(
                 this.searchValue.trim()
                   ? 'ernestdefoe-social-groups.forum.groups.empty_search'
@@ -143,7 +143,7 @@ export default class GroupsPage extends Page {
               return [
                 featured.length
                   ? m('div.GroupsPage-featured', [
-                      m('h3.GroupsPage-featuredHeading', [m('i.fas.fa-star'), ' Featured Groups']),
+                      m('h3.GroupsPage-featuredHeading', [m('i.fa-solid.fa-star'), ' Featured Groups']),
                       m('div.GroupsPage-grid.GroupsPage-grid--featured',
                         featured.map((group) => m(GroupCard, {
                           group,

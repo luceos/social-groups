@@ -24,7 +24,7 @@ export default class CreateDiscussionModal extends Modal {
   content() {
     return m('.Modal-body', [
       this.error
-        ? m('.Alert.Alert--error', [m('i.fas.fa-exclamation-circle'), ' ', this.error])
+        ? m('.Alert.Alert--error', [m('i.fa-solid.fa-circle-exclamation'), ' ', this.error])
         : null,
 
       m('.Form-group', [

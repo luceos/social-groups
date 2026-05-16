@@ -20,7 +20,7 @@ export default class GroupBadge {
         },
         title: name,
       },
-      [m('i.fas.fa-users'), ' ', name]
+      [m('i.fa-solid.fa-users'), ' ', name]
     );
   }
 }

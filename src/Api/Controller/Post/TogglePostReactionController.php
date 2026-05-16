@@ -9,10 +9,13 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class TogglePostReactionController implements RequestHandlerInterface
 {
     private const ALLOWED = ['like', 'heart', 'haha', 'wow', 'sad', 'angry'];
+
+    public function __construct(private LoggerInterface $log) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -66,7 +69,7 @@ class TogglePostReactionController implements RequestHandlerInterface
                 'actorReaction' => $actorReaction,
             ]);
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] TogglePostReactionController: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[social-groups] TogglePostReactionController: ' . $e->getMessage(), ['exception' => $e]);
             return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }

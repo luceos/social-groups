@@ -10,12 +10,16 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class ListGroupMediaController implements RequestHandlerInterface
 {
     private const PER_PAGE = 24;
 
-    public function __construct(private Formatter $formatter) {}
+    public function __construct(
+        private Formatter $formatter,
+        private LoggerInterface $log,
+    ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -100,7 +104,7 @@ class ListGroupMediaController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Group not found.'], 404);
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] ListGroupMediaController: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[social-groups] ListGroupMediaController: ' . $e->getMessage(), ['exception' => $e]);
             return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }

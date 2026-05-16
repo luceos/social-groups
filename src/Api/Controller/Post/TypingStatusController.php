@@ -8,6 +8,7 @@ use Laminas\Diactoros\Response\EmptyResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * POST /api/sg-typing
@@ -20,6 +21,8 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class TypingStatusController implements RequestHandlerInterface
 {
+    public function __construct(private LoggerInterface $log) {}
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
@@ -63,7 +66,7 @@ class TypingStatusController implements RequestHandlerInterface
                     'isTyping'     => $isTyping,
                 ]);
             } catch (\Throwable $e) {
-                resolve('log')->error('[social-groups] Typing broadcast failed: ' . $e->getMessage());
+                $this->log->error('[social-groups] Typing broadcast failed: ' . $e->getMessage());
             }
         }
 

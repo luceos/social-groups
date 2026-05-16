@@ -15,13 +15,17 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class CreateGroupDiscussionController implements RequestHandlerInterface
 {
     use SanitizesLinkPreview;
     use SerializesPoll;
 
-    public function __construct(private Formatter $formatter) {}
+    public function __construct(
+        private Formatter $formatter,
+        private LoggerInterface $log,
+    ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -165,7 +169,7 @@ class CreateGroupDiscussionController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Group not found.'], 404);
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] CreateGroupDiscussionController: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[social-groups] CreateGroupDiscussionController: ' . $e->getMessage(), ['exception' => $e]);
             return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }

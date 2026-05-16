@@ -146,7 +146,7 @@ export default class MemberList extends Component {
               class:   'Button Button--sm Button--primary MemberList-inviteBtn',
               'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.invite.title'),
               onclick: () => this.openInvite(),
-            }, [m('i.fas.fa-user-plus'), ' ',
+            }, [m('i.fa-solid.fa-user-plus'), ' ',
                 app.translator.trans('ernestdefoe-social-groups.forum.invite.button')])
           : null,
       ]),
@@ -204,14 +204,14 @@ export default class MemberList extends Component {
                       loading:     acting === 'promote',
                       disabled:    !!acting,
                       onclick:     () => this.promote(member),
-                    }, m('i.fas.fa-shield-alt'))
+                    }, m('i.fa-solid.fa-shield'))
                   : m(Button, {
                       class:       'Button Button--sm MemberList-demoteBtn',
                       'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.group.demote_member'),
                       loading:     acting === 'demote',
                       disabled:    !!acting,
                       onclick:     () => this.demote(member),
-                    }, m('i.fas.fa-user')))
+                    }, m('i.fa-solid.fa-user')))
               : null,
             canRemove
               ? m(Button, {
@@ -221,7 +221,7 @@ export default class MemberList extends Component {
                   loading:      acting === 'remove',
                   disabled:     !!acting,
                   onclick:      () => this.removeMember(member),
-                }, m('i.fas.fa-user-times'))
+                }, m('i.fa-solid.fa-user-xmark'))
               : null,
           ])
         : null,

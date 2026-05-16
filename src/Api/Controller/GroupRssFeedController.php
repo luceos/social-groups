@@ -10,10 +10,14 @@ use Laminas\Diactoros\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class GroupRssFeedController implements RequestHandlerInterface
 {
-    public function __construct(private Formatter $formatter) {}
+    public function __construct(
+        private Formatter $formatter,
+        private LoggerInterface $log,
+    ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -104,7 +108,7 @@ class GroupRssFeedController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->xmlError('Group not found.', 404);
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] GroupRssFeedController: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[social-groups] GroupRssFeedController: ' . $e->getMessage(), ['exception' => $e]);
             return $this->xmlError('An unexpected error occurred.', 500);
         }
     }

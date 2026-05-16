@@ -64,7 +64,7 @@ export function clearLinkPreview(component) {
 export function viewComposerLinkPreview(component) {
   if (component.previewLoading) {
     return m('.SGLinkPreview.SGLinkPreview--loading', [
-      m('i.fas.fa-spinner.fa-spin'),
+      m('i.fa-solid.fa-spinner.fa-spin'),
       m('span', ' Loading preview…'),
     ]);
   }

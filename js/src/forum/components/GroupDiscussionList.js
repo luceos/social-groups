@@ -91,7 +91,7 @@ export default class GroupDiscussionList extends Component {
         isMember
           ? m(Button, {
               class: 'Button Button--primary SGDiscussionList-newBtn',
-              icon:  'fas fa-plus',
+              icon:  'fa-solid fa-plus',
               onclick: () => app.modal.show(CreateDiscussionModal, {
                 groupId,
                 onCreated: (d) => {
@@ -109,7 +109,7 @@ export default class GroupDiscussionList extends Component {
         ? m('.SGDiscussionList-loading', m(LoadingIndicator, { display: 'block' }))
         : !this.discussions || this.discussions.length === 0
         ? m('.SGDiscussionList-empty', [
-            m('i.fas.fa-comments'),
+            m('i.fa-solid.fa-comments'),
             m('p', app.translator.trans('ernestdefoe-social-groups.forum.discussions.empty')),
             isMember
               ? m(Button, {
@@ -137,7 +137,7 @@ export default class GroupDiscussionList extends Component {
                     'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.discussions.prev_page'),
                     disabled: this.page <= 1,
                     onclick: () => this.load(this.page - 1),
-                  }, m('i.fas.fa-chevron-left')),
+                  }, m('i.fa-solid.fa-chevron-left')),
                   m('span.SGDiscussionList-pageInfo',
                     `${this.page} / ${this.pages}`),
                   m(Button, {
@@ -145,7 +145,7 @@ export default class GroupDiscussionList extends Component {
                     'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.discussions.next_page'),
                     disabled: this.page >= this.pages,
                     onclick: () => this.load(this.page + 1),
-                  }, m('i.fas.fa-chevron-right')),
+                  }, m('i.fa-solid.fa-chevron-right')),
                 ])
               : null,
           ],
@@ -185,7 +185,7 @@ export default class GroupDiscussionList extends Component {
       // Stats
       m('.SGDiscussionList-stats', [
         m('span.SGDiscussionList-replies', [
-          m('i.fas.fa-reply'),
+          m('i.fa-solid.fa-reply'),
           ' ', d.commentCount,
         ]),
         d.lastPostedAt
@@ -200,7 +200,7 @@ export default class GroupDiscussionList extends Component {
             title:   app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete'),
             disabled: this.deleting === d.id,
             onclick:  (e) => { e.stopPropagation(); this.deleteDiscussion(d); },
-          }, m('i.fas.fa-trash'))
+          }, m('i.fa-solid.fa-trash'))
         : null,
     ]);
   }

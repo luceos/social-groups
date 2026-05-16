@@ -91,12 +91,12 @@ export function viewUploadChips(uploads, onRemove) {
 
     return m(cls, { key: u.id }, [
       u.uploading
-        ? m('i.fas.fa-spinner.fa-spin')
+        ? m('i.fa-solid.fa-spinner.fa-spin')
         : u.error
-        ? m('i.fas.fa-exclamation-circle')
+        ? m('i.fa-solid.fa-circle-exclamation')
         : u.previewUrl
         ? m('img.SGUploadChip-thumb', { src: u.previewUrl, alt: u.name })
-        : m('i.fas.fa-file'),
+        : m('i.fa-solid.fa-file'),
       m('span.SGUploadChip-name', u.error ? `${u.name}: ${u.error}` : u.name),
       !u.uploading
         ? m('button.SGUploadChip-remove', {

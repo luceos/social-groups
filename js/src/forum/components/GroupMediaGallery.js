@@ -205,8 +205,8 @@ export default class GroupMediaGallery extends Component {
                 },
               }),
               this.uploading
-                ? [m('i.fas.fa-spinner.fa-spin'), ' Uploading…']
-                : [m('i.fas.fa-upload'), ' Upload Images'],
+                ? [m('i.fa-solid.fa-spinner.fa-spin'), ' Uploading…']
+                : [m('i.fa-solid.fa-upload'), ' Upload Images'],
             ]),
           ])
         : null,
@@ -215,7 +215,7 @@ export default class GroupMediaGallery extends Component {
         ? m('.SGMedia-loading', m(LoadingIndicator, { display: 'block' }))
         : !this.items || this.items.length === 0
         ? m('.SGMedia-empty', [
-            m('i.fas.fa-photo-video'),
+            m('i.fa-solid.fa-photo-film'),
             m('p', 'No media found in this group yet.'),
           ])
         : [
@@ -243,13 +243,13 @@ export default class GroupMediaGallery extends Component {
                     class:    'Button',
                     disabled: this.page <= 1,
                     onclick:  () => this.load(this.page - 1),
-                  }, m('i.fas.fa-chevron-left')),
+                  }, m('i.fa-solid.fa-chevron-left')),
                   m('span.SGMedia-pageInfo', `${this.page} / ${this.pages}`),
                   m(Button, {
                     class:    'Button',
                     disabled: this.page >= this.pages,
                     onclick:  () => this.load(this.page + 1),
-                  }, m('i.fas.fa-chevron-right')),
+                  }, m('i.fa-solid.fa-chevron-right')),
                 ])
               : null,
           ],
@@ -266,13 +266,13 @@ export default class GroupMediaGallery extends Component {
       m('button.SGMedia-lightboxClose', {
         onclick: () => this.lightboxClose(),
         title:   'Close',
-      }, m('i.fas.fa-times')),
+      }, m('i.fa-solid.fa-xmark')),
 
       this.items.length > 1
         ? m('button.SGMedia-lightboxPrev', {
             onclick: (e) => { e.stopPropagation(); this.lightboxPrev(); },
             title:   'Previous',
-          }, m('i.fas.fa-chevron-left'))
+          }, m('i.fa-solid.fa-chevron-left'))
         : null,
 
       m('.SGMedia-lightboxContent', [
@@ -299,7 +299,7 @@ export default class GroupMediaGallery extends Component {
                     discussionId: item.discussionId,
                   }));
                 },
-              }, [m('i.fas.fa-external-link-alt'), ' View post']),
+              }, [m('i.fa-solid.fa-arrow-up-right-from-square'), ' View post']),
             ])
           : null,
         m('.SGMedia-lightboxCounter', (() => {
@@ -313,7 +313,7 @@ export default class GroupMediaGallery extends Component {
         ? m('button.SGMedia-lightboxNext', {
             onclick: (e) => { e.stopPropagation(); this.lightboxNext(); },
             title:   'Next',
-          }, m('i.fas.fa-chevron-right'))
+          }, m('i.fa-solid.fa-chevron-right'))
         : null,
     ]);
   }

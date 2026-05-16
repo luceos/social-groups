@@ -9,9 +9,12 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class UnreactGroupPostController implements RequestHandlerInterface
 {
+    public function __construct(private LoggerInterface $log) {}
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         try {
@@ -34,7 +37,7 @@ class UnreactGroupPostController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return new JsonResponse(['error' => 'Post not found.'], 404);
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] UnreactGroupPostController: ' . $e->getMessage());
+            $this->log->error('[social-groups] UnreactGroupPostController: ' . $e->getMessage());
             return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }

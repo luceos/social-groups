@@ -8,9 +8,12 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class PinGroupDiscussionController implements RequestHandlerInterface
 {
+    public function __construct(private LoggerInterface $log) {}
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         try {
@@ -41,7 +44,7 @@ class PinGroupDiscussionController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Discussion not found.'], 404);
         } catch (\Throwable $e) {
-            resolve('log')->error('[social-groups] PinGroupDiscussionController: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[social-groups] PinGroupDiscussionController: ' . $e->getMessage(), ['exception' => $e]);
             return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }

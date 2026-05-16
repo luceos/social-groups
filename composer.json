@@ -28,7 +28,7 @@
             "title": "Social Groups",
             "category": "feature",
             "icon": {
-                "name": "fas fa-users",
+                "name": "fa-solid fa-users",
                 "backgroundColor": "#4A90E2",
                 "color": "#fff"
             }
@@ -36,5 +36,7 @@
     },
     "config": {
         "sort-packages": true
-    }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

@@ -90,11 +90,11 @@ export default class GroupPage extends Page {
             m('button.GroupPage-tab', {
               class:   this.activeTab === 'posts' ? 'is-active' : '',
               onclick: () => { this.activeTab = 'posts'; m.redraw(); },
-            }, [m('i.fas.fa-stream'), ' Posts']),
+            }, [m('i.fa-solid.fa-bars-staggered'), ' Posts']),
             m('button.GroupPage-tab', {
               class:   this.activeTab === 'media' ? 'is-active' : '',
               onclick: () => { this.activeTab = 'media'; m.redraw(); },
-            }, [m('i.fas.fa-photo-video'), ' Media']),
+            }, [m('i.fa-solid.fa-photo-film'), ' Media']),
           ]),
           this.activeTab === 'media'
             ? m(GroupMediaGallery, {
@@ -130,11 +130,11 @@ export default class GroupPage extends Page {
               : m('p.GroupPage-aboutCard-empty',
                   app.translator.trans('ernestdefoe-social-groups.forum.group.description_placeholder')),
             group.isPrivate()
-              ? m('.GroupPage-privateTag', [m('i.fas.fa-lock'), ' ',
+              ? m('.GroupPage-privateTag', [m('i.fa-solid.fa-lock'), ' ',
                   app.translator.trans('ernestdefoe-social-groups.forum.groups.private')])
               : null,
             isApproval
-              ? m('.GroupPage-approvalTag', [m('i.fas.fa-user-check'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.approval_required')])
+              ? m('.GroupPage-approvalTag', [m('i.fa-solid.fa-user-check'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.approval_required')])
               : null,
           ]),
 

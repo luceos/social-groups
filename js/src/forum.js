@@ -99,7 +99,7 @@ app.initializers.add('ernestdefoe-social-groups', (app) => {
         LinkButton,
         {
           href: app.route('ernestdefoe-social-groups.index'),
-          icon: 'fas fa-users',
+          icon: 'fa-solid fa-users',
         },
         app.translator.trans('ernestdefoe-social-groups.forum.groups.title')
       ),

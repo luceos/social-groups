@@ -2,12 +2,15 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
+use Flarum\Http\RequestUtil;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class FetchLinkPreviewController implements RequestHandlerInterface
 {
@@ -15,8 +18,16 @@ class FetchLinkPreviewController implements RequestHandlerInterface
     private const MAX_BYTES   = 524288; // 512 KB — enough to find <head> OG tags
     private const USER_AGENT  = 'flarum-social-groups/1.0 (+https://github.com/ernestdefoe/social-groups)';
 
+    public function __construct(
+        private CacheRepository $cache,
+        private LoggerInterface $log,
+    ) {}
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
+        $actor = RequestUtil::getActor($request);
+        $actor->assertRegistered();
+
         $url = trim((string) ($request->getQueryParams()['url'] ?? ''));
 
         $url = filter_var($url, FILTER_VALIDATE_URL);
@@ -24,10 +35,9 @@ class FetchLinkPreviewController implements RequestHandlerInterface
             return new JsonResponse(['error' => 'Invalid URL.'], 422);
         }
 
-        $cache    = resolve('cache');
         $cacheKey = 'sg-link-preview:' . md5($url);
 
-        if ($cached = $cache->get($cacheKey)) {
+        if ($cached = $this->cache->get($cacheKey)) {
             return new JsonResponse($cached);
         }
 
@@ -50,7 +60,7 @@ class FetchLinkPreviewController implements RequestHandlerInterface
 
         $preview = $this->parseOgData($html, $url);
 
-        $cache->put($cacheKey, $preview, self::CACHE_TTL);
+        $this->cache->put($cacheKey, $preview, self::CACHE_TTL);
 
         return new JsonResponse($preview);
     }

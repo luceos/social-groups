@@ -112,13 +112,13 @@ export default class JoinRequestsPanel extends Component {
                 loading:  this.actioning[req.id] === 'approve',
                 disabled: !!this.actioning[req.id],
                 onclick:  () => this.approve(req),
-              }, m('i.fas.fa-check')),
+              }, m('i.fa-solid.fa-check')),
               m(Button, {
                 class:    'Button Button--sm SGJoinRequests-rejectBtn',
                 loading:  this.actioning[req.id] === 'reject',
                 disabled: !!this.actioning[req.id],
                 onclick:  () => this.reject(req),
-              }, m('i.fas.fa-times')),
+              }, m('i.fa-solid.fa-xmark')),
             ]),
           ])
         )

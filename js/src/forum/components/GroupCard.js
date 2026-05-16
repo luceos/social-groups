@@ -74,11 +74,11 @@ export default class GroupCard extends Component {
         m('div.GroupCard-body', [
           m('div.GroupCard-name', name),
           m('div.GroupCard-meta', [
-            m('i.fas.fa-users'),
+            m('i.fa-solid.fa-users'),
             m('span', ' ' + app.translator.trans('ernestdefoe-social-groups.forum.groups.members_count', { count: this.memberCount })),
-            group.isPrivate() ? m('span.GroupCard-private', [m('i.fas.fa-lock'), ' Private']) : null,
-            isApproval ? m('span.GroupCard-approval', [m('i.fas.fa-user-check'), ' Approval']) : null,
-            group.isFeatured() ? m('span.GroupCard-featured', [m('i.fas.fa-star'), ' Featured']) : null,
+            group.isPrivate() ? m('span.GroupCard-private', [m('i.fa-solid.fa-lock'), ' Private']) : null,
+            isApproval ? m('span.GroupCard-approval', [m('i.fa-solid.fa-user-check'), ' Approval']) : null,
+            group.isFeatured() ? m('span.GroupCard-featured', [m('i.fa-solid.fa-star'), ' Featured']) : null,
           ]),
           description
             ? m('div.GroupCard-description', description)
@@ -113,7 +113,7 @@ export default class GroupCard extends Component {
           this.kebabOpen = !this.kebabOpen;
           m.redraw();
         },
-      }, m('i.fas.fa-ellipsis-v')),
+      }, m('i.fa-solid.fa-ellipsis-vertical')),
 
       this.kebabOpen
         ? m('div.GroupCard-kebabMenu', [
@@ -126,8 +126,8 @@ export default class GroupCard extends Component {
                     if (this.attrs.onToggleFeature) this.attrs.onToggleFeature();
                   },
                 }, group.isFeatured()
-                    ? [m('i.fas.fa-star'), ' Unfeature group']
-                    : [m('i.far.fa-star'), ' Feature group'])
+                    ? [m('i.fa-solid.fa-star'), ' Unfeature group']
+                    : [m('i.fa-regular.fa-star'), ' Feature group'])
               : null,
             m('button.GroupCard-kebabItem', {
               type: 'button',
@@ -140,7 +140,7 @@ export default class GroupCard extends Component {
                   onDeleted: () => m.route.set(app.route('ernestdefoe-social-groups.index')),
                 });
               },
-            }, [m('i.fas.fa-pencil-alt'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.group.edit')]),
+            }, [m('i.fa-solid.fa-pencil'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.group.edit')]),
 
             m('button.GroupCard-kebabItem.GroupCard-kebabItem--danger', {
               type: 'button',
@@ -156,7 +156,7 @@ export default class GroupCard extends Component {
                   }
                 });
               },
-            }, [m('i.fas.fa-trash'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.group.delete')]),
+            }, [m('i.fa-solid.fa-trash'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.group.delete')]),
           ])
         : null,
     ]);
@@ -183,7 +183,7 @@ export default class GroupCard extends Component {
           loading: this.joining,
           onclick: (e) => { e.stopPropagation(); this.cancelRequest(group); },
         },
-        [m('i.fas.fa-clock'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.pending')]
+        [m('i.fa-solid.fa-clock'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.pending')]
       );
     }
 
@@ -195,7 +195,7 @@ export default class GroupCard extends Component {
         onclick: (e) => { e.stopPropagation(); this.toggleMembership(group, isApproval); },
       },
       isApproval
-        ? [m('i.fas.fa-user-plus'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.request_to_join')]
+        ? [m('i.fa-solid.fa-user-plus'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.request_to_join')]
         : app.translator.trans('ernestdefoe-social-groups.forum.groups.join')
     );
   }

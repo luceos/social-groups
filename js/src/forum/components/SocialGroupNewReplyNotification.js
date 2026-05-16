@@ -3,7 +3,7 @@ import Notification from 'flarum/forum/components/Notification';
 
 export default class SocialGroupNewReplyNotification extends Notification {
   icon() {
-    return 'fas fa-reply';
+    return 'fa-solid fa-reply';
   }
 
   href() {
