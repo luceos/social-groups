@@ -739,18 +739,19 @@ export default class GroupFeed extends Component {
                 const active = fp.actorReaction
                   ? GroupFeed.REACTIONS.find((r) => r.key === fp.actorReaction)
                   : null;
-                return [
-                  m('button.SGFeed-likeBtn', {
-                    class:   active ? 'SGFeed-likeBtn--liked' : '',
-                    onclick: (e) => { e.stopPropagation(); this.toggleReaction(d, fp.actorReaction || 'like'); },
-                  }, active
-                      ? [active.emoji, ' ', active.label]
-                      : [m('i.fas.fa-thumbs-up'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.like')]),
-                  m('button.SGFeed-pickerToggle', {
-                    title:   'More reactions',
-                    onclick: (e) => { e.stopPropagation(); this.togglePicker(d.id); },
-                  }, m('i.fas.fa-smile')),
-                ];
+                return m('button.SGFeed-reactBtn', {
+                  class:   active ? 'SGFeed-reactBtn--active' : '',
+                  onclick: (e) => {
+                    e.stopPropagation();
+                    if (active) {
+                      this.toggleReaction(d, fp.actorReaction);
+                    } else {
+                      this.togglePicker(d.id);
+                    }
+                  },
+                }, active
+                    ? [active.emoji, ' ', active.label]
+                    : [m('i.fas.fa-smile-beam'), ' React']);
               })(),
             ])
           : null,
