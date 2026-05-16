@@ -517,6 +517,194 @@ body {
 .picker-label { font-size: 9px; color: var(--text-secondary); font-family: inherit; }
 
 .react-wrap { position: relative; }
+
+/* ══════════════════════════════════════════════════════════
+   FLARUM 2 DARK MODE
+   Must be LAST in the stylesheet so it wins the cascade
+   ══════════════════════════════════════════════════════════ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary:        #e05c5c;
+    --primary-dark:   #c03030;
+    --primary-light:  #f08080;
+    --primary-ghost:  rgba(224,92,92,0.10);
+    --primary-ghost2: rgba(224,92,92,0.18);
+    --bg:             #0c0d10;
+    --surface:        #111318;
+    --card:           #16171c;
+    --border:         rgba(255,255,255,0.055);
+    --border-chip:    rgba(255,255,255,0.085);
+    --text:           #dddee8;
+    --text-muted:     #484956;
+    --text-secondary: #7e7f92;
+    --online:         #4ec46a;
+    --shadow-sm:      0 2px 8px rgba(0,0,0,0.50), 0 1px 3px rgba(0,0,0,0.40);
+    --shadow-md:      0 4px 20px rgba(0,0,0,0.60), 0 2px 8px rgba(0,0,0,0.45);
+    --shadow-lg:      0 8px 32px rgba(0,0,0,0.70), 0 3px 12px rgba(0,0,0,0.50);
+  }
+
+  body { background: var(--bg); color: var(--text); }
+
+  /* ── Header ── */
+  .header {
+    background: #13141a;
+    border-bottom-color: rgba(255,255,255,0.055);
+  }
+  .header-nav a { color: var(--text-secondary); }
+  .header-nav a:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .header-nav a.active { background: rgba(224,92,92,0.13); color: var(--primary); }
+  .btn-icon { background: #1a1b21; border-color: rgba(255,255,255,0.07); color: var(--text-secondary); }
+  .user-avatar { background: linear-gradient(135deg, #c03030, #7a0a0a); }
+  .logo { color: var(--text); }
+  .notif-dot { background: var(--primary); border-color: #13141a; }
+
+  /* ── Main card & widgets ── */
+  .group-wrap  { background: var(--card); box-shadow: var(--shadow-md); }
+  .widget      { background: var(--card); box-shadow: var(--shadow-sm); }
+
+  /* ── Group hero ── */
+  .group-hero {
+    background: linear-gradient(135deg, rgba(120,10,10,0.97) 0%, rgba(30,2,2,0.99) 100%);
+  }
+  .group-hero-icon {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  /* ── Tabs ── */
+  .group-tabs { background: #13141a; border-bottom-color: var(--border); }
+  .group-tab  { color: var(--text-secondary); }
+  .group-tab:hover { color: var(--text); }
+  .group-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── Composer ── */
+  .composer { border-bottom-color: var(--border); background: var(--card); }
+  .composer-input {
+    background: #0f1013;
+    color: var(--text-secondary);
+    border-color: rgba(255,255,255,0.06);
+  }
+  .composer-btn {
+    border-color: rgba(255,255,255,0.07);
+    color: var(--text-secondary);
+  }
+  .composer-btn:hover { background: var(--primary-ghost); color: var(--primary); }
+
+  /* ── Posts ── */
+  .post { border-bottom-color: var(--border); }
+  .post:hover { background: rgba(255,255,255,0.015); }
+  .post-body { color: var(--text); }
+  .post-author { color: var(--text); }
+  .post-byline { color: var(--text-muted); }
+  .post-menu { color: var(--text-muted); }
+  .post-menu:hover { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+  .post-pinned-badge { background: rgba(224,92,92,0.15); color: var(--primary); }
+
+  /* ── Stat / action bars ── */
+  .stat-bar { border-bottom-color: rgba(255,255,255,0.04); color: var(--text-secondary); }
+  .stat-emoji { background: #0f1013; border-color: var(--card); }
+  .stat-count { color: var(--text-secondary); }
+  .stat-comments-btn { color: var(--text-secondary); }
+  .stat-comments-btn:hover { color: var(--primary); }
+  .action-bar { border-bottom-color: rgba(255,255,255,0.04); }
+  .action-btn { color: var(--text-secondary); }
+  .action-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .action-btn.reacted { color: var(--primary); }
+
+  /* ── Image placeholder ── */
+  .post-img-placeholder {
+    background: linear-gradient(135deg, #080000 0%, #2a0505 50%, #450e0e 100%);
+    color: rgba(255,255,255,0.35);
+  }
+
+  /* ── Shared card ── */
+  .post-shared {
+    background: #0f1013;
+    border-color: rgba(255,255,255,0.08);
+  }
+  .post-shared:hover { border-color: var(--primary); background: rgba(224,92,92,0.07); }
+  .post-shared-author { color: var(--text); }
+  .post-shared-group  { color: var(--text-muted); }
+  .post-shared-title  { color: var(--text); }
+  .post-shared-snippet { color: var(--text-secondary); }
+
+  /* ── Poll ── */
+  .poll-q { color: var(--text); }
+  .poll-opt {
+    background: #0f1013;
+    border-color: rgba(255,255,255,0.08);
+    color: var(--text);
+  }
+  .poll-opt:hover { border-color: var(--primary-light); }
+  .poll-opt.voted { border-color: var(--primary); }
+  .poll-bar { background: rgba(224,92,92,0.14); }
+  .poll-opt.voted .poll-bar { background: rgba(224,92,92,0.22); }
+  .poll-opt-pct { color: var(--text-secondary); }
+  .poll-opt.voted .poll-opt-text,
+  .poll-opt.voted .poll-opt-pct { color: var(--primary-light); }
+  .poll-footer { color: var(--text-muted); }
+
+  /* ── Comments ── */
+  .view-all-btn { color: var(--primary); }
+  .view-all-btn:hover { background: var(--primary-ghost); }
+  .comment-bubble { background: #0f1013; }
+  .comment-author { color: var(--text); }
+  .comment-text   { color: var(--text); }
+  .comment-footer { color: var(--text-muted); }
+  .comment-react-btn { color: var(--text-muted); }
+  .comment-react-btn:hover { color: var(--primary); }
+  .comment-react-btn.reacted { color: var(--primary); }
+  .comment-react-stat {
+    background: #0f1013;
+    border-color: rgba(255,255,255,0.07);
+    color: var(--text-secondary);
+  }
+
+  /* ── Reply row ── */
+  .reply-row { background: transparent; }
+  .reply-avatar { background: linear-gradient(135deg, #c03030, #7a0a0a); }
+  .reply-input {
+    background: #0f1013;
+    border-color: rgba(255,255,255,0.06);
+    color: var(--text-secondary);
+  }
+
+  /* ── Sidebar: Live Scores ── */
+  .widget-header { border-bottom-color: var(--border); }
+  .widget-title { color: var(--text-secondary); }
+  .score-card { border-bottom-color: var(--border); }
+  .score-team-abbr { color: var(--text); }
+  .score-num { color: var(--text); }
+  .score-num.winning { color: var(--primary); }
+  .score-bar-wrap { background: rgba(255,255,255,0.06); }
+  .score-meta { color: var(--text-muted); }
+  .widget-live-badge { background: var(--primary); }
+
+  /* ── Sidebar: Trending ── */
+  .trend-item { border-bottom-color: var(--border); color: var(--text-secondary); }
+  .trend-item:hover { background: var(--primary-ghost); }
+  .trend-title { color: var(--text); }
+  .trend-meta  { color: var(--text-muted); }
+  .trend-num   { color: rgba(255,255,255,0.10); }
+  .trend-item:nth-child(1) .trend-num,
+  .trend-item:nth-child(2) .trend-num { color: var(--primary); }
+
+  /* ── Sidebar: Recruits ── */
+  .recruit-card { border-bottom-color: var(--border); }
+  .recruit-card:hover { background: var(--primary-ghost); }
+  .recruit-pos  { background: #7a0a0a; }
+  .recruit-name { color: var(--text); }
+  .recruit-sub  { color: var(--text-muted); }
+  .status-committed   { background: rgba(74,222,128,0.10); color: #4ade80; }
+  .status-undecided   { background: rgba(251,191,36,0.10); color: #fbbf24; }
+  .status-decommitted { background: rgba(248,113,113,0.12); color: #f87171; }
+
+  /* ── Sidebar: Online Now ── */
+  .online-header-count { color: var(--online); }
+  .online-name { color: var(--text); }
+  .online-sub  { color: var(--text-muted); }
+  .online-status-dot { border-color: var(--card); }
+}
 </style>
 </head>
 <body>

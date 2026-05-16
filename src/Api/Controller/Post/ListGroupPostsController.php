@@ -50,6 +50,15 @@ class ListGroupPostsController implements RequestHandlerInterface
             $actorId = $actor->exists ? $actor->id : null;
             $now     = \Carbon\Carbon::now()->toIso8601String();
 
+            // Resolve actor's moderation rights once — reused for every post in the list.
+            $isAdmin     = $actor->isAdmin();
+            $isModerator = $actorId && ! $isAdmin
+                ? $group->members()
+                    ->where('user_id', $actorId)
+                    ->whereIn('role', ['creator', 'admin'])
+                    ->exists()
+                : false;
+
             // Batch-load reaction counts grouped by (post_id, reaction)
             $postIds = $posts->pluck('id')->all();
 
@@ -75,9 +84,9 @@ class ListGroupPostsController implements RequestHandlerInterface
                     'commentCount' => $discussion->comment_count,
                     'isLocked'     => (bool) $discussion->is_locked,
                     'createdAt'    => ($discussion->created_at ?? $discussion->last_posted_at)?->toIso8601String() ?? $now,
-                    'canDelete'    => $actorId && ($actorId === $discussion->user_id || $actor->isAdmin()),
+                    'canDelete'    => $actorId && ($actorId === $discussion->user_id || $isAdmin || $isModerator),
                 ],
-                'data' => $posts->map(fn ($p) => $this->serializePost($p, $actorId, $now, $reactionsByPost->all(), $actorReactions))->values(),
+                'data' => $posts->map(fn ($p) => $this->serializePost($p, $actorId, $isAdmin, $isModerator, $now, $reactionsByPost->all(), $actorReactions))->values(),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Discussion not found.'], 404);
@@ -87,7 +96,7 @@ class ListGroupPostsController implements RequestHandlerInterface
         }
     }
 
-    private function serializePost(SocialGroupPost $p, ?int $actorId, string $fallbackTime, array $reactionsByPost = [], array $actorReactions = []): array
+    private function serializePost(SocialGroupPost $p, ?int $actorId, bool $isAdmin, bool $isModerator, string $fallbackTime, array $reactionsByPost = [], array $actorReactions = []): array
     {
         $createdAt = $p->created_at?->toIso8601String() ?? $fallbackTime;
         $updatedAt = $p->updated_at?->toIso8601String() ?? $createdAt;
@@ -112,7 +121,7 @@ class ListGroupPostsController implements RequestHandlerInterface
             'parentPostId'  => $p->parent_post_id,
             'linkPreview'   => $p->link_preview,
             'canEdit'       => $actorId && $actorId === $p->user_id,
-            'canDelete'     => $actorId && $actorId === $p->user_id,
+            'canDelete'     => $actorId && ($actorId === $p->user_id || $isAdmin || $isModerator),
             'user'          => $p->user ? [
                 'id'          => $p->user->id,
                 'displayName' => $p->user->display_name,

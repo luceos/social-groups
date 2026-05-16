@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GridIron Nation — College Football Forum</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary:        #B22222;   /* Crimson */
+    --primary-dark:   #8B0000;
+    --primary-light:  #d94f4f;
+    --bg:             #f4f4f7;
+    --surface:        #f8f8fa;
+    --surface-raised: #ffffff;
+    --border:         rgba(0,0,0,0.07);
+    --border-chip:    rgba(0,0,0,0.11);
+    --text:           #2a2b30;
+    --text-muted:     #b2b2bb;
+    --text-secondary: #6b6b78;
+    --online:         #4ec46a;
+    --shadow-sm:      0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md:      0 4px 16px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05);
+    --shadow-lg:      0 8px 32px rgba(0,0,0,0.12), 0 3px 10px rgba(0,0,0,0.06);
+    --radius:         14px;
+    --transition:     0.15s ease;
+  }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    height: 58px;
+    gap: 20px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 34px;
+    height: 34px;
+    background: var(--primary);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(178,34,34,0.35);
+  }
+  .header-nav {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    margin-left: 8px;
+  }
+  .header-nav a {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background var(--transition), color var(--transition);
+  }
+  .header-nav a:hover { background: var(--bg); color: var(--text); }
+  .header-nav a.active { background: rgba(178,34,34,0.09); color: var(--primary); }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+  .btn-notif {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    position: relative;
+    transition: background var(--transition);
+  }
+  .btn-notif:hover { background: var(--border); }
+  .notif-dot {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 7px; height: 7px;
+    background: var(--primary);
+    border-radius: 50%;
+    border: 2px solid var(--surface-raised);
+  }
+  .avatar-sm {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(178,34,34,0.3);
+  }
+
+  /* ── LAYOUT ── */
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    grid-column: 1 / -1;
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    min-height: 240px;
+    display: flex;
+    align-items: flex-end;
+    box-shadow: var(--shadow-lg);
+  }
+  .hero-img {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 0;
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(178,34,34,0.82) 0%, rgba(80,10,10,0.75) 100%);
+    z-index: 1;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 36px 36px 32px;
+    color: #fff;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 8px;
+  }
+  .hero h1 {
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .hero-sub {
+    font-size: 14.5px;
+    opacity: 0.82;
+    max-width: 480px;
+  }
+  .hero-stats {
+    display: flex;
+    gap: 28px;
+    flex-shrink: 0;
+  }
+  .hero-stat { text-align: center; }
+  .hero-stat-num {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .hero-stat-label {
+    font-size: 11px;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 3px;
+  }
+  .hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 16px;
+  }
+  .hero-tag {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 11px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.28);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+    transition: background var(--transition);
+    color: #fff;
+    text-decoration: none;
+  }
+  .hero-tag:hover { background: rgba(255,255,255,0.28); }
+  .hero-tag.active { background: rgba(255,255,255,0.95); color: var(--primary); }
+
+  /* ── MAIN COLUMN ── */
+  .main { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── NEW DISCUSSIONS PILL ── */
+  .new-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--surface-raised);
+    border: 1.5px solid var(--primary);
+    border-radius: 30px;
+    padding: 7px 16px;
+    align-self: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: background var(--transition), color var(--transition);
+  }
+  .new-pill:hover { background: var(--primary); color: #fff; }
+  .pulse-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: pulse 1.6s infinite;
+  }
+  .new-pill:hover .pulse-dot { background: #fff; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface-raised);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+  }
+  .toolbar-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 4px;
+  }
+  .tag-chip {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border-chip);
+    cursor: pointer;
+    transition: all var(--transition);
+    background: var(--bg);
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+  .tag-chip:hover { border-color: var(--primary); color: var(--primary); background: rgba(178,34,34,0.05); }
+  .tag-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .tag-chip[data-color] { border-color: currentColor; }
+  .ml-auto { margin-left: auto; }
+  .sort-btn {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background var(--transition);
+  }
+  .sort-btn:hover { background: var(--border); }
+
+  /* ── DISCUSSION LIST ── */
+  .discussion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--surface-raised);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .discussion-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+  }
+  .discussion-item:last-child { border-bottom: none; }
+  .discussion-item:hover { background: var(--bg); }
+  .discussion-item.unread { background: rgba(178,34,34,0.025); }
+  .unread-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(178,34,34,0.2);
+  }
+  .no-unread-dot { width: 7px; flex-shrink: 0; }
+  .disc-avatar {
+    width: 50px; height: 50px;
+    border-radius: 14px;
+    object-fit: cover;
+    flex-shrink: 0;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #fff;
+  }
+  .disc-body { flex: 1; min-width: 0; }
+  .disc-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .discussion-item.unread .disc-title { color: var(--primary-dark); }
+  .disc-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  .disc-author { font-weight: 500; color: var(--text-secondary); }
+  .disc-sep { opacity: 0.4; }
+  .disc-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    color: #fff;
+  }
+  .disc-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .disc-count {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .disc-time { font-size: 11.5px; color: var(--text-muted); }
+  .disc-menu-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    transition: background var(--transition);
+    flex-shrink: 0;
+  }
+  .disc-menu-btn:hover { background: var(--bg); color: var(--text); }
+  .pinned-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--primary);
+    padding: 2px 7px;
+    border-radius: 5px;
+  }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .page-btn {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .page-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 2px 8px rgba(178,34,34,0.35); }
+
+  /* ── SIDEBAR ── */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  .widget {
+    background: var(--surface-raised);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .widget-header {
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .widget-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .widget-body { padding: 14px 18px; }
+
+  /* Scoreboard widget */
+  .scoreboard-game {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .scoreboard-game:last-child { border-bottom: none; padding-bottom: 0; }
+  .scoreboard-game:first-child { padding-top: 0; }
+  .team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 60px;
+  }
+  .team-logo {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 900;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .team-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+  .score-block { text-align: center; }
+  .score {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .score-sep { font-size: 14px; color: var(--text-muted); margin: 0 2px; }
+  .game-status {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 3px;
+    text-align: center;
+  }
+  .game-status.live { color: #e53e3e; animation: pulse-text 1.4s infinite; }
+  .game-status.final { color: var(--text-muted); }
+  .game-status.upcoming { color: var(--primary); }
+  @keyframes pulse-text {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+  }
+
+  /* Trending widget */
+  .trending-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+  .trending-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .trending-item:first-child { padding-top: 0; }
+  .trending-num {
+    width: 22px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .trending-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .trending-count {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  /* Online members */
+  .members-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .member-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 4px 10px 4px 4px;
+    background: var(--bg);
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+  .member-avatar {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .online-indicator {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--online);
+    margin-left: 2px;
+  }
+
+  /* Post button */
+  .btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(178,34,34,0.35);
+    transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+    text-decoration: none;
+  }
+  .btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(178,34,34,0.45);
+  }
+
+  /* Recruiting widget */
+  .recruit-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .recruit-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .recruit-item:first-child { padding-top: 0; }
+  .recruit-avatar {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .recruit-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .recruit-pos {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .recruit-stars {
+    margin-left: auto;
+    color: #f6ad2b;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .commit-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: rgba(78, 196, 106, 0.15);
+    color: #2d8b4e;
+    border: 1px solid rgba(78,196,106,0.3);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 860px) {
+    .page {
+      grid-template-columns: 1fr;
+      padding: 16px 16px 48px;
+    }
+    .hero-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 28px 24px 24px;
+    }
+    .hero-stats { gap: 20px; }
+    .hero h1 { font-size: 26px; }
+    .filter-bar { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+    .header-nav { display: none; }
+  }
+  @media (max-width: 560px) {
+    .hero-filter-chips { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon"><i class="fas fa-football-ball"></i></div>
+      GridIron Nation
+    </a>
+    <nav class="header-nav">
+      <a href="#" class="active">Discussions</a>
+      <a href="#">Teams</a>
+      <a href="#">Recruiting</a>
+      <a href="#">Game Day</a>
+      <a href="#">Media</a>
+    </nav>
+    <div class="header-right">
+      <div class="btn-notif">
+        <i class="fas fa-bell"></i>
+        <span class="notif-dot"></span>
+      </div>
+      <div class="btn-notif"><i class="fas fa-search"></i></div>
+      <div class="avatar-sm">E</div>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<div style="max-width:1200px;margin:20px auto 0;padding:0 24px;">
+  <div class="hero">
+    <!-- Stadium SVG background -->
+    <svg class="hero-img" viewBox="0 0 1200 340" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <rect width="1200" height="340" fill="#1a1a2e"/>
+      <!-- Field -->
+      <rect x="0" y="180" width="1200" height="160" fill="#2d6a2d"/>
+      <!-- Field lines -->
+      <line x1="0" y1="200" x2="1200" y2="200" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+      <line x1="0" y1="220" x2="1200" y2="220" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <line x1="0" y1="240" x2="1200" y2="240" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <line x1="0" y1="260" x2="1200" y2="260" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <line x1="0" y1="280" x2="1200" y2="280" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <line x1="0" y1="300" x2="1200" y2="300" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <!-- Yard lines -->
+      <line x1="120" y1="180" x2="120" y2="340" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+      <line x1="240" y1="180" x2="240" y2="340" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+      <line x1="360" y1="180" x2="360" y2="340" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <line x1="480" y1="180" x2="480" y2="340" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+      <line x1="600" y1="180" x2="600" y2="340" stroke="rgba(255,255,255,0.25)" stroke-width="2.5"/>
+      <line x1="720" y1="180" x2="720" y2="340" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+      <line x1="840" y1="180" x2="840" y2="340" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <line x1="960" y1="180" x2="960" y2="340" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+      <line x1="1080" y1="180" x2="1080" y2="340" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+      <!-- Stands -->
+      <rect x="0" y="0" width="1200" height="180" fill="#16213e"/>
+      <!-- Crowd dots pattern -->
+      <g opacity="0.3">
+        <circle cx="80" cy="40" r="3" fill="#b22222"/><circle cx="120" cy="60" r="3" fill="#fff"/>
+        <circle cx="160" cy="35" r="3" fill="#b22222"/><circle cx="200" cy="55" r="3" fill="#fff"/>
+        <circle cx="240" cy="42" r="3" fill="#b22222"/><circle cx="280" cy="62" r="3" fill="#fff"/>
+        <circle cx="320" cy="38" r="3" fill="#b22222"/><circle cx="360" cy="58" r="3" fill="#fff"/>
+        <circle cx="400" cy="45" r="3" fill="#b22222"/><circle cx="440" cy="50" r="3" fill="#fff"/>
+        <circle cx="480" cy="40" r="3" fill="#b22222"/><circle cx="520" cy="60" r="3" fill="#fff"/>
+        <circle cx="560" cy="35" r="3" fill="#b22222"/><circle cx="600" cy="55" r="3" fill="#fff"/>
+        <circle cx="640" cy="42" r="3" fill="#b22222"/><circle cx="680" cy="62" r="3" fill="#fff"/>
+        <circle cx="720" cy="38" r="3" fill="#b22222"/><circle cx="760" cy="58" r="3" fill="#fff"/>
+        <circle cx="800" cy="45" r="3" fill="#b22222"/><circle cx="840" cy="50" r="3" fill="#fff"/>
+        <circle cx="880" cy="40" r="3" fill="#b22222"/><circle cx="920" cy="60" r="3" fill="#fff"/>
+        <circle cx="960" cy="35" r="3" fill="#b22222"/><circle cx="1000" cy="55" r="3" fill="#fff"/>
+        <circle cx="1040" cy="42" r="3" fill="#b22222"/><circle cx="1080" cy="62" r="3" fill="#fff"/>
+        <circle cx="1120" cy="38" r="3" fill="#b22222"/><circle cx="1160" cy="58" r="3" fill="#fff"/>
+        <!-- Row 2 -->
+        <circle cx="60" cy="90" r="3" fill="#fff"/><circle cx="100" cy="110" r="3" fill="#b22222"/>
+        <circle cx="140" cy="85" r="3" fill="#fff"/><circle cx="180" cy="105" r="3" fill="#b22222"/>
+        <circle cx="220" cy="92" r="3" fill="#fff"/><circle cx="260" cy="112" r="3" fill="#b22222"/>
+        <circle cx="300" cy="88" r="3" fill="#fff"/><circle cx="340" cy="108" r="3" fill="#b22222"/>
+        <circle cx="380" cy="95" r="3" fill="#fff"/><circle cx="420" cy="100" r="3" fill="#b22222"/>
+        <circle cx="460" cy="90" r="3" fill="#fff"/><circle cx="500" cy="110" r="3" fill="#b22222"/>
+        <circle cx="540" cy="85" r="3" fill="#fff"/><circle cx="580" cy="105" r="3" fill="#b22222"/>
+        <circle cx="620" cy="92" r="3" fill="#fff"/><circle cx="660" cy="112" r="3" fill="#b22222"/>
+        <circle cx="700" cy="88" r="3" fill="#fff"/><circle cx="740" cy="108" r="3" fill="#b22222"/>
+        <circle cx="780" cy="95" r="3" fill="#fff"/><circle cx="820" cy="100" r="3" fill="#b22222"/>
+        <circle cx="860" cy="90" r="3" fill="#fff"/><circle cx="900" cy="110" r="3" fill="#b22222"/>
+        <circle cx="940" cy="85" r="3" fill="#fff"/><circle cx="980" cy="105" r="3" fill="#b22222"/>
+        <circle cx="1020" cy="92" r="3" fill="#fff"/><circle cx="1060" cy="112" r="3" fill="#b22222"/>
+        <circle cx="1100" cy="88" r="3" fill="#fff"/><circle cx="1140" cy="108" r="3" fill="#b22222"/>
+      </g>
+      <!-- Lights -->
+      <ellipse cx="100" cy="15" rx="30" ry="12" fill="rgba(255,220,100,0.25)"/>
+      <ellipse cx="1100" cy="15" rx="30" ry="12" fill="rgba(255,220,100,0.25)"/>
+      <circle cx="90" cy="12" r="5" fill="#ffe066" opacity="0.9"/>
+      <circle cx="110" cy="10" r="4" fill="#ffe066" opacity="0.8"/>
+      <circle cx="1090" cy="12" r="5" fill="#ffe066" opacity="0.9"/>
+      <circle cx="1110" cy="10" r="4" fill="#ffe066" opacity="0.8"/>
+    </svg>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div>
+        <div class="hero-eyebrow"><i class="fas fa-football-ball"></i> &nbsp;College Football Community</div>
+        <h1>GridIron Nation</h1>
+        <div class="hero-sub">The ultimate fan hub for college football — game recaps, recruiting news, and live game day threads.</div>
+        <div class="hero-tags">
+          <a class="hero-tag active" href="#">All</a>
+          <a class="hero-tag" href="#">SEC</a>
+          <a class="hero-tag" href="#">Big Ten</a>
+          <a class="hero-tag" href="#">Big 12</a>
+          <a class="hero-tag" href="#">ACC</a>
+          <a class="hero-tag" href="#">Game Day</a>
+          <a class="hero-tag" href="#">Recruiting</a>
+          <a class="hero-tag" href="#">Transfer Portal</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-num">12.4k</div>
+          <div class="hero-stat-label">Members</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">48.9k</div>
+          <div class="hero-stat-label">Posts</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">247</div>
+          <div class="hero-stat-label">Online</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE -->
+<div class="page">
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="new-pill">
+      <span class="pulse-dot"></span>
+      14 new discussions since your last visit
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <span class="toolbar-label">Filter:</span>
+      <a class="tag-chip active" href="#">All</a>
+      <a class="tag-chip" href="#" style="color:#c0392b;border-color:#c0392b20">🏈 Game Day</a>
+      <a class="tag-chip" href="#" style="color:#2980b9;border-color:#2980b920">📋 Recruiting</a>
+      <a class="tag-chip" href="#" style="color:#27ae60;border-color:#27ae6020">🔄 Transfer Portal</a>
+      <a class="tag-chip" href="#" style="color:#8e44ad;border-color:#8e44ad20">📊 Analysis</a>
+      <div class="ml-auto"></div>
+      <button class="sort-btn"><i class="fas fa-clock"></i> Recent</button>
+      <button class="sort-btn"><i class="fas fa-fire"></i> Hot</button>
+    </div>
+
+    <!-- DISCUSSION LIST -->
+    <div class="discussion-list">
+
+      <!-- Pinned -->
+      <a class="discussion-item unread" href="#">
+        <span class="unread-dot"></span>
+        <div class="disc-avatar" style="background:linear-gradient(135deg,#b22222,#8b0000)">📌</div>
+        <div class="disc-body">
+          <div class="disc-title">🏈 Official 2025 Season Game Day Live Thread Megathread — Week 14 CFP Playoff</div>
+          <div class="disc-meta">
+            <span class="disc-author">GridIronMod</span>
+            <span class="disc-sep">·</span>
+            <span class="disc-tag" style="background:#c0392b">Game Day</span>
+            <span class="disc-sep">·</span>
+            <span>2 hours ago</span>
+            <span class="pinned-badge">PINNED</span>
+          </div>
+        </div>
+        <div class="disc-right">
+          <div class="disc-count"><i class="fas fa-comment" style="font-size:11px;color:var(--text-muted)"></i> 2,847</div>
+          <div class="disc-time">Active now</div>
+        </div>
+        <button class="disc-menu-btn"><i class="fas fa-ellipsis-h"></i></button>
+      </a>
+
+      <a class="discussion-item unread" href="#">
+        <span class="unread-dot"></span>
+        <div class="disc-avatar" style="background:linear-gradient(135deg,#2c3e8c,#1a2670)">🐊</div>
+        <div class="disc-body">
+          <div class="disc-title">Florida lands #1 overall recruit Malik Thompson — 5-star QB committed</div>
+          <div class="disc-meta">
+            <span class="disc-author">GatorNation88</span>
+            <span class="disc-sep">·</span>
+            <span class="disc-tag" style="background:#2980b9">Recruiting</span>
+            <span class="disc-sep">·</span>
+            <span>38 min ago</span>
+          </div>
+        </div>
+        <div class="disc-right">
+          <div class="disc-count"><i class="fas fa-comment" style="font-size:11px;color:var(--text-muted)"></i> 341</div>
+          <div class="disc-time">38m ago</div>
+        </div>
+        <button class="disc-menu-btn"><i class="fas fa-ellipsis-h"></i></button>
+      </a>
+
+      <a class="discussion-item unread" href="#">
+        <span class="unread-dot"></span>
+        <div class="disc-avatar" style="background:linear-gradient(135deg,#bf5700,#8b3d00)">🤘</div>
+        <div class="disc-body">
+          <div class="disc-title">Texas vs Georgia CFP Semifinal — Complete film breakdown and X's & O's analysis</div>
+          <div class="disc-meta">
+            <span class="disc-author">LonghornAnalytics</span>
+            <span class="disc-sep">·</span>
+            <span class="disc-tag" style="background:#8e44ad">Analysis</span>
+            <span class="disc-sep">·</span>
+            <span>1 hour ago</span>
+          </div>
+        </div>
+        <div class="disc-right">
+          <div class="disc-count"><i class="fas fa-comment" style="font-size:11px;color:var(--text-muted)"></i> 189</div>
+          <div class="disc-time">1h ago</div>
+        </div>
+        <button class="disc-menu-btn"><i class="fas fa-ellipsis-h"></i></button>
+      </a>
+
+      <a class="discussion-item" href="#">
+        <span class="no-unread-dot"></span>
+        <div class="disc-avatar" style="background:linear-gradient(135deg,#4a1942,#2d0f29)">🐯</div>
+        <div class="disc-body">
+          <div class="disc-title">Transfer portal tracker — All major moves heading into bowl season (updated daily)</div>
+          <div class="disc-meta">
+            <span class="disc-author">PortalWatch</span>
+            <span class="disc-sep">·</span>
+            <span class="disc-tag" style="background:#27ae60">Transfer Portal</span>
+            <span class="disc-sep">·</span>
+            <span>3 hours ago</span>
+          </div>
+        </div>
+        <div class="disc-right">
+          <div class="disc-count"><i class="fas fa-comment" style="font-size:11px;color:var(--text-muted)"></i> 724</div>
+          <div class="disc-time">3h ago</div>
+        </div>
+        <button class="disc-menu-btn"><i class="fas fa-ellipsis-h"></i></button>
+      </a>
+
+      <a class="discussion-item" href="#">
+        <span class="no-unread-dot"></span>
+        <div class="disc-avatar" style="background:linear-gradient(135deg,#003087,#001d52)">🐬</div>
+        <div class="disc-body">
+          <div class="disc-title">Penn State's defense is historically elite — comparing them to 2016 Alabama</div>
+          <div class="disc-meta">
+            <span class="disc-author">B1G_Film_Room</span>
+            <span class="disc-sep">·</span>
+            <span class="disc-tag" style="background:#8e44ad">Analysis</span>
+            <span class="disc-sep">·</span>
+            <span>5 hours ago</span>
+          </div>
+        </div>
+        <div class="disc-right">
+          <div class="disc-count"><i class="fas fa-comment" style="font-size:11px;color:var(--text-muted)"></i> 412</div>
+          <div class="disc-time">5h ago</div>
+        </div>
+        <button class="disc-menu-btn"><i class="fas fa-ellipsis-h"></i></button>
+      </a>
+
+      <a class="discussion-item" href="#">
+        <span class="no-unread-dot"></span>
+        <div class="disc-avatar" style="background:linear-gradient(135deg,#cc0000,#8b0000)">🐘</div>
+        <div class="disc-body">
+          <div class="disc-title">Alabama vs Michigan — Best CFP Championship game in history? Hot take thread</div>
+          <div class="disc-meta">
+            <span class="disc-author">RollTideRandy</span>
+            <span class="disc-sep">·</span>
+            <span class="disc-tag" style="background:#c0392b">Game Day</span>
+            <span class="disc-sep">·</span>
+            <span>Yesterday</span>
+          </div>
+        </div>
+        <div class="disc-right">
+          <div class="disc-count"><i class="fas fa-comment" style="font-size:11px;color:var(--text-muted)"></i> 1,203</div>
+          <div class="disc-time">Yesterday</div>
+        </div>
+        <button class="disc-menu-btn"><i class="fas fa-ellipsis-h"></i></button>
+      </a>
+
+      <a class="discussion-item" href="#">
+        <span class="no-unread-dot"></span>
+        <div class="disc-avatar" style="background:linear-gradient(135deg,#006747,#004530)">🐊</div>
+        <div class="disc-body">
+          <div class="disc-title">Heisman odds tracker — week by week movement and who's the frontrunner now</div>
+          <div class="disc-meta">
+            <span class="disc-author">HeismanWatch</span>
+            <span class="disc-sep">·</span>
+            <span class="disc-tag" style="background:#8e44ad">Analysis</span>
+            <span class="disc-sep">·</span>
+            <span>2 days ago</span>
+          </div>
+        </div>
+        <div class="disc-right">
+          <div class="disc-count"><i class="fas fa-comment" style="font-size:11px;color:var(--text-muted)"></i> 567</div>
+          <div class="disc-time">2d ago</div>
+        </div>
+        <button class="disc-menu-btn"><i class="fas fa-ellipsis-h"></i></button>
+      </a>
+
+    </div>
+
+    <!-- PAGINATION -->
+    <div class="pagination">
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <button class="page-btn">…</button>
+      <button class="page-btn">24</button>
+      <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
+    </div>
+
+  </main>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <a class="btn-primary" href="#">
+      <i class="fas fa-pen"></i> Start a Discussion
+    </a>
+
+    <!-- SCOREBOARD -->
+    <div class="widget">
+      <div class="widget-header">
+        <span class="widget-title">🏈 Live Scores</span>
+        <span style="font-size:11px;color:var(--online);font-weight:700">● LIVE</span>
+      </div>
+      <div class="widget-body">
+
+        <div class="scoreboard-game">
+          <div class="team">
+            <div class="team-logo" style="background:#cc0000">A</div>
+            <div class="team-name">Alabama</div>
+          </div>
+          <div class="score-block">
+            <div class="score">24 <span class="score-sep">–</span> 17</div>
+            <div class="game-status live">● Q3 8:42</div>
+          </div>
+          <div class="team">
+            <div class="team-logo" style="background:#003087">PSU</div>
+            <div class="team-name">Penn St</div>
+          </div>
+        </div>
+
+        <div class="scoreboard-game">
+          <div class="team">
+            <div class="team-logo" style="background:#bf5700">TX</div>
+            <div class="team-name">Texas</div>
+          </div>
+          <div class="score-block">
+            <div class="score">31 <span class="score-sep">–</span> 28</div>
+            <div class="game-status live">● Q4 2:15</div>
+          </div>
+          <div class="team">
+            <div class="team-logo" style="background:#ba0c2f">UGA</div>
+            <div class="team-name">Georgia</div>
+          </div>
+        </div>
+
+        <div class="scoreboard-game">
+          <div class="team">
+            <div class="team-logo" style="background:#002d62">ND</div>
+            <div class="team-name">Notre Dame</div>
+          </div>
+          <div class="score-block">
+            <div class="score">7 <span class="score-sep">–</span> 0</div>
+            <div class="game-status upcoming">7:30 PM ET</div>
+          </div>
+          <div class="team">
+            <div class="team-logo" style="background:#4a1942">TCU</div>
+            <div class="team-name">TCU</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TRENDING -->
+    <div class="widget">
+      <div class="widget-header">
+        <span class="widget-title">🔥 Trending</span>
+      </div>
+      <div class="widget-body">
+        <a class="trending-item" href="#">
+          <span class="trending-num">1</span>
+          <span class="trending-title">CFP bracket predictions megathread</span>
+          <span class="trending-count"><i class="fas fa-comment"></i> 2.8k</span>
+        </a>
+        <a class="trending-item" href="#">
+          <span class="trending-num">2</span>
+          <span class="trending-title">Malik Thompson commits to Florida 🔵🟠</span>
+          <span class="trending-count"><i class="fas fa-comment"></i> 341</span>
+        </a>
+        <a class="trending-item" href="#">
+          <span class="trending-num">3</span>
+          <span class="trending-title">Texas defense holding Georgia to FG attempts</span>
+          <span class="trending-count"><i class="fas fa-comment"></i> 289</span>
+        </a>
+        <a class="trending-item" href="#">
+          <span class="trending-num">4</span>
+          <span class="trending-title">Transfer portal — 47 new entries today</span>
+          <span class="trending-count"><i class="fas fa-comment"></i> 204</span>
+        </a>
+        <a class="trending-item" href="#">
+          <span class="trending-num">5</span>
+          <span class="trending-title">Heisman finalists announced — your pick?</span>
+          <span class="trending-count"><i class="fas fa-comment"></i> 567</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- TOP RECRUITS -->
+    <div class="widget">
+      <div class="widget-header">
+        <span class="widget-title">⭐ Top Recruits</span>
+        <span style="font-size:12px;color:var(--primary);font-weight:600;cursor:pointer">View all</span>
+      </div>
+      <div class="widget-body">
+        <div class="recruit-item">
+          <div class="recruit-avatar" style="background:linear-gradient(135deg,#2c3e8c,#1a2670)">QB</div>
+          <div>
+            <div class="recruit-name">Malik Thompson</div>
+            <div class="recruit-pos">QB · 6'3" · Tampa, FL</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div class="recruit-stars">★★★★★</div>
+            <div class="commit-badge">COMMITTED</div>
+          </div>
+        </div>
+        <div class="recruit-item">
+          <div class="recruit-avatar" style="background:linear-gradient(135deg,#cc0000,#8b0000)">RB</div>
+          <div>
+            <div class="recruit-name">DeShaun Walker</div>
+            <div class="recruit-pos">RB · 5'11" · Hoover, AL</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div class="recruit-stars">★★★★★</div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-top:2px">UNDECIDED</div>
+          </div>
+        </div>
+        <div class="recruit-item">
+          <div class="recruit-avatar" style="background:linear-gradient(135deg,#bf5700,#8b3d00)">WR</div>
+          <div>
+            <div class="recruit-name">Jordan Ellis</div>
+            <div class="recruit-pos">WR · 6'1" · Austin, TX</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div class="recruit-stars">★★★★☆</div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-top:2px">UNDECIDED</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONLINE MEMBERS -->
+    <div class="widget">
+      <div class="widget-header">
+        <span class="widget-title">👥 Online Now</span>
+        <span style="font-size:12px;color:var(--text-muted)">247 members</span>
+      </div>
+      <div class="widget-body">
+        <div class="members-row">
+          <div class="member-pill"><div class="member-avatar" style="background:#cc0000">R</div>RollTideRandy<span class="online-indicator"></span></div>
+          <div class="member-pill"><div class="member-avatar" style="background:#2c3e8c">G</div>GatorNation88<span class="online-indicator"></span></div>
+          <div class="member-pill"><div class="member-avatar" style="background:#bf5700">L</div>LonghornFan<span class="online-indicator"></span></div>
+          <div class="member-pill"><div class="member-avatar" style="background:#003087">B</div>B1G_Guy<span class="online-indicator"></span></div>
+          <div class="member-pill"><div class="member-avatar" style="background:#ba0c2f">H</div>HailState<span class="online-indicator"></span></div>
+          <div class="member-pill"><div class="member-avatar" style="background:#006747">M</div>MiamiMike<span class="online-indicator"></span></div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+</body>
+</html>

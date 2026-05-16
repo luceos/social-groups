@@ -1446,7 +1446,6 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: var(--primary-color, @sg-primary-hex);
     flex-shrink: 0;
     overflow: hidden;
     display: flex;
@@ -1459,7 +1458,7 @@
   &-postInitial {
     font-size: 1rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--primary-color, @sg-primary-hex);
   }
 
   &-postMeta {
@@ -2275,7 +2274,7 @@
   .SGThread-postMeta    { font-size: 0.9em; }
   .SGThread-postAuthor  { color: inherit; font-weight: 700; }
   .SGThread-postTime    { color: var(--muted-color); }
-  .SGThread-postInitial { color: #fff; }
+  .SGThread-postInitial { color: var(--primary-color, @sg-primary-hex); }
 }
 
 .SGThread-replyBtn {
