@@ -8,15 +8,16 @@ use Illuminate\Database\Schema\Builder;
 // and carries a new filename so Flarum always treats it as fresh.
 return [
     'up' => function (Builder $schema) {
-        $db = $schema->getConnection();
+        $db     = $schema->getConnection();
+        $prefix = $db->getTablePrefix();
 
         $exists = $db->select(
-            "SHOW COLUMNS FROM `social_group_posts` LIKE 'content_parsed'"
+            "SHOW COLUMNS FROM `{$prefix}social_group_posts` LIKE 'content_parsed'"
         );
 
         if (empty($exists)) {
             $db->statement(
-                'ALTER TABLE `social_group_posts` ADD COLUMN `content_parsed` MEDIUMTEXT NULL AFTER `content`'
+                "ALTER TABLE `{$prefix}social_group_posts` ADD COLUMN `content_parsed` MEDIUMTEXT NULL AFTER `content`"
             );
         }
     },

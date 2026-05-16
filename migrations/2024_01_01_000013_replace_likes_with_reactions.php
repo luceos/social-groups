@@ -20,9 +20,11 @@ return [
 
             // Migrate existing likes → reactions
             if ($schema->hasTable('social_group_post_likes')) {
-                $schema->getConnection()->statement(
-                    "INSERT INTO `social_group_post_reactions` (`post_id`, `user_id`, `reaction`)
-                     SELECT `post_id`, `user_id`, 'like' FROM `social_group_post_likes`
+                $db     = $schema->getConnection();
+                $prefix = $db->getTablePrefix();
+                $db->statement(
+                    "INSERT INTO `{$prefix}social_group_post_reactions` (`post_id`, `user_id`, `reaction`)
+                     SELECT `post_id`, `user_id`, 'like' FROM `{$prefix}social_group_post_likes`
                      ON DUPLICATE KEY UPDATE `reaction` = `reaction`"
                 );
             }

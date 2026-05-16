@@ -75,10 +75,11 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
 
             $applySearch = function ($query) use ($search) {
                 if ($search === '') return;
-                $like = '%' . addcslashes($search, '%_\\') . '%';
-                $query->leftJoin('social_group_posts as sgp_s', function ($join) {
+                $like   = '%' . addcslashes($search, '%_\\') . '%';
+                $prefix = $query->getConnection()->getTablePrefix();
+                $query->leftJoin('social_group_posts as sgp_s', function ($join) use ($prefix) {
                     $join->on('sgp_s.discussion_id', '=', 'social_group_discussions.id')
-                         ->whereRaw('sgp_s.id = (SELECT MIN(id) FROM social_group_posts WHERE discussion_id = social_group_discussions.id)');
+                         ->whereRaw("sgp_s.id = (SELECT MIN(id) FROM `{$prefix}social_group_posts` WHERE discussion_id = `{$prefix}social_group_discussions`.id)");
                 })
                 ->where(function ($q) use ($like) {
                     $q->where('social_group_discussions.title', 'like', $like)
