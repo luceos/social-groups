@@ -24,6 +24,7 @@ use Ernestdefoe\SocialGroups\Api\Controller\Post\ListGroupPostsController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\TogglePostReactionController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\UpdateGroupPostController;
 use Ernestdefoe\SocialGroups\Api\Controller\ListUserGroupsController;
+use Ernestdefoe\SocialGroups\Api\Controller\SetPrimaryGroupController;
 use Ernestdefoe\SocialGroups\Api\Controller\StoreGroupMediaPostController;
 use Ernestdefoe\SocialGroups\Api\Controller\Poll\VotePollController;
 use Ernestdefoe\SocialGroups\Api\Controller\PromoteMemberController;
@@ -71,6 +72,7 @@ return [
         ->post('/social-groups/{id}/invite',  'social-groups.invite',        InviteUserController::class)
         // Link preview proxy
         ->get('/sg-link-preview', 'sg-link-preview', FetchLinkPreviewController::class)
+        ->post('/sg-primary-group',     'sg.primary-group.set', SetPrimaryGroupController::class)
         ->get('/sg-media/{groupId}',   'sg-media.list',   ListGroupMediaController::class)
         ->post('/sg-media-post/{groupId}', 'sg-media-post.store', StoreGroupMediaPostController::class)
         // Discussions

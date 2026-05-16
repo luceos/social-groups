@@ -1,6 +1,7 @@
 import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
 import IndexSidebar from 'flarum/forum/components/IndexSidebar';
+import SettingsPage from 'flarum/forum/components/SettingsPage';
 import UserCard from 'flarum/forum/components/UserCard';
 import LinkButton from 'flarum/common/components/LinkButton';
 import SocialGroup from './forum/models/SocialGroup';
@@ -10,6 +11,7 @@ import GroupDiscussionThread from './forum/components/GroupDiscussionThread';
 import SocialGroupNewPostNotification from './forum/components/SocialGroupNewPostNotification';
 import SocialGroupNewReplyNotification from './forum/components/SocialGroupNewReplyNotification';
 import UserGroupBadges from './forum/components/UserGroupBadges';
+import PrimaryGroupSelector from './forum/components/PrimaryGroupSelector';
 
 app.initializers.add('ernestdefoe-social-groups', () => {
   app.store.models['social-groups'] = SocialGroup;
@@ -43,6 +45,13 @@ app.initializers.add('ernestdefoe-social-groups', () => {
         m(UserGroupBadges, { userId: user.id() }),
         -10
       );
+    }
+  });
+
+  // ── Primary group selector in account settings ────────────────────────────
+  extend(SettingsPage.prototype, 'settingsItems', function (items) {
+    if (app.session.user) {
+      items.add('sg-primary-group', m(PrimaryGroupSelector), 10);
     }
   });
 

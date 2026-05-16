@@ -44,10 +44,14 @@ export default class UserGroupBadges extends Component {
   view() {
     if (this.loading || !this.groups || this.groups.length === 0) return m('span');
 
+    // Show only the primary group if one has been selected; otherwise show all.
+    const primary = this.groups.find((g) => g.isPrimary);
+    const display = primary ? [primary] : this.groups;
+
     return m('.UserGroupBadges', [
       m('.UserGroupBadges-label', [m('i.fas.fa-users'), ' Groups']),
       m('.UserGroupBadges-list',
-        this.groups.map((group) =>
+        display.map((group) =>
           m(Link, {
             key:   group.id,
             href:  app.route('ernestdefoe-social-groups.show', { slug: group.slug }),

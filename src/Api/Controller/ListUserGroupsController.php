@@ -22,16 +22,19 @@ class ListUserGroupsController implements RequestHandlerInterface
                 $userId = (int) ($m[1] ?? 0);
             }
 
-            if (! $userId || ! User::where('id', $userId)->exists()) {
+            $profileUser = User::find($userId);
+            if (! $profileUser) {
                 return new JsonResponse(['error' => 'User not found.'], 404);
             }
+
+            $primaryGroupId = $profileUser->sg_primary_group_id;
 
             $memberships = SocialGroupMember::where('user_id', $userId)
                 ->whereNull('banned_at')
                 ->with('group')
                 ->get();
 
-            $groups = $memberships->map(function ($membership) use ($actor) {
+            $groups = $memberships->map(function ($membership) use ($actor, $primaryGroupId) {
                 $group = $membership->group;
                 if (! $group) return null;
 
@@ -52,6 +55,7 @@ class ListUserGroupsController implements RequestHandlerInterface
                     'color'       => $group->color,
                     'memberCount' => (int) $group->member_count,
                     'role'        => $membership->role,
+                    'isPrimary'   => $primaryGroupId && $group->id === $primaryGroupId,
                 ];
             })->filter()->values();
 
