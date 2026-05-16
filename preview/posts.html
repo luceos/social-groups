@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GridIron Nation — Group Posts Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary:        #B22222;
+  --primary-dark:   #8B0000;
+  --primary-light:  #d94f4f;
+  --primary-ghost:  rgba(178,34,34,0.08);
+  --primary-ghost2: rgba(178,34,34,0.14);
+  --bg:             #f0f1f5;
+  --surface:        #f8f8fa;
+  --card:           #ffffff;
+  --border:         rgba(0,0,0,0.07);
+  --border-chip:    rgba(0,0,0,0.10);
+  --text:           #22232a;
+  --text-muted:     #9fa0ab;
+  --text-secondary: #5f6070;
+  --online:         #4ec46a;
+  --shadow-sm:      0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md:      0 4px 16px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05);
+  --shadow-lg:      0 8px 32px rgba(0,0,0,0.12), 0 3px 10px rgba(0,0,0,0.06);
+  --radius:         14px;
+  --radius-sm:      9px;
+  --transition:     0.15s ease;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+/* ── HEADER ─────────────────────────────────────────────── */
+.header {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+.header-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; height: 58px; gap: 20px;
+}
+.logo {
+  display: flex; align-items: center; gap: 9px;
+  font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none;
+}
+.logo-icon {
+  width: 34px; height: 34px; background: var(--primary); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; box-shadow: 0 2px 8px rgba(178,34,34,0.35);
+}
+.header-nav { display: flex; gap: 2px; flex: 1; margin-left: 6px; }
+.header-nav a {
+  font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; padding: 6px 12px; border-radius: 8px;
+  transition: background var(--transition), color var(--transition);
+}
+.header-nav a:hover { background: var(--bg); color: var(--text); }
+.header-nav a.active { background: var(--primary-ghost); color: var(--primary); }
+.header-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.btn-icon {
+  width: 36px; height: 36px; border-radius: 10px; background: var(--bg);
+  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); cursor: pointer; font-size: 14px; position: relative;
+}
+.notif-dot {
+  position: absolute; top: 7px; right: 7px;
+  width: 7px; height: 7px; background: var(--primary); border-radius: 50%;
+  border: 2px solid #fff;
+}
+.user-avatar {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, #B22222, #8B0000);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(178,34,34,0.3);
+}
+
+/* ── GROUP HERO ─────────────────────────────────────────── */
+.group-hero {
+  background: linear-gradient(135deg, rgba(178,34,34,0.90) 0%, rgba(60,6,6,0.88) 100%),
+              url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><circle cx="30" cy="30" r="1.5" fill="rgba(255,255,255,0.15)"/><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="10" cy="50" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+  padding: 28px 28px 22px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  color: #fff;
+  display: flex; align-items: center; gap: 18px;
+}
+.group-hero-icon {
+  width: 56px; height: 56px; border-radius: 14px;
+  background: rgba(255,255,255,0.18); border: 2px solid rgba(255,255,255,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; flex-shrink: 0;
+  backdrop-filter: blur(6px);
+}
+.group-hero-info { flex: 1; }
+.group-hero-name { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.group-hero-sub { font-size: 13px; opacity: 0.72; margin-top: 3px; }
+.group-hero-stats { display: flex; gap: 20px; flex-shrink: 0; }
+.group-hero-stat { text-align: center; }
+.group-hero-stat-num { font-size: 20px; font-weight: 700; line-height: 1; }
+.group-hero-stat-label { font-size: 10.5px; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+/* ── GROUP TABS ─────────────────────────────────────────── */
+.group-tabs {
+  background: #fff; border-bottom: 1px solid var(--border);
+  padding: 0 20px; display: flex; gap: 2px;
+  border-radius: 0; box-shadow: none;
+}
+.group-tab {
+  font-size: 13.5px; font-weight: 600; color: var(--text-secondary);
+  padding: 12px 14px; border-bottom: 3px solid transparent; margin-bottom: -1px;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  transition: color var(--transition), border-color var(--transition);
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.group-tab:hover { color: var(--text); }
+.group-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.page {
+  max-width: 1200px; margin: 0 auto;
+  padding: 20px 24px 60px;
+  display: grid; grid-template-columns: 1fr 300px; gap: 20px;
+  align-items: start;
+}
+.main { display: flex; flex-direction: column; gap: 0; }
+.group-wrap {
+  background: #fff; border-radius: var(--radius);
+  box-shadow: var(--shadow-md); overflow: hidden;
+}
+
+/* ── COMPOSER ───────────────────────────────────────────── */
+.composer {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 11px; align-items: center;
+}
+.composer-avatar {
+  width: 38px; height: 38px; border-radius: 12px;
+  background: linear-gradient(135deg, #B22222, #8B0000);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 14px; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(178,34,34,0.3);
+}
+.composer-input {
+  flex: 1; background: var(--bg); border: 1.5px solid transparent;
+  border-radius: 22px; padding: 9px 16px;
+  font-family: inherit; font-size: 14px; color: var(--text-secondary);
+  cursor: pointer; display: flex; align-items: center;
+  transition: border-color var(--transition), background var(--transition);
+}
+.composer-input:hover { border-color: var(--border-chip); background: #f0f1f5; }
+.composer-actions { display: flex; gap: 6px; }
+.composer-btn {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: none; border: 1px solid var(--border-chip);
+  color: var(--text-secondary); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 13px; transition: background var(--transition), color var(--transition);
+}
+.composer-btn:hover { background: var(--primary-ghost); color: var(--primary); }
+
+/* ── POST CARD ──────────────────────────────────────────── */
+.post {
+  border-bottom: 1px solid var(--border);
+  padding: 16px 16px 0;
+  transition: background var(--transition);
+}
+.post:last-child { border-bottom: none; }
+.post:hover { background: #fdfcfc; }
+
+.post-header {
+  display: flex; align-items: flex-start; gap: 11px; margin-bottom: 10px;
+}
+.post-avatar {
+  width: 42px; height: 42px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 15px; flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+.post-meta { flex: 1; min-width: 0; }
+.post-author { font-weight: 700; font-size: 14.5px; line-height: 1.2; }
+.post-byline { font-size: 12.5px; color: var(--text-muted); margin-top: 1px; display: flex; align-items: center; gap: 6px; }
+.post-menu { color: var(--text-muted); cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: background var(--transition); }
+.post-menu:hover { background: var(--bg); color: var(--text-secondary); }
+
+.post-pinned-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--primary); background: var(--primary-ghost); padding: 2px 7px; border-radius: 6px;
+}
+
+.post-body { font-size: 14.5px; line-height: 1.65; color: var(--text); margin-bottom: 12px; }
+.post-body strong { color: var(--primary); }
+.post-body em { color: var(--text-secondary); }
+
+/* Image attachment */
+.post-img {
+  width: 100%; max-height: 340px; object-fit: cover;
+  border-radius: var(--radius-sm); margin-bottom: 12px; display: block;
+  background: linear-gradient(135deg, #2a0000 0%, #6b0000 100%);
+  min-height: 200px; position: relative; overflow: hidden;
+}
+.post-img-placeholder {
+  width: 100%; height: 220px;
+  border-radius: var(--radius-sm); margin-bottom: 12px;
+  background: linear-gradient(135deg, #1a0000 0%, #8B0000 50%, #B22222 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.55); gap: 8px; font-size: 13px;
+}
+.post-img-placeholder i { font-size: 32px; opacity: 0.4; }
+.post-img-caption { font-size: 12px; opacity: 0.6; }
+
+/* Shared card */
+.post-shared {
+  border: 1.5px solid var(--border-chip); border-radius: var(--radius-sm);
+  padding: 12px 14px; margin-bottom: 12px; cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  background: var(--bg);
+}
+.post-shared:hover { border-color: var(--primary-light); background: var(--primary-ghost); }
+.post-shared-header { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.post-shared-avatar { width: 22px; height: 22px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 9px; flex-shrink: 0; }
+.post-shared-author { font-size: 12.5px; font-weight: 600; }
+.post-shared-group { font-size: 11.5px; color: var(--text-muted); }
+.post-shared-title { font-weight: 600; font-size: 13.5px; margin-bottom: 4px; }
+.post-shared-snippet { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Poll */
+.poll { margin-bottom: 14px; }
+.poll-q { font-weight: 700; font-size: 14.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+.poll-q i { color: var(--primary); }
+.poll-options { display: flex; flex-direction: column; gap: 7px; margin-bottom: 10px; }
+.poll-opt {
+  position: relative; height: 38px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-chip); overflow: hidden; cursor: pointer;
+  display: flex; align-items: center; padding: 0 12px; gap: 10px;
+  background: #fff; font-size: 13.5px; font-weight: 500;
+  transition: border-color var(--transition);
+}
+.poll-opt:hover { border-color: var(--primary-light); }
+.poll-opt.voted { border-color: var(--primary); }
+.poll-bar {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: var(--primary-ghost); z-index: 0;
+  transition: width 0.4s ease;
+}
+.poll-opt-text { position: relative; z-index: 1; flex: 1; }
+.poll-opt-pct { position: relative; z-index: 1; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.poll-opt.voted .poll-opt-text, .poll-opt.voted .poll-opt-pct { color: var(--primary-dark); }
+.poll-opt-check { position: relative; z-index: 1; color: var(--primary); font-size: 12px; }
+.poll-footer { font-size: 12px; color: var(--text-muted); }
+
+/* ── STAT BAR ───────────────────────────────────────────── */
+.stat-bar {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--text-secondary);
+  padding: 6px 0 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  margin-bottom: 0;
+}
+.stat-reactions { display: flex; align-items: center; gap: 4px; }
+.stat-emoji-stack { display: flex; }
+.stat-emoji {
+  font-size: 14px; line-height: 1;
+  background: var(--bg); border: 1.5px solid #fff;
+  border-radius: 50%; width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  margin-right: -6px; font-size: 11px;
+}
+.stat-count { font-weight: 600; font-size: 13px; margin-left: 10px; }
+.stat-dot { color: var(--border-chip); margin: 0 2px; }
+.stat-comments-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-secondary); font-size: 13px; font-weight: 500;
+  padding: 0; transition: color var(--transition);
+  font-family: inherit;
+}
+.stat-comments-btn:hover { color: var(--primary); }
+
+/* ── ACTION BAR ─────────────────────────────────────────── */
+.action-bar {
+  display: flex; gap: 2px; padding: 4px 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+.action-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 13.5px; font-weight: 500;
+  color: var(--text-secondary); transition: background var(--transition), color var(--transition);
+}
+.action-btn:hover { background: var(--bg); color: var(--text); }
+.action-btn.reacted { color: var(--primary); }
+.action-btn.reacted i { color: var(--primary); }
+.action-btn i { font-size: 15px; }
+
+/* ── INLINE COMMENTS ────────────────────────────────────── */
+.comments { padding: 10px 0 0; }
+.view-all-btn {
+  display: block; width: 100%; text-align: center;
+  padding: 7px; font-size: 13px; font-weight: 600; color: var(--primary);
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  border-radius: 8px; transition: background var(--transition);
+  margin-bottom: 6px;
+}
+.view-all-btn:hover { background: var(--primary-ghost); }
+.comment {
+  display: flex; gap: 9px; padding: 7px 0;
+}
+.comment-avatar {
+  width: 30px; height: 30px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 11px; flex-shrink: 0;
+}
+.comment-right { flex: 1; min-width: 0; }
+.comment-bubble {
+  background: var(--bg); border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
+  padding: 8px 12px; display: inline-block; max-width: 100%;
+}
+.comment-author { font-size: 12.5px; font-weight: 700; margin-bottom: 2px; color: var(--text); }
+.comment-text { font-size: 13.5px; line-height: 1.5; color: var(--text); }
+.comment-footer {
+  display: flex; align-items: center; gap: 10px; margin-top: 4px; padding-left: 4px;
+  font-size: 12px; color: var(--text-muted);
+}
+.comment-react-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  padding: 0; font-family: inherit; transition: color var(--transition);
+}
+.comment-react-btn:hover { color: var(--primary); }
+.comment-react-btn.reacted { color: var(--primary); }
+.comment-react-stat {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--bg); border: 1px solid var(--border-chip);
+  border-radius: 20px; padding: 1px 7px; font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ── REPLY ROW ──────────────────────────────────────────── */
+.reply-row {
+  display: flex; gap: 9px; align-items: center;
+  padding: 10px 0 14px;
+}
+.reply-avatar {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: linear-gradient(135deg, #B22222, #8B0000);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 11px; flex-shrink: 0;
+}
+.reply-input {
+  flex: 1; background: var(--bg); border: 1.5px solid transparent;
+  border-radius: 20px; padding: 7px 14px; font-family: inherit;
+  font-size: 13.5px; color: var(--text-muted);
+  transition: border-color var(--transition);
+  cursor: text;
+}
+.reply-input:focus-visible { outline: none; border-color: var(--primary-light); }
+
+/* ── SIDEBAR ────────────────────────────────────────────── */
+.sidebar { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 78px; }
+
+.widget {
+  background: #fff; border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.widget-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px 10px; border-bottom: 1px solid var(--border);
+}
+.widget-title {
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 7px;
+}
+.widget-title i { color: var(--primary); }
+.widget-live-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+  color: #fff; background: var(--primary);
+  padding: 2px 7px; border-radius: 20px;
+  display: flex; align-items: center; gap: 4px;
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #fff;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+}
+
+/* Live Scores */
+.score-card {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.score-card:last-child { border-bottom: none; }
+.score-teams { display: flex; flex-direction: column; gap: 4px; }
+.score-row { display: flex; align-items: center; gap: 8px; }
+.score-team-abbr {
+  font-size: 13px; font-weight: 700; color: var(--text); width: 38px;
+}
+.score-bar-wrap { flex: 1; height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+.score-bar { height: 100%; border-radius: 2px; }
+.score-num { font-size: 15px; font-weight: 700; min-width: 24px; text-align: right; }
+.score-num.winning { color: var(--primary); }
+.score-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11.5px; color: var(--text-muted);
+}
+.score-quarter {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  color: var(--online); letter-spacing: 0.04em; display: flex; align-items: center; gap: 4px;
+}
+.score-quarter.final { color: var(--text-muted); }
+
+/* Trending */
+.trend-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
+  transition: background var(--transition);
+}
+.trend-item:hover { background: var(--primary-ghost); }
+.trend-item:last-child { border-bottom: none; }
+.trend-num {
+  font-size: 18px; font-weight: 800; color: var(--border-chip);
+  line-height: 1.2; min-width: 20px;
+}
+.trend-item:nth-child(1) .trend-num,
+.trend-item:nth-child(2) .trend-num { color: var(--primary); }
+.trend-title { font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--text); }
+.trend-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+/* Recruits */
+.recruit-card {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 11px;
+  cursor: pointer; transition: background var(--transition);
+}
+.recruit-card:hover { background: var(--primary-ghost); }
+.recruit-card:last-child { border-bottom: none; }
+.recruit-pos {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; flex-shrink: 0; letter-spacing: -0.02em;
+}
+.recruit-info { flex: 1; min-width: 0; }
+.recruit-name { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.recruit-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+.recruit-right { text-align: right; flex-shrink: 0; }
+.stars { color: #f59e0b; font-size: 11px; letter-spacing: 1px; }
+.recruit-status {
+  display: inline-block; margin-top: 3px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 1px 7px; border-radius: 6px;
+}
+.status-committed { background: rgba(34,197,94,0.12); color: #16a34a; }
+.status-undecided { background: rgba(234,179,8,0.12); color: #b45309; }
+.status-decommitted { background: rgba(239,68,68,0.12); color: #dc2626; }
+
+/* Online Now */
+.online-header-count {
+  font-size: 12.5px; font-weight: 700; color: var(--online);
+  display: flex; align-items: center; gap: 5px;
+}
+.online-dot-sm { width: 7px; height: 7px; border-radius: 50%; background: var(--online); }
+.online-members { padding: 12px 16px; display: flex; flex-direction: column; gap: 9px; }
+.online-member { display: flex; align-items: center; gap: 9px; }
+.online-avatar {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 11px; position: relative;
+}
+.online-status-dot {
+  position: absolute; bottom: -1px; right: -1px;
+  width: 9px; height: 9px; border-radius: 50%; background: var(--online);
+  border: 2px solid #fff;
+}
+.online-name { font-size: 13px; font-weight: 600; }
+.online-sub { font-size: 11.5px; color: var(--text-muted); }
+
+/* ── AVATAR COLORS ─────────────────────────────────── */
+.av-crimson   { background: linear-gradient(135deg, #B22222, #8B0000); }
+.av-navy      { background: linear-gradient(135deg, #1e3a5f, #0f1e3a); }
+.av-forest    { background: linear-gradient(135deg, #2d6a4f, #1b4332); }
+.av-amber     { background: linear-gradient(135deg, #d97706, #92400e); }
+.av-purple    { background: linear-gradient(135deg, #7c3aed, #4c1d95); }
+.av-teal      { background: linear-gradient(135deg, #0891b2, #0c4a6e); }
+.av-rose      { background: linear-gradient(135deg, #e11d48, #881337); }
+
+/* ── REACTION PICKER (demo) ─────────────────────────── */
+.reaction-picker {
+  position: absolute; bottom: calc(100% + 6px); left: 0;
+  background: #fff; border: 1px solid var(--border-chip);
+  border-radius: 40px; padding: 6px 10px;
+  box-shadow: var(--shadow-md);
+  display: flex; gap: 4px; z-index: 10;
+}
+.picker-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 8px; border-radius: 20px; background: none; border: none;
+  cursor: pointer; font-size: 20px; transition: transform var(--transition), background var(--transition);
+}
+.picker-btn:hover { transform: scale(1.3) translateY(-3px); background: var(--bg); }
+.picker-label { font-size: 9px; color: var(--text-secondary); font-family: inherit; }
+
+.react-wrap { position: relative; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon"><i class="fas fa-football-ball"></i></div>
+      GridIron Nation
+    </a>
+    <nav class="header-nav">
+      <a href="#">Discussions</a>
+      <a href="#">Teams</a>
+      <a href="#" class="active">Groups</a>
+      <a href="#">Game Day</a>
+      <a href="#">Recruiting</a>
+    </nav>
+    <div class="header-right">
+      <div class="btn-icon">
+        <i class="fas fa-search"></i>
+      </div>
+      <div class="btn-icon">
+        <i class="fas fa-bell"></i>
+        <span class="notif-dot"></span>
+      </div>
+      <div class="user-avatar">E</div>
+    </div>
+  </div>
+</header>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- MAIN COLUMN -->
+  <main class="main">
+
+    <!-- GROUP WRAPPER -->
+    <div class="group-wrap">
+
+      <!-- GROUP HERO -->
+      <div class="group-hero">
+        <div class="group-hero-icon">🏈</div>
+        <div class="group-hero-info">
+          <div class="group-hero-name">Alabama Crimson Tide Fans</div>
+          <div class="group-hero-sub">Private group · 2,841 members · Roll Tide 🐘</div>
+        </div>
+        <div class="group-hero-stats">
+          <div class="group-hero-stat">
+            <div class="group-hero-stat-num">2,841</div>
+            <div class="group-hero-stat-label">Members</div>
+          </div>
+          <div class="group-hero-stat">
+            <div class="group-hero-stat-num">14.2k</div>
+            <div class="group-hero-stat-label">Posts</div>
+          </div>
+          <div class="group-hero-stat">
+            <div class="group-hero-stat-num">187</div>
+            <div class="group-hero-stat-label">Online</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABS -->
+      <div class="group-tabs">
+        <button class="group-tab active"><i class="fas fa-stream"></i> Feed</button>
+        <button class="group-tab"><i class="fas fa-comments"></i> Discussions</button>
+        <button class="group-tab"><i class="fas fa-images"></i> Media</button>
+        <button class="group-tab"><i class="fas fa-users"></i> Members</button>
+        <button class="group-tab"><i class="fas fa-chart-bar"></i> Analytics</button>
+      </div>
+
+      <!-- COMPOSER -->
+      <div class="composer">
+        <div class="composer-avatar">E</div>
+        <div class="composer-input">What's on your mind, Ernest?</div>
+        <div class="composer-actions">
+          <button class="composer-btn" title="Add image"><i class="fas fa-image"></i></button>
+          <button class="composer-btn" title="Add poll"><i class="fas fa-poll"></i></button>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- POST 1 — Text + Reactions + Expanded Replies       -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="post">
+        <div class="post-header">
+          <div class="post-avatar av-navy">TW</div>
+          <div class="post-meta">
+            <div class="post-author">
+              TideWatcher82
+              <span class="post-pinned-badge" style="margin-left:8px;"><i class="fas fa-thumbtack"></i> Pinned</span>
+            </div>
+            <div class="post-byline">
+              <span>3 hours ago</span>
+              <span>·</span>
+              <span>Moderator</span>
+            </div>
+          </div>
+          <div class="post-menu"><i class="fas fa-ellipsis-h"></i></div>
+        </div>
+
+        <div class="post-body">
+          <strong>CFP Bracket is SET 🏆</strong> — Alabama draws Colorado in the first round at the Rose Bowl on January 1st. I've been saying all season that this team is peaking at the right time. Milroe has looked like an absolute <em>dawg</em> the last four weeks, and our D-line is the best we've had since 2020.<br><br>
+          Anyone else booking flights? The Rose Bowl setup is going to be 🔥🔥🔥
+        </div>
+
+        <!-- Stat bar -->
+        <div class="stat-bar">
+          <div class="stat-reactions">
+            <div class="stat-emoji-stack">
+              <div class="stat-emoji">👍</div>
+              <div class="stat-emoji">❤️</div>
+              <div class="stat-emoji">🔥</div>
+            </div>
+            <span class="stat-count">147</span>
+          </div>
+          <span class="stat-dot">·</span>
+          <button class="stat-comments-btn">41 comments</button>
+        </div>
+
+        <!-- Action bar -->
+        <div class="action-bar">
+          <div class="react-wrap">
+            <button class="action-btn reacted"><i class="fas fa-fire"></i> 🔥 Fire</button>
+          </div>
+          <button class="action-btn"><i class="far fa-comment"></i> Comment</button>
+          <button class="action-btn"><i class="fas fa-share"></i> Share</button>
+        </div>
+
+        <!-- Inline comments (auto-expanded) -->
+        <div class="comments">
+          <button class="view-all-btn">View all 41 comments in thread →</button>
+
+          <div class="comment">
+            <div class="comment-avatar av-forest">CG</div>
+            <div class="comment-right">
+              <div class="comment-bubble">
+                <div class="comment-author">CrimsonGator</div>
+                <div class="comment-text">Already have my tickets booked, section 14B! This is going to be the most electric CFP game of the whole bracket. Colorado's run has been a great story but they aren't ready for this defense.</div>
+              </div>
+              <div class="comment-footer">
+                <span>2 hrs ago</span>
+                <button class="comment-react-btn reacted">❤️ Love</button>
+                <span class="comment-react-stat">❤️ 23</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="comment">
+            <div class="comment-avatar av-amber">RU</div>
+            <div class="comment-right">
+              <div class="comment-bubble">
+                <div class="comment-author">RollUgaRoll</div>
+                <div class="comment-text">The Milroe stat line this season is genuinely insane when you look at it. 3,100 yds, 28 TDs, 5 INTs. If he plays like that in Pasadena it won't be close.</div>
+              </div>
+              <div class="comment-footer">
+                <span>1 hr ago</span>
+                <button class="comment-react-btn">👍 Like</button>
+                <span class="comment-react-stat">👍 14</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="comment">
+            <div class="comment-avatar av-rose">SB</div>
+            <div class="comment-right">
+              <div class="comment-bubble">
+                <div class="comment-author">SabaNation</div>
+                <div class="comment-text">@CrimsonGator section 14B gang 😤 see you there! Let's get a meetup going before the game</div>
+              </div>
+              <div class="comment-footer">
+                <span>47 mins ago</span>
+                <button class="comment-react-btn">😂 Haha</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reply row -->
+        <div class="reply-row">
+          <div class="reply-avatar">E</div>
+          <div class="reply-input">Write a comment… <span style="color:var(--primary)">@</span></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- POST 2 — Image Post                                -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="post">
+        <div class="post-header">
+          <div class="post-avatar av-crimson">JD</div>
+          <div class="post-meta">
+            <div class="post-author">JDixonTide</div>
+            <div class="post-byline"><span>6 hours ago</span></div>
+          </div>
+          <div class="post-menu"><i class="fas fa-ellipsis-h"></i></div>
+        </div>
+
+        <div class="post-body">
+          Bryant-Denny at sunset last Saturday. There is genuinely no place like it on earth. 101,821 people, all one heartbeat. 🏟️
+        </div>
+
+        <!-- Image placeholder styled as a stadium -->
+        <div class="post-img-placeholder">
+          <i class="fas fa-image"></i>
+          <div class="post-img-caption">Bryant-Denny Stadium · Tuscaloosa, AL</div>
+          <div style="font-size:11px;opacity:0.4;">[ stadium photo ]</div>
+        </div>
+
+        <!-- Stat bar -->
+        <div class="stat-bar">
+          <div class="stat-reactions">
+            <div class="stat-emoji-stack">
+              <div class="stat-emoji">❤️</div>
+              <div class="stat-emoji">🔥</div>
+            </div>
+            <span class="stat-count">312</span>
+          </div>
+          <span class="stat-dot">·</span>
+          <button class="stat-comments-btn">18 comments</button>
+        </div>
+
+        <div class="action-bar">
+          <button class="action-btn"><i class="far fa-smile"></i> React</button>
+          <button class="action-btn"><i class="far fa-comment"></i> Comment</button>
+          <button class="action-btn"><i class="fas fa-share"></i> Share</button>
+        </div>
+
+        <div class="comments">
+          <div class="comment">
+            <div class="comment-avatar av-purple">MK</div>
+            <div class="comment-right">
+              <div class="comment-bubble">
+                <div class="comment-author">MikeKilpatrick</div>
+                <div class="comment-text">Chills every single time. There's literally nothing better than a fall Saturday in Tuscaloosa.</div>
+              </div>
+              <div class="comment-footer">
+                <span>5 hrs ago</span>
+                <button class="comment-react-btn reacted">❤️ Love</button>
+                <span class="comment-react-stat">❤️ 41</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="comment">
+            <div class="comment-avatar av-teal">HL</div>
+            <div class="comment-right">
+              <div class="comment-bubble">
+                <div class="comment-author">HoundstootLou</div>
+                <div class="comment-text">That lighting is incredible. What time was this taken?</div>
+              </div>
+              <div class="comment-footer">
+                <span>4 hrs ago</span>
+                <button class="comment-react-btn">👍 Like</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reply-row">
+          <div class="reply-avatar">E</div>
+          <div class="reply-input">Write a comment…</div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- POST 3 — Poll                                      -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="post">
+        <div class="post-header">
+          <div class="post-avatar av-forest">CG</div>
+          <div class="post-meta">
+            <div class="post-author">CrimsonGator</div>
+            <div class="post-byline"><span>Yesterday</span></div>
+          </div>
+          <div class="post-menu"><i class="fas fa-ellipsis-h"></i></div>
+        </div>
+
+        <div class="post-body">
+          Real talk — who is taking the SEC Championship if Alabama wins out? Vote below 👇
+        </div>
+
+        <!-- Poll -->
+        <div class="poll">
+          <div class="poll-q"><i class="fas fa-poll"></i> Who wins the SEC Rematch?</div>
+          <div class="poll-options">
+            <button class="poll-opt voted">
+              <div class="poll-bar" style="width:54%"></div>
+              <span class="poll-opt-text">Alabama Crimson Tide 🐘</span>
+              <span class="poll-opt-pct">54%</span>
+              <i class="fas fa-check poll-opt-check"></i>
+            </button>
+            <button class="poll-opt">
+              <div class="poll-bar" style="width:28%;background:rgba(178,34,34,0.05)"></div>
+              <span class="poll-opt-text">Georgia Bulldogs 🐶</span>
+              <span class="poll-opt-pct">28%</span>
+            </button>
+            <button class="poll-opt">
+              <div class="poll-bar" style="width:10%;background:rgba(178,34,34,0.05)"></div>
+              <span class="poll-opt-text">Texas Longhorns 🤘</span>
+              <span class="poll-opt-pct">10%</span>
+            </button>
+            <button class="poll-opt">
+              <div class="poll-bar" style="width:8%;background:rgba(178,34,34,0.05)"></div>
+              <span class="poll-opt-text">Ohio State Buckeyes 🌰</span>
+              <span class="poll-opt-pct">8%</span>
+            </button>
+          </div>
+          <div class="poll-footer">1,204 votes · Closes in 2 days</div>
+        </div>
+
+        <div class="stat-bar">
+          <span class="stat-dot" style="margin:0">·</span>
+          <button class="stat-comments-btn">7 comments</button>
+        </div>
+
+        <div class="action-bar">
+          <button class="action-btn"><i class="far fa-smile"></i> React</button>
+          <button class="action-btn"><i class="far fa-comment"></i> Comment</button>
+          <button class="action-btn"><i class="fas fa-share"></i> Share</button>
+        </div>
+
+        <div class="comments">
+          <div class="comment">
+            <div class="comment-avatar av-amber">RU</div>
+            <div class="comment-right">
+              <div class="comment-bubble">
+                <div class="comment-author">RollUgaRoll</div>
+                <div class="comment-text">Georgia in a rematch hits different. Smart's squad has been quietly building since the loss in October. Don't sleep on them.</div>
+              </div>
+              <div class="comment-footer">
+                <span>23 hrs ago</span>
+                <button class="comment-react-btn">👍 Like</button>
+                <span class="comment-react-stat">👍 9</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reply-row">
+          <div class="reply-avatar">E</div>
+          <div class="reply-input">Write a comment…</div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════ -->
+      <!-- POST 4 — Shared Post Card                          -->
+      <!-- ══════════════════════════════════════════════════ -->
+      <div class="post">
+        <div class="post-header">
+          <div class="post-avatar av-purple">MK</div>
+          <div class="post-meta">
+            <div class="post-author">MikeKilpatrick</div>
+            <div class="post-byline"><span>2 days ago</span></div>
+          </div>
+          <div class="post-menu"><i class="fas fa-ellipsis-h"></i></div>
+        </div>
+
+        <div class="post-body">
+          Dropped this in the Recruiting group but figured y'all would want to see it too — 5-star DT Darius Vance just dropped a massive hint on his Instagram story. Read between the lines here 👀
+        </div>
+
+        <!-- Shared card -->
+        <div class="post-shared">
+          <div class="post-shared-header">
+            <div class="post-shared-avatar av-crimson">R</div>
+            <span class="post-shared-author">RecruitingInsider</span>
+            <span class="post-shared-group"><i class="fas fa-users"></i> Transfer Portal Watch</span>
+          </div>
+          <div class="post-shared-title">🚨 Darius Vance (5⭐ DT, #3 overall) teases decision before Early Signing Day</div>
+          <div class="post-shared-snippet">Sources close to the Vance family indicate that a top-two of Alabama and Georgia has held firm all month, with a campus visit to Tuscaloosa scheduled for Dec 14th. The visit timing is significant because…</div>
+        </div>
+
+        <div class="stat-bar">
+          <div class="stat-reactions">
+            <div class="stat-emoji-stack">
+              <div class="stat-emoji">🔥</div>
+              <div class="stat-emoji">😮</div>
+            </div>
+            <span class="stat-count">88</span>
+          </div>
+          <span class="stat-dot">·</span>
+          <button class="stat-comments-btn">22 comments</button>
+        </div>
+
+        <div class="action-bar">
+          <button class="action-btn"><i class="far fa-smile"></i> React</button>
+          <button class="action-btn"><i class="far fa-comment"></i> Comment</button>
+          <button class="action-btn"><i class="fas fa-share"></i> Share</button>
+        </div>
+
+        <div class="comments">
+          <div class="comment">
+            <div class="comment-avatar av-navy">TW</div>
+            <div class="comment-right">
+              <div class="comment-bubble">
+                <div class="comment-author">TideWatcher82</div>
+                <div class="comment-text">If we land Vance this class becomes legitimately historic. A DT that runs a 4.7 at 310 lbs is once-in-a-decade. @MikeKilpatrick where'd you hear about the Instagram thing?</div>
+              </div>
+              <div class="comment-footer">
+                <span>2 days ago</span>
+                <button class="comment-react-btn">👍 Like</button>
+                <span class="comment-react-stat">👍 31</span>
+              </div>
+            </div>
+          </div>
+          <div class="comment">
+            <div class="comment-avatar av-teal">HL</div>
+            <div class="comment-right">
+              <div class="comment-bubble">
+                <div class="comment-author">HoundstootLou</div>
+                <div class="comment-text">The timing of a Dec 14 visit right before the Dec 18 Early Signing period is no accident. That's how Saban always played it — make the visit the last thing they remember before they sign. 🐘</div>
+              </div>
+              <div class="comment-footer">
+                <span>2 days ago</span>
+                <button class="comment-react-btn reacted">🔥 Fire</button>
+                <span class="comment-react-stat">🔥 19</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reply-row">
+          <div class="reply-avatar">E</div>
+          <div class="reply-input">Write a comment…</div>
+        </div>
+      </div>
+
+    </div><!-- /group-wrap -->
+  </main>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- LIVE SCORES -->
+    <div class="widget">
+      <div class="widget-header">
+        <div class="widget-title"><i class="fas fa-broadcast-tower"></i> Live Scores</div>
+        <div class="widget-live-badge"><div class="live-dot"></div> LIVE</div>
+      </div>
+
+      <div class="score-card">
+        <div class="score-teams">
+          <div class="score-row">
+            <div class="score-team-abbr">ALA</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:60%;background:#B22222"></div></div>
+            <div class="score-num winning">28</div>
+          </div>
+          <div class="score-row">
+            <div class="score-team-abbr">UGA</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:40%;background:#CC0000"></div></div>
+            <div class="score-num">21</div>
+          </div>
+        </div>
+        <div class="score-meta">
+          <span>SEC Championship · Atlanta</span>
+          <span class="score-quarter"><span class="live-dot" style="background:var(--online)"></span> Q4 8:42</span>
+        </div>
+      </div>
+
+      <div class="score-card">
+        <div class="score-teams">
+          <div class="score-row">
+            <div class="score-team-abbr">OSU</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:50%;background:#BB0000"></div></div>
+            <div class="score-num">17</div>
+          </div>
+          <div class="score-row">
+            <div class="score-team-abbr">MICH</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:50%;background:#00274C"></div></div>
+            <div class="score-num">17</div>
+          </div>
+        </div>
+        <div class="score-meta">
+          <span>Big Ten Championship</span>
+          <span class="score-quarter"><span class="live-dot" style="background:var(--online)"></span> Q3 2:11</span>
+        </div>
+      </div>
+
+      <div class="score-card">
+        <div class="score-teams">
+          <div class="score-row">
+            <div class="score-team-abbr">TEX</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:67%;background:#BF5700"></div></div>
+            <div class="score-num winning">35</div>
+          </div>
+          <div class="score-row">
+            <div class="score-team-abbr">ARIZ</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:33%;background:#AB0520"></div></div>
+            <div class="score-num">17</div>
+          </div>
+        </div>
+        <div class="score-meta">
+          <span>Big 12 Championship</span>
+          <span class="score-quarter final">Final</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRENDING -->
+    <div class="widget">
+      <div class="widget-header">
+        <div class="widget-title"><i class="fas fa-fire"></i> Trending</div>
+      </div>
+      <div class="trend-item">
+        <div class="trend-num">1</div>
+        <div>
+          <div class="trend-title">CFP bracket reaction megathread — who got robbed?</div>
+          <div class="trend-meta">847 replies · Game Day</div>
+        </div>
+      </div>
+      <div class="trend-item">
+        <div class="trend-num">2</div>
+        <div>
+          <div class="trend-title">Milroe for Heisman — the case is actually strong now</div>
+          <div class="trend-meta">341 replies · Analysis</div>
+        </div>
+      </div>
+      <div class="trend-item">
+        <div class="trend-num">3</div>
+        <div>
+          <div class="trend-title">Darius Vance decision thread — where is he going?</div>
+          <div class="trend-meta">218 replies · Recruiting</div>
+        </div>
+      </div>
+      <div class="trend-item">
+        <div class="trend-num">4</div>
+        <div>
+          <div class="trend-title">OC search: who would you want to replace Sark?</div>
+          <div class="trend-meta">192 replies · Alabama</div>
+        </div>
+      </div>
+      <div class="trend-item">
+        <div class="trend-num">5</div>
+        <div>
+          <div class="trend-title">Transfer portal window opens — targets to watch</div>
+          <div class="trend-meta">156 replies · Transfer Portal</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP RECRUITS -->
+    <div class="widget">
+      <div class="widget-header">
+        <div class="widget-title"><i class="fas fa-star"></i> Top Recruits</div>
+        <span style="font-size:11px;color:var(--text-muted)">Class of 2025</span>
+      </div>
+      <div class="recruit-card">
+        <div class="recruit-pos">DT</div>
+        <div class="recruit-info">
+          <div class="recruit-name">Darius Vance</div>
+          <div class="recruit-sub">6'4" · 310 lbs · Atlanta, GA</div>
+        </div>
+        <div class="recruit-right">
+          <div class="stars">★★★★★</div>
+          <span class="recruit-status status-undecided">Undecided</span>
+        </div>
+      </div>
+      <div class="recruit-card">
+        <div class="recruit-pos">QB</div>
+        <div class="recruit-info">
+          <div class="recruit-name">Marcus Webb</div>
+          <div class="recruit-sub">6'3" · 215 lbs · Mobile, AL</div>
+        </div>
+        <div class="recruit-right">
+          <div class="stars">★★★★★</div>
+          <span class="recruit-status status-committed">Alabama</span>
+        </div>
+      </div>
+      <div class="recruit-card">
+        <div class="recruit-pos">CB</div>
+        <div class="recruit-info">
+          <div class="recruit-name">Jaylen Booker</div>
+          <div class="recruit-sub">6'0" · 185 lbs · Hoover, AL</div>
+        </div>
+        <div class="recruit-right">
+          <div class="stars">★★★★</div>
+          <span class="recruit-status status-committed">Alabama</span>
+        </div>
+      </div>
+      <div class="recruit-card">
+        <div class="recruit-pos">WR</div>
+        <div class="recruit-info">
+          <div class="recruit-name">Trayvon Miles</div>
+          <div class="recruit-sub">6'2" · 195 lbs · Decatur, GA</div>
+        </div>
+        <div class="recruit-right">
+          <div class="stars">★★★★</div>
+          <span class="recruit-status status-decommitted">Decommitted</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONLINE NOW -->
+    <div class="widget">
+      <div class="widget-header">
+        <div class="widget-title"><i class="fas fa-circle" style="color:var(--online);font-size:8px"></i> Online Now</div>
+        <div class="online-header-count"><div class="online-dot-sm"></div>187 online</div>
+      </div>
+      <div class="online-members">
+        <div class="online-member">
+          <div class="online-avatar av-navy"><div class="online-status-dot"></div>TW</div>
+          <div><div class="online-name">TideWatcher82</div><div class="online-sub">Moderator</div></div>
+        </div>
+        <div class="online-member">
+          <div class="online-avatar av-forest"><div class="online-status-dot"></div>CG</div>
+          <div><div class="online-name">CrimsonGator</div><div class="online-sub">Active in feed</div></div>
+        </div>
+        <div class="online-member">
+          <div class="online-avatar av-amber"><div class="online-status-dot"></div>RU</div>
+          <div><div class="online-name">RollUgaRoll</div><div class="online-sub">Viewing game thread</div></div>
+        </div>
+        <div class="online-member">
+          <div class="online-avatar av-purple"><div class="online-status-dot"></div>MK</div>
+          <div><div class="online-name">MikeKilpatrick</div><div class="online-sub">Active in feed</div></div>
+        </div>
+        <div class="online-member">
+          <div class="online-avatar av-teal"><div class="online-status-dot"></div>HL</div>
+          <div><div class="online-name">HoundstootLou</div><div class="online-sub">Just joined</div></div>
+        </div>
+        <div style="padding:4px 0 2px;text-align:center">
+          <button style="background:none;border:none;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--primary);font-family:inherit;">+ 182 more members</button>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+</body>
+</html>
