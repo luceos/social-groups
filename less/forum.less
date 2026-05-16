@@ -16,6 +16,15 @@
 @sg-primary-hex:   #4A90E2;
 @sg-secondary-hex: #7b5ea7;
 
+// ── Dark-mode compatibility ──────────────────────────────────────────────────
+// Flarum core defines --body-color for text (not --text-color). Map our alias
+// so that dark-mode themes redefining --body-color are picked up everywhere.
+// CSS custom properties resolve lazily, so var(--text-color) inside a
+// .dark-mode element will correctly resolve to the dark-mode --body-color.
+:root {
+  --text-color: var(--body-color);
+}
+
 // ============================================================
 // Group Badge (shown on posts)
 // ============================================================
@@ -2180,16 +2189,26 @@
   background: var(--control-bg);
   border-radius: 10px;
   padding: 0;
+  // Explicitly set all text colours so dark-mode themes that use a different
+  // --body-bg / --control-bg pairing don't leave text invisible.
+  color: var(--body-color);
 
   .SGThread-postHeader   { padding: 10px 12px 0; }
-  .SGThread-postContent  { padding: 6px 12px 8px; font-size: 0.88rem; }
+  .SGThread-postContent  {
+    padding: 6px 12px 8px;
+    font-size: 0.88rem;
+    color: var(--body-color);   // never inherit a stale dark colour
+  }
   .SGThread-postStatBar  { padding: 3px 12px; }
   .SGThread-postActionBar {
     border-radius: 0 0 10px 10px;
     background: var(--control-bg);
   }
-  .SGThread-postAvatar { width: 32px; height: 32px; font-size: 0.8rem; }
-  .SGThread-postMeta   { font-size: 0.9em; }
+  .SGThread-postAvatar  { width: 32px; height: 32px; font-size: 0.8rem; }
+  .SGThread-postMeta    { font-size: 0.9em; }
+  .SGThread-postAuthor  { color: var(--body-color); }   // username — explicit override
+  .SGThread-postTime    { color: var(--muted-color); }  // timestamp
+  .SGThread-postInitial { color: #fff; }                // letter avatar always white-on-primary
 }
 
 .SGThread-replyBtn {
@@ -2239,7 +2258,7 @@
   flex: 1;
   background: none; border: none; outline: none;
   font-size: 0.88rem; font-family: inherit;
-  color: var(--text-color); resize: none;
+  color: var(--body-color); resize: none;
   min-height: 18px; overflow: hidden;
   &::placeholder { color: var(--muted-color); }
 }
