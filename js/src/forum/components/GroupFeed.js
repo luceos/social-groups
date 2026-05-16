@@ -127,6 +127,12 @@ export default class GroupFeed extends Component {
     this.loading  = true;
     this.page     = page;
 
+    // Reset per-page comment state so stale data from a previous page/search
+    // doesn't linger when the discussion list is replaced.
+    this.expandedDiscIds = new Set();
+    this.loadedComments  = {};
+    this.commentsLoading = {};
+
     const qs = new URLSearchParams({ page });
     if (q) qs.set('q', q);
 
@@ -144,6 +150,16 @@ export default class GroupFeed extends Component {
         this.pages       = data.pages || 1;
         this.loadError   = false;
         this.loading     = false;
+
+        // Auto-expand replies for every discussion that has them so users
+        // see comments immediately without having to click.
+        this.discussions.forEach((d) => {
+          if (d.commentCount > 1) {
+            this.expandedDiscIds.add(d.id);
+            this.loadComments(d);
+          }
+        });
+
         m.redraw();
       })
       .catch(() => {
