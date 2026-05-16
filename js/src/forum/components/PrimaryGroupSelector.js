@@ -94,8 +94,8 @@ export default class PrimaryGroupSelector extends Component {
       groups.length === 0
         ? m('em.SG-PrimaryGroupSelector-empty', "You haven't joined any groups yet.")
         : m('.SG-PrimaryGroupSelector-list', [
-            // "None" option
-            m('label.SG-PrimaryGroupSelector-row', { class: !this.selected ? 'active' : '' }, [
+            // "None" option — key required so all siblings are consistently keyed
+            m('label.SG-PrimaryGroupSelector-row', { key: 'none', class: !this.selected ? 'active' : '' }, [
               m('input[type=radio]', {
                 name:     'sg-primary-group',
                 value:    '',
