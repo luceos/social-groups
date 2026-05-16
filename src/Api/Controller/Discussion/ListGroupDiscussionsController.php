@@ -11,6 +11,7 @@ use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPostReaction;
 use Flarum\Formatter\Formatter;
 use Flarum\Http\RequestUtil;
+use Illuminate\Support\Facades\Schema;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -25,6 +26,22 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         try {
+            // ── Schema capability flags ──────────────────────────────────────
+            // Columns / tables added by later migrations may not exist on
+            // databases that haven't been migrated after an extension update.
+            // Check once per request and degrade gracefully rather than 500.
+            static $schema = null;
+            if ($schema === null) {
+                $schema = [
+                    'is_gallery'             => Schema::hasColumn('social_group_discussions', 'is_gallery'),
+                    'is_pinned'              => Schema::hasColumn('social_group_discussions', 'is_pinned'),
+                    'shared_from'            => Schema::hasColumn('social_group_discussions', 'shared_from_discussion_id'),
+                    'polls'                  => Schema::hasTable('sg_polls'),
+                    'reactions'              => Schema::hasTable('social_group_post_reactions'),
+                    'link_preview'           => Schema::hasColumn('social_group_posts', 'link_preview'),
+                ];
+            }
+
             $actor   = RequestUtil::getActor($request);
             $params  = $request->getQueryParams();
             $groupId = $request->getAttribute('groupId') ?? ($params['groupId'] ?? null);
@@ -66,7 +83,8 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 ->select('social_group_discussions.*');
             };
 
-            $excludeGallery = function ($q) {
+            $excludeGallery = function ($q) use ($schema) {
+                if (! $schema['is_gallery']) return;
                 $q->whereNull('social_group_discussions.is_gallery')
                   ->orWhere('social_group_discussions.is_gallery', false);
             };
@@ -80,8 +98,12 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 ->where($excludeGallery)
                 ->with(['user', 'lastPostedUser']);
             $applySearch($discussionsQuery);
+
+            if ($schema['is_pinned']) {
+                $discussionsQuery->orderByDesc('social_group_discussions.is_pinned');
+            }
+
             $discussions = $discussionsQuery
-                ->orderByDesc('social_group_discussions.is_pinned')
                 ->orderByDesc('social_group_discussions.last_posted_at')
                 ->skip($offset)
                 ->take($limit)
@@ -109,22 +131,29 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             $firstPostIds = $firstPostsByDiscussion->map(fn ($p) => $p?->id)->filter()->values()->all();
 
             // Batch-load reaction counts per post, grouped by (post_id, reaction)
-            $reactionsByPost = SocialGroupPostReaction::whereIn('post_id', $firstPostIds)
-                ->selectRaw('post_id, reaction, COUNT(*) as cnt')
-                ->groupBy('post_id', 'reaction')
-                ->get()
-                ->groupBy('post_id')
-                ->map(fn ($rows) => $rows->pluck('cnt', 'reaction')->all());
+            $reactionsByPost = [];
+            $actorReactions  = [];
+            if ($schema['reactions'] && ! empty($firstPostIds)) {
+                $reactionsByPost = SocialGroupPostReaction::whereIn('post_id', $firstPostIds)
+                    ->selectRaw('post_id, reaction, COUNT(*) as cnt')
+                    ->groupBy('post_id', 'reaction')
+                    ->get()
+                    ->groupBy('post_id')
+                    ->map(fn ($rows) => $rows->pluck('cnt', 'reaction')->all())
+                    ->all();
 
-            $actorReactions = $actorId
-                ? SocialGroupPostReaction::whereIn('post_id', $firstPostIds)
-                    ->where('user_id', $actorId)
-                    ->pluck('reaction', 'post_id')
-                    ->all()
-                : [];
+                $actorReactions = $actorId
+                    ? SocialGroupPostReaction::whereIn('post_id', $firstPostIds)
+                        ->where('user_id', $actorId)
+                        ->pluck('reaction', 'post_id')
+                        ->all()
+                    : [];
+            }
 
             // Batch-load sharedFrom data
-            $sharedIds = $discussions->pluck('shared_from_discussion_id')->filter()->unique()->values()->all();
+            $sharedIds = $schema['shared_from']
+                ? $discussions->pluck('shared_from_discussion_id')->filter()->unique()->values()->all()
+                : [];
             $sharedFromMap = [];
 
             if (! empty($sharedIds)) {
@@ -159,14 +188,13 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 }
             }
 
-            // Batch-load polls
-            $pollsByDiscussion = SgPoll::with('options')
-                ->whereIn('discussion_id', $discussionIds)
-                ->get()
-                ->keyBy('discussion_id');
+            // Batch-load polls (only if the polls tables exist)
+            $pollsByDiscussion = $schema['polls']
+                ? SgPoll::with('options')->whereIn('discussion_id', $discussionIds)->get()->keyBy('discussion_id')
+                : collect();
 
             $pollMap = [];
-            if ($pollsByDiscussion->isNotEmpty()) {
+            if ($schema['polls'] && $pollsByDiscussion->isNotEmpty()) {
                 $allOptionIds = $pollsByDiscussion->flatMap(fn ($p) => $p->options->pluck('id'))->all();
 
                 $allVoteCounts = SgPollVote::whereIn('option_id', $allOptionIds)
@@ -205,8 +233,8 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             $actorIsAdmin = $actorId ? $actor->isAdmin() : false;
 
             return new JsonResponse([
-                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $actorIsAdmin, $actorCanPin, $sharedFromMap, $pollMap, $now) {
-                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost->all(), $actorReactions, $actorId, $actorIsAdmin, $actorCanPin, $sharedFromMap, $pollMap, $now);
+                'data'  => $discussions->map(function ($d) use ($firstPostsByDiscussion, $reactionsByPost, $actorReactions, $actorId, $actorIsAdmin, $actorCanPin, $sharedFromMap, $pollMap, $now, $schema) {
+                    return $this->serialize($d, $firstPostsByDiscussion[$d->id] ?? null, $reactionsByPost, $actorReactions, $actorId, $actorIsAdmin, $actorCanPin, $sharedFromMap, $pollMap, $now, $schema);
                 })->values(),
                 'total' => $total,
                 'page'  => $page,
@@ -231,7 +259,8 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
         bool $actorCanPin,
         array $sharedFromMap,
         array $pollMap,
-        string $now
+        string $now,
+        array $schema
     ): array {
         $serializedFirstPost = null;
 
@@ -246,7 +275,7 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 'contentParsed' => $contentParsed,
                 'reactions'     => (object) ($reactionsByPost[$firstPost->id] ?? []),
                 'actorReaction' => $actorReactions[$firstPost->id] ?? null,
-                'linkPreview'   => $firstPost->link_preview,
+                'linkPreview'   => $schema['link_preview'] ? $firstPost->link_preview : null,
                 'canEdit'       => $actorId && $actorId === $firstPost->user_id,
                 'createdAt'     => $firstPost->created_at?->toIso8601String() ?? $now,
                 'user'          => $firstPost->user ? [
@@ -263,16 +292,16 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             'title'          => $d->title,
             'commentCount'   => $d->comment_count,
             'isLocked'       => (bool) $d->is_locked,
-            'isPinned'       => (bool) $d->is_pinned,
-            'canPin'         => $actorCanPin,
+            'isPinned'       => $schema['is_pinned'] ? (bool) $d->is_pinned : false,
+            'canPin'         => $actorCanPin && $schema['is_pinned'],
             'lastPostedAt'   => $d->last_posted_at?->toIso8601String(),
             'createdAt'      => ($d->created_at ?? $d->last_posted_at)?->toIso8601String() ?? $now,
             'canDelete'      => $actorId && ($actorId === $d->user_id || $actorIsAdmin),
             'canShare'       => $actorId !== null,
-            'sharedFrom'     => $d->shared_from_discussion_id
+            'sharedFrom'     => ($schema['shared_from'] && $d->shared_from_discussion_id)
                 ? ($sharedFromMap[$d->shared_from_discussion_id] ?? null)
                 : null,
-            'poll'           => $pollMap[$d->id] ?? null,
+            'poll'           => $schema['polls'] ? ($pollMap[$d->id] ?? null) : null,
             'firstPost'      => $serializedFirstPost,
             'user'           => $d->user ? [
                 'id'          => $d->user->id,
