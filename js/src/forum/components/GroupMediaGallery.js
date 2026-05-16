@@ -99,17 +99,14 @@ export default class GroupMediaGallery extends Component {
     Promise.all(uploads)
       .then((bbcodes) => {
         const content = bbcodes.join('\n');
-        return fetch(`${apiBase()}/sg-discussions`, {
+        return fetch(`${apiBase()}/sg-media-post/${this.attrs.groupId}`, {
           method:      'POST',
           credentials: 'same-origin',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRF-Token': app.session.csrfToken || '',
           },
-          body: JSON.stringify({
-            groupId: this.attrs.groupId,
-            content,
-          }),
+          body: JSON.stringify({ content }),
         });
       })
       .then((r) => {

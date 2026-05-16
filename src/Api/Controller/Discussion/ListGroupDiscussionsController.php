@@ -66,11 +66,18 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
                 ->select('social_group_discussions.*');
             };
 
-            $countQuery = SocialGroupDiscussion::where('social_group_discussions.group_id', $groupId);
+            $excludeGallery = function ($q) {
+                $q->whereNull('social_group_discussions.is_gallery')
+                  ->orWhere('social_group_discussions.is_gallery', false);
+            };
+
+            $countQuery = SocialGroupDiscussion::where('social_group_discussions.group_id', $groupId)
+                ->where($excludeGallery);
             $applySearch($countQuery);
             $total = $countQuery->count();
 
             $discussionsQuery = SocialGroupDiscussion::where('social_group_discussions.group_id', $groupId)
+                ->where($excludeGallery)
                 ->with(['user', 'lastPostedUser']);
             $applySearch($discussionsQuery);
             $discussions = $discussionsQuery

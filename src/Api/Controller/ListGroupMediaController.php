@@ -40,7 +40,15 @@ class ListGroupMediaController implements RequestHandlerInterface
                 }
             }
 
+            // Only surface images that were uploaded into gallery archive discussions
+            $galleryDiscussionIds = \Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion
+                ::where('group_id', $groupId)
+                ->where('is_gallery', true)
+                ->pluck('id')
+                ->all();
+
             $mediaQuery = fn () => SocialGroupPost::where('group_id', $groupId)
+                ->whereIn('discussion_id', $galleryDiscussionIds)
                 ->where(function ($q) {
                     // Catch fof/upload BBCode in raw content AND inline img tags
                     // that survive into the parsed XML AST
