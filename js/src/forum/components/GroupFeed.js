@@ -51,6 +51,13 @@ export default class GroupFeed extends Component {
     this.commentsLoading  = {};          // { [discId]: bool }
     this._rtFeedHandler   = null;        // sg:post-created DOM listener
     this.pickerCommentId  = null;        // post.id whose reaction picker is open
+
+    // @mention state
+    this.members          = null;        // cached member list; null = not yet loaded
+    this.membersLoading   = false;
+    this.mentionQuery     = null;        // string typed after '@', null = dropdown closed
+    this.mentionDiscId    = null;        // 'feed' | discussion.id (identifies active textarea)
+    this._mentionTa       = null;        // reference to the active textarea DOM element
   }
 
   oncreate(vnode) {
@@ -68,6 +75,11 @@ export default class GroupFeed extends Component {
       }
       if (this.pickerCommentId !== null && !e.target.closest('.SGFeed-commentReactWrap')) {
         this.pickerCommentId = null;
+        m.redraw();
+      }
+      if (this.mentionQuery !== null && !e.target.closest('.SGFeed-mentionDropdown')) {
+        this.mentionQuery  = null;
+        this.mentionDiscId = null;
         m.redraw();
       }
     };
@@ -410,6 +422,114 @@ export default class GroupFeed extends Component {
       });
   }
 
+  // ── @mention helpers ────────────────────────────────────────────────────
+
+  loadMembers() {
+    if (this.members !== null || this.membersLoading) return;
+    this.membersLoading = true;
+    fetch(`${apiBase()}/social-groups/${this.attrs.groupId}/members`, {
+      credentials: 'same-origin',
+      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
+    })
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((data) => {
+        this.members        = data.data || [];
+        this.membersLoading = false;
+        m.redraw();
+      })
+      .catch(() => {
+        this.members        = [];
+        this.membersLoading = false;
+      });
+  }
+
+  // Called from oninput — detects whether the cursor is right after an @mention.
+  handleMentionInput(discId, e) {
+    const ta  = e.target;
+    const pos = ta.selectionStart;
+    const before = ta.value.slice(0, pos);
+    // Match '@' followed by word chars at end of text before cursor.
+    const match = before.match(/@([\w-]*)$/);
+    if (match) {
+      this.mentionQuery  = match[1];
+      this.mentionDiscId = discId;
+      this._mentionTa    = ta;
+      this.loadMembers();
+    } else if (this.mentionDiscId === discId) {
+      this.mentionQuery  = null;
+      this.mentionDiscId = null;
+    }
+  }
+
+  insertMention(member) {
+    const ta = this._mentionTa;
+    if (!ta) return;
+
+    const pos    = ta.selectionStart;
+    const text   = ta.value;
+    const before = text.slice(0, pos);
+    const match  = before.match(/@([\w-]*)$/);
+    if (!match) { this.mentionQuery = null; return; }
+
+    const start    = pos - match[0].length;
+    const inserted = '@' + member.displayName + ' ';
+    const newText  = text.slice(0, start) + inserted + text.slice(pos);
+
+    if (this.mentionDiscId === 'feed') {
+      this.postText = newText;
+    } else {
+      this.replyTexts[this.mentionDiscId] = newText;
+    }
+
+    this.mentionQuery  = null;
+    this.mentionDiscId = null;
+    m.redraw();
+
+    // Restore cursor to end of inserted mention.
+    requestAnimationFrame(() => {
+      if (!ta.isConnected) return;
+      const newPos = start + inserted.length;
+      ta.value = newText;
+      ta.focus();
+      ta.setSelectionRange(newPos, newPos);
+    });
+  }
+
+  viewMentionDropdown(discId) {
+    if (this.mentionDiscId !== discId || this.mentionQuery === null) return null;
+
+    const query   = this.mentionQuery.toLowerCase();
+    const members = (this.members || [])
+      .filter((mbr) =>
+        mbr.displayName.toLowerCase().includes(query) ||
+        (mbr.slug || '').toLowerCase().includes(query)
+      )
+      .slice(0, 7);
+
+    if (!members.length && !this.membersLoading) return null;
+
+    return m('.SGFeed-mentionDropdown', [
+      this.membersLoading && !this.members
+        ? m('.SGFeed-mentionLoading', m('i.fas.fa-spinner.fa-spin'))
+        : members.map((mbr) =>
+            m('button.SGFeed-mentionItem', {
+              key:         mbr.userId,
+              type:        'button',
+              // onmousedown prevents blurring the textarea before the click registers.
+              onmousedown: (e) => { e.preventDefault(); this.insertMention(mbr); },
+            }, [
+              mbr.avatarUrl
+                ? m('img.SGFeed-mentionAvatar', { src: mbr.avatarUrl, alt: '' })
+                : m('span.SGFeed-mentionInitial', (mbr.displayName || '?')[0].toUpperCase()),
+              m('span.SGFeed-mentionName', mbr.displayName),
+              mbr.role && mbr.role !== 'member'
+                ? m('span.SGFeed-mentionRole', mbr.role)
+                : null,
+            ])
+          ),
+    ]);
+  }
+
   toggleComments(d) {
     if (this.expandedDiscIds.has(d.id)) {
       this.expandedDiscIds.delete(d.id);
@@ -637,6 +757,13 @@ export default class GroupFeed extends Component {
             e.target.style.height = 'auto';
             e.target.style.height = e.target.scrollHeight + 'px';
             scheduleLinkPreview(this, e.target.value);
+            this.handleMentionInput('feed', e);
+          },
+          onkeydown: (e) => {
+            if (e.key === 'Escape' && this.mentionQuery !== null) {
+              e.stopPropagation();
+              this.mentionQuery = null; this.mentionDiscId = null; m.redraw();
+            }
           },
           onpaste: (e) => {
             const imgs = pastedImages(e);
@@ -647,6 +774,7 @@ export default class GroupFeed extends Component {
         viewUploadChips(this.postUploads, (id) => removeUpload(this, id, 'postUploads', 'postText')),
         viewComposerLinkPreview(this),
         this.poll ? this.viewPollComposer() : null,
+        this.viewMentionDropdown('feed'),
         expanded
           ? m('.SGFeed-composerActions', [
               m('label.SGFeed-composerAttach', {
@@ -1007,6 +1135,7 @@ export default class GroupFeed extends Component {
                 : m('span', (actor.attribute('displayName') || '?')[0].toUpperCase()),
             ]),
             m('.SGFeed-replyInputWrap', [
+              this.viewMentionDropdown(d.id),
               m('textarea.SGFeed-replyInput', {
                 placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_placeholder'),
                 value:       replyText,
@@ -1016,8 +1145,14 @@ export default class GroupFeed extends Component {
                   this.replyTexts[d.id] = e.target.value;
                   e.target.style.height = 'auto';
                   e.target.style.height = e.target.scrollHeight + 'px';
+                  this.handleMentionInput(d.id, e);
                 },
                 onkeydown: (e) => {
+                  if (e.key === 'Escape' && this.mentionQuery !== null) {
+                    e.stopPropagation();
+                    this.mentionQuery = null; this.mentionDiscId = null; m.redraw();
+                    return;
+                  }
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     this.submitReply(d);
