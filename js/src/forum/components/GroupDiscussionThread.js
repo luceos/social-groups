@@ -731,7 +731,7 @@ export default class GroupDiscussionThread extends Page {
               },
             }, active
                 ? [active.emoji, ' ', active.label]
-                : [m('i.fa-solid.fa-face-grin-beam'), ' React']),
+                : [m('i.fa-solid.fa-face-grin-beam'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.react')]),
           ])
         : null,
       actor && !this.discussion?.isLocked
@@ -771,7 +771,7 @@ export default class GroupDiscussionThread extends Page {
         m('button.SGThread-inlineReplySendBtn', {
           disabled: this.inlineReplySubmitting || !this.inlineReplyText.trim(),
           onclick:  () => this.submitInlineReply(),
-          title:    'Post reply',
+          title:    app.translator.trans('ernestdefoe-social-groups.forum.discussions.post_reply'),
         }, this.inlineReplySubmitting
             ? m('i.fa-solid.fa-spinner.fa-spin')
             : m('i.fa-solid.fa-paper-plane')),
@@ -820,7 +820,7 @@ export default class GroupDiscussionThread extends Page {
                   this.openMenuId = menuOpen ? null : post.id;
                   m.redraw();
                 },
-                title: 'More options',
+                title: app.translator.trans('ernestdefoe-social-groups.forum.discussions.more_options'),
               }, m('i.fa-solid.fa-ellipsis')),
               menuOpen
                 ? m('.SGThread-postDropdown', [

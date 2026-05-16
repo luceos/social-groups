@@ -49,8 +49,8 @@ export default class GroupAnalyticsPanel extends Component {
   view() {
     return m('.SGAnalytics', [
       m('button.SGAnalytics-toggle', { onclick: () => this.toggle() }, [
-        m('span.SGAnalytics-toggleLabel', [m('i.fa-solid.fa-chart-bar'), ' Analytics']),
-        m('i.fas', { class: this.expanded ? 'fa-chevron-up' : 'fa-chevron-down' }),
+        m('span.SGAnalytics-toggleLabel', [m('i.fa-solid.fa-chart-bar'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.analytics.title')]),
+        m('i.fa-solid', { class: this.expanded ? 'fa-chevron-up' : 'fa-chevron-down' }),
       ]),
 
       this.expanded ? this.viewBody() : null,
@@ -59,7 +59,7 @@ export default class GroupAnalyticsPanel extends Component {
 
   viewBody() {
     if (this.loading) return m('.SGAnalytics-body', m(LoadingIndicator, { display: 'block' }));
-    if (this.error)   return m('.SGAnalytics-body.SGAnalytics-error', 'Failed to load analytics.');
+    if (this.error)   return m('.SGAnalytics-body.SGAnalytics-error', app.translator.trans('ernestdefoe-social-groups.forum.analytics.error'));
     if (!this.data)   return null;
 
     const { summary, memberGrowth, postVolume, topPosts } = this.data;
@@ -68,27 +68,27 @@ export default class GroupAnalyticsPanel extends Component {
 
       // Summary stats
       m('.SGAnalytics-stats', [
-        this.viewStat(summary.totalMembers,   'Members',   'fa-users'),
-        this.viewStat(summary.totalPosts,     'Posts',     'fa-comment'),
-        this.viewStat(summary.totalReactions, 'Reactions', 'fa-heart'),
+        this.viewStat(summary.totalMembers,   app.translator.trans('ernestdefoe-social-groups.forum.analytics.stat_members'),   'fa-users'),
+        this.viewStat(summary.totalPosts,     app.translator.trans('ernestdefoe-social-groups.forum.analytics.stat_posts'),     'fa-comment'),
+        this.viewStat(summary.totalReactions, app.translator.trans('ernestdefoe-social-groups.forum.analytics.stat_reactions'), 'fa-heart'),
       ]),
 
       // Member growth chart
       m('.SGAnalytics-section', [
-        m('h4.SGAnalytics-sectionTitle', 'New Members — Last 30 Days'),
+        m('h4.SGAnalytics-sectionTitle', app.translator.trans('ernestdefoe-social-groups.forum.analytics.member_growth')),
         this.viewBarChart(memberGrowth, 'date',      'count', '#4A90E2'),
       ]),
 
       // Post volume chart
       m('.SGAnalytics-section', [
-        m('h4.SGAnalytics-sectionTitle', 'Posts — Last 8 Weeks'),
+        m('h4.SGAnalytics-sectionTitle', app.translator.trans('ernestdefoe-social-groups.forum.analytics.post_volume')),
         this.viewBarChart(postVolume,   'weekStart', 'count', '#7b5ea7'),
       ]),
 
       // Top posts
       topPosts && topPosts.length > 0
         ? m('.SGAnalytics-section', [
-            m('h4.SGAnalytics-sectionTitle', 'Top Reacted Posts'),
+            m('h4.SGAnalytics-sectionTitle', app.translator.trans('ernestdefoe-social-groups.forum.analytics.top_posts')),
             m('ol.SGAnalytics-topPosts',
               topPosts.map((p) =>
                 m('li.SGAnalytics-topPost', {

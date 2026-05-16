@@ -216,8 +216,8 @@ export default class MemberList extends Component {
             canRemove
               ? m(Button, {
                   class:       'Button Button--sm MemberList-removeBtn',
-                  'aria-label': 'Remove member',
-                  title:        'Remove member',
+                  'aria-label': app.translator.trans('ernestdefoe-social-groups.forum.group.remove_member'),
+                  title:        app.translator.trans('ernestdefoe-social-groups.forum.group.remove_member'),
                   loading:      acting === 'remove',
                   disabled:     !!acting,
                   onclick:      () => this.removeMember(member),

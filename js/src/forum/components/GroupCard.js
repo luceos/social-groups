@@ -76,9 +76,9 @@ export default class GroupCard extends Component {
           m('div.GroupCard-meta', [
             m('i.fa-solid.fa-users'),
             m('span', ' ' + app.translator.trans('ernestdefoe-social-groups.forum.groups.members_count', { count: this.memberCount })),
-            group.isPrivate() ? m('span.GroupCard-private', [m('i.fa-solid.fa-lock'), ' Private']) : null,
-            isApproval ? m('span.GroupCard-approval', [m('i.fa-solid.fa-user-check'), ' Approval']) : null,
-            group.isFeatured() ? m('span.GroupCard-featured', [m('i.fa-solid.fa-star'), ' Featured']) : null,
+            group.isPrivate() ? m('span.GroupCard-private', [m('i.fa-solid.fa-lock'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.private')]) : null,
+            isApproval ? m('span.GroupCard-approval', [m('i.fa-solid.fa-user-check'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.approval')]) : null,
+            group.isFeatured() ? m('span.GroupCard-featured', [m('i.fa-solid.fa-star'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.featured')]) : null,
           ]),
           description
             ? m('div.GroupCard-description', description)
@@ -126,8 +126,8 @@ export default class GroupCard extends Component {
                     if (this.attrs.onToggleFeature) this.attrs.onToggleFeature();
                   },
                 }, group.isFeatured()
-                    ? [m('i.fa-solid.fa-star'), ' Unfeature group']
-                    : [m('i.fa-regular.fa-star'), ' Feature group'])
+                    ? [m('i.fa-solid.fa-star'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.unfeature')]
+                    : [m('i.fa-regular.fa-star'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.feature')])
               : null,
             m('button.GroupCard-kebabItem', {
               type: 'button',

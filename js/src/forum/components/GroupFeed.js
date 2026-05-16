@@ -572,7 +572,7 @@ export default class GroupFeed extends Component {
 
     if (!comments || comments.length === 0) {
       return m('.SGFeed-comments',
-        m('.SGFeed-commentsEmpty', 'No comments yet. Be the first!')
+        m('.SGFeed-commentsEmpty', app.translator.trans('ernestdefoe-social-groups.forum.discussions.comments_empty'))
       );
     }
 
@@ -586,7 +586,7 @@ export default class GroupFeed extends Component {
       hidden > 0
         ? m('button.SGFeed-viewAllBtn', {
             onclick: () => this.openThread(d),
-          }, `View all ${comments.length} comments in thread`)
+          }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.view_all_comments', { count: comments.length }))
         : null,
       shown.map((post) => {
         const user        = post.user;
@@ -641,7 +641,7 @@ export default class GroupFeed extends Component {
                       : null,
                     m('button.SGFeed-commentReactBtn', {
                       class:   activeEmoji ? 'is-active' : '',
-                      title:   activeEmoji ? `Remove ${activeEmoji.label}` : 'React',
+                      title:   activeEmoji ? app.translator.trans('ernestdefoe-social-groups.forum.discussions.remove_reaction', { emoji: activeEmoji.label }) : app.translator.trans('ernestdefoe-social-groups.forum.discussions.react'),
                       onclick: (e) => {
                         e.stopPropagation();
                         if (activeEmoji) {
@@ -653,7 +653,7 @@ export default class GroupFeed extends Component {
                       },
                     }, activeEmoji
                         ? [activeEmoji.emoji, ' ', activeEmoji.label]
-                        : [m('i.fa-solid.fa-face-grin-beam'), ' React']),
+                        : [m('i.fa-solid.fa-face-grin-beam'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.react')]),
                   ])
                 : null,
 
@@ -718,7 +718,7 @@ export default class GroupFeed extends Component {
         : this.loadError
         ? m('.SGFeed-empty', [
             m('i.fa-solid.fa-circle-exclamation'),
-            m('p', 'Failed to load posts. Please try refreshing the page.'),
+            m('p', app.translator.trans('ernestdefoe-social-groups.forum.discussions.load_error')),
           ])
         : !this.discussions || this.discussions.length === 0
         ? m('.SGFeed-empty', [
@@ -810,7 +810,7 @@ export default class GroupFeed extends Component {
               ]),
               m('button.SGFeed-pollToggle', {
                 class:   this.poll ? 'is-active' : '',
-                title:   this.poll ? 'Remove poll' : 'Add poll',
+                title:   this.poll ? app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_remove') : app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_add'),
                 onclick: () => {
                   this.poll = this.poll
                     ? null
@@ -845,18 +845,18 @@ export default class GroupFeed extends Component {
     const p = this.poll;
     return m('.SGFeed-pollComposer', [
       m('.SGFeed-pollComposer-header', [
-        m('span', [m('i.fa-solid.fa-square-poll-vertical'), ' Poll']),
+        m('span', [m('i.fa-solid.fa-square-poll-vertical'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_label')]),
         m('label.SGFeed-pollComposer-multiToggle', [
           m('input[type=checkbox]', {
             checked:  p.isMultiSelect,
             onchange: (e) => { p.isMultiSelect = e.target.checked; m.redraw(); },
           }),
-          ' Allow multiple choices',
+          ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_allow_multiple'),
         ]),
       ]),
       m('input.FormControl.SGFeed-pollComposer-question', {
         type:        'text',
-        placeholder: 'Ask a question…',
+        placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_question_placeholder'),
         value:       p.question,
         maxlength:   500,
         oninput:     (e) => { p.question = e.target.value; },
@@ -865,7 +865,7 @@ export default class GroupFeed extends Component {
         m('.SGFeed-pollComposer-optRow', { key: i }, [
           m('input.FormControl.SGFeed-pollComposer-opt', {
             type:        'text',
-            placeholder: `Option ${i + 1}`,
+            placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_option_placeholder', { number: i + 1 }),
             value:       opt,
             maxlength:   255,
             oninput:     (e) => { p.options[i] = e.target.value; },
@@ -880,7 +880,7 @@ export default class GroupFeed extends Component {
       p.options.length < 6
         ? m('button.SGFeed-pollComposer-addOpt', {
             onclick: () => { p.options.push(''); m.redraw(); },
-          }, [m('i.fa-solid.fa-plus'), ' Add option'])
+          }, [m('i.fa-solid.fa-plus'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_add_option')])
         : null,
     ]);
   }
@@ -964,8 +964,8 @@ export default class GroupFeed extends Component {
         })
       ),
       m('.SGFeed-poll-footer', [
-        m('span', `${poll.totalVotes} vote${poll.totalVotes !== 1 ? 's' : ''}`),
-        ended ? m('span.SGFeed-poll-ended', ' · Ended') : null,
+        m('span', app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_votes', { count: poll.totalVotes })),
+        ended ? m('span.SGFeed-poll-ended', ' · ' + app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_ended')) : null,
       ]),
     ]);
   }
@@ -994,7 +994,7 @@ export default class GroupFeed extends Component {
         m('.SGFeed-postMeta', [
           m('span.SGFeed-postAuthor', postUser?.displayName || ''),
           m('span.SGFeed-postTime', { title: postTime }, humanTime(new Date(postTime))),
-          d.isPinned ? m('span.SGFeed-pinnedBadge', [m('i.fa-solid.fa-thumbtack'), ' Pinned']) : null,
+          d.isPinned ? m('span.SGFeed-pinnedBadge', [m('i.fa-solid.fa-thumbtack'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.pinned')]) : null,
         ]),
         d.canDelete || d.canPin || (actor && d.canShare)
           ? m('.SGFeed-postMenu', [
@@ -1126,7 +1126,7 @@ export default class GroupFeed extends Component {
                   },
                 }, active
                     ? [active.emoji, ' ', active.label]
-                    : [m('i.fa-solid.fa-face-grin-beam'), ' React']);
+                    : [m('i.fa-solid.fa-face-grin-beam'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.react')]);
               })(),
             ])
           : null,
@@ -1135,7 +1135,7 @@ export default class GroupFeed extends Component {
           onclick: () => this.toggleComments(d),
         }, [m('i.fa-solid.fa-comment'), ' ',
             this.expandedDiscIds.has(d.id)
-              ? 'Hide Comments'
+              ? app.translator.trans('ernestdefoe-social-groups.forum.discussions.hide_comments')
               : app.translator.trans('ernestdefoe-social-groups.forum.discussions.view_comments')]),
       ]),
 
@@ -1178,7 +1178,7 @@ export default class GroupFeed extends Component {
               m('button.SGFeed-replySendBtn', {
                 disabled: replyBusy || !replyText.trim(),
                 onclick:  () => this.submitReply(d),
-                title:    'Post comment',
+                title:    app.translator.trans('ernestdefoe-social-groups.forum.discussions.post_comment'),
               }, replyBusy
                   ? m('i.fa-solid.fa-spinner.fa-spin')
                   : m('i.fa-solid.fa-paper-plane')),

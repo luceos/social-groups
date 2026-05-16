@@ -143,7 +143,7 @@ export default class GroupsPage extends Page {
               return [
                 featured.length
                   ? m('div.GroupsPage-featured', [
-                      m('h3.GroupsPage-featuredHeading', [m('i.fa-solid.fa-star'), ' Featured Groups']),
+                      m('h3.GroupsPage-featuredHeading', [m('i.fa-solid.fa-star'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.groups.featured_heading')]),
                       m('div.GroupsPage-grid.GroupsPage-grid--featured',
                         featured.map((group) => m(GroupCard, {
                           group,

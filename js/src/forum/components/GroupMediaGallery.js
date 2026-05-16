@@ -192,7 +192,7 @@ export default class GroupMediaGallery extends Component {
               : null,
             m('label.Button.Button--primary.SGMedia-uploadBtn', {
               class: this.uploading ? 'disabled' : '',
-              title: 'Upload images to gallery',
+              title: app.translator.trans('ernestdefoe-social-groups.forum.media.upload_tooltip'),
             }, [
               m('input[type=file]', {
                 accept:   'image/*',
@@ -205,8 +205,8 @@ export default class GroupMediaGallery extends Component {
                 },
               }),
               this.uploading
-                ? [m('i.fa-solid.fa-spinner.fa-spin'), ' Uploading…']
-                : [m('i.fa-solid.fa-upload'), ' Upload Images'],
+                ? [m('i.fa-solid.fa-spinner.fa-spin'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.media.uploading')]
+                : [m('i.fa-solid.fa-upload'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.media.upload_button')],
             ]),
           ])
         : null,
@@ -216,7 +216,7 @@ export default class GroupMediaGallery extends Component {
         : !this.items || this.items.length === 0
         ? m('.SGMedia-empty', [
             m('i.fa-solid.fa-photo-film'),
-            m('p', 'No media found in this group yet.'),
+            m('p', app.translator.trans('ernestdefoe-social-groups.forum.media.empty')),
           ])
         : [
             m('.SGMedia-grid',
@@ -265,13 +265,13 @@ export default class GroupMediaGallery extends Component {
     }, [
       m('button.SGMedia-lightboxClose', {
         onclick: () => this.lightboxClose(),
-        title:   'Close',
+        title:   app.translator.trans('ernestdefoe-social-groups.forum.media.close'),
       }, m('i.fa-solid.fa-xmark')),
 
       this.items.length > 1
         ? m('button.SGMedia-lightboxPrev', {
             onclick: (e) => { e.stopPropagation(); this.lightboxPrev(); },
-            title:   'Previous',
+            title:   app.translator.trans('ernestdefoe-social-groups.forum.media.previous'),
           }, m('i.fa-solid.fa-chevron-left'))
         : null,
 
@@ -299,7 +299,7 @@ export default class GroupMediaGallery extends Component {
                     discussionId: item.discussionId,
                   }));
                 },
-              }, [m('i.fa-solid.fa-arrow-up-right-from-square'), ' View post']),
+              }, [m('i.fa-solid.fa-arrow-up-right-from-square'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.media.view_post')]),
             ])
           : null,
         m('.SGMedia-lightboxCounter', (() => {
@@ -312,7 +312,7 @@ export default class GroupMediaGallery extends Component {
       this.items.length > 1
         ? m('button.SGMedia-lightboxNext', {
             onclick: (e) => { e.stopPropagation(); this.lightboxNext(); },
-            title:   'Next',
+            title:   app.translator.trans('ernestdefoe-social-groups.forum.media.next'),
           }, m('i.fa-solid.fa-chevron-right'))
         : null,
     ]);

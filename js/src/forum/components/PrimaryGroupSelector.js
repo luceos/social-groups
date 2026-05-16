@@ -85,14 +85,14 @@ export default class PrimaryGroupSelector extends Component {
 
     return m('.SG-PrimaryGroupSelector', [
       m('.SG-PrimaryGroupSelector-header', [
-        m('strong', 'Profile Group Badge'),
-        m('span.helpText', 'Choose which group displays on your profile card.'),
+        m('strong', app.translator.trans('ernestdefoe-social-groups.forum.primary_group.title')),
+        m('span.helpText', app.translator.trans('ernestdefoe-social-groups.forum.primary_group.help')),
       ]),
 
       this.error ? m('.Alert.Alert--error', { style: 'margin:8px 0' }, this.error) : null,
 
       groups.length === 0
-        ? m('em.SG-PrimaryGroupSelector-empty', "You haven't joined any groups yet.")
+        ? m('em.SG-PrimaryGroupSelector-empty', app.translator.trans('ernestdefoe-social-groups.forum.primary_group.empty'))
         : m('.SG-PrimaryGroupSelector-list', [
             // "None" option — key required so all siblings are consistently keyed
             m('label.SG-PrimaryGroupSelector-row', { key: 'none', class: !this.selected ? 'active' : '' }, [
@@ -103,7 +103,7 @@ export default class PrimaryGroupSelector extends Component {
                 disabled: this.saving,
                 onchange: () => this.save(null),
               }),
-              m('span.SG-PrimaryGroupSelector-none', 'None'),
+              m('span.SG-PrimaryGroupSelector-none', app.translator.trans('ernestdefoe-social-groups.forum.primary_group.none')),
             ]),
 
             ...groups.map((group) =>
@@ -132,7 +132,7 @@ export default class PrimaryGroupSelector extends Component {
             ),
           ]),
 
-      this.saving ? m('span.SG-PrimaryGroupSelector-saving', [m('i.fa-solid.fa-spinner.fa-spin'), ' Saving…']) : null,
+      this.saving ? m('span.SG-PrimaryGroupSelector-saving', [m('i.fa-solid.fa-spinner.fa-spin'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.primary_group.saving')]) : null,
     ]);
   }
 }

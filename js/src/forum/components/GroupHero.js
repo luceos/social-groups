@@ -63,7 +63,7 @@ export default class GroupHero extends Component {
                     href:   `${app.forum.attribute('baseUrl')}/groups/${group.slug()}/feed.rss`,
                     target: '_blank',
                     rel:    'noopener noreferrer',
-                    title:  'RSS feed',
+                    title:  app.translator.trans('ernestdefoe-social-groups.forum.group.rss_feed'),
                   }, m('i.fa-solid.fa-rss'))
                 : null,
             ]),

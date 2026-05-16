@@ -90,11 +90,11 @@ export default class GroupPage extends Page {
             m('button.GroupPage-tab', {
               class:   this.activeTab === 'posts' ? 'is-active' : '',
               onclick: () => { this.activeTab = 'posts'; m.redraw(); },
-            }, [m('i.fa-solid.fa-bars-staggered'), ' Posts']),
+            }, [m('i.fa-solid.fa-bars-staggered'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.group.tab_posts')]),
             m('button.GroupPage-tab', {
               class:   this.activeTab === 'media' ? 'is-active' : '',
               onclick: () => { this.activeTab = 'media'; m.redraw(); },
-            }, [m('i.fa-solid.fa-photo-film'), ' Media']),
+            }, [m('i.fa-solid.fa-photo-film'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.group.tab_media')]),
           ]),
           this.activeTab === 'media'
             ? m(GroupMediaGallery, {
