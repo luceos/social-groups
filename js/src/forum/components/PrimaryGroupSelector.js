@@ -119,7 +119,11 @@ export default class PrimaryGroupSelector extends Component {
                   onchange: () => this.save(group.id),
                 }),
                 group.imageUrl
-                  ? m('img.SG-PrimaryGroupSelector-img', { src: group.imageUrl, alt: '' })
+                  ? m('img.SG-PrimaryGroupSelector-img', {
+                      src:   group.imageUrl,
+                      alt:   '',
+                      style: 'width:75px;height:75px;object-fit:cover;border-radius:6px;flex-shrink:0',
+                    })
                   : m('span.SG-PrimaryGroupSelector-pill', {
                       style: `background:${group.color || '#4A90E2'}`,
                     }),
