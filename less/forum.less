@@ -3355,3 +3355,114 @@
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+// ============================================================
+// GroupFeed — Inline Comments
+// ============================================================
+
+.SGFeed-comments {
+  padding: 4px 16px 8px;
+  border-top: 1px solid var(--control-bg, #f0f0f0);
+  animation: sg-fade-in 0.15s ease;
+}
+
+.SGFeed-commentsLoading,
+.SGFeed-commentsEmpty {
+  padding: 12px 0;
+  text-align: center;
+  color: var(--muted-color, #9ca3af);
+  font-size: 13px;
+
+  .fas { margin-right: 4px; }
+}
+
+.SGFeed-viewAllBtn {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--muted-color, #6b7280);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 0 2px;
+  transition: color @sg-transition;
+
+  &:hover { color: var(--primary-color, @sg-primary-hex); text-decoration: underline; }
+}
+
+.SGFeed-comment {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0 0;
+  align-items: flex-start;
+  animation: sg-fade-in 0.15s ease;
+}
+
+.SGFeed-commentAvatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.SGFeed-commentInitial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-color, @sg-primary-hex);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.SGFeed-commentBody {
+  background: var(--control-bg, #f3f4f6);
+  border-radius: 12px;
+  padding: 8px 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.SGFeed-commentAuthor {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--body-color, #111827);
+  margin-bottom: 2px;
+}
+
+.SGFeed-commentContent {
+  font-size: 14px;
+  color: var(--body-color, #374151);
+  word-break: break-word;
+  line-height: 1.45;
+
+  // Strip block-level margins inside a compact comment bubble
+  p { margin: 0; }
+  img { max-width: 100%; border-radius: 6px; }
+}
+
+.SGFeed-commentTime {
+  display: block;
+  font-size: 11px;
+  color: var(--muted-color, #9ca3af);
+  margin-top: 4px;
+}
+
+// Active state for the Comments toggle button
+.SGFeed-commentBtn.is-active {
+  color: var(--primary-color, @sg-primary-hex);
+  font-weight: 600;
+}

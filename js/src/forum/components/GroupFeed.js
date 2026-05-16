@@ -44,6 +44,12 @@ export default class GroupFeed extends Component {
 
     // Poll composer state
     this.poll = null; // null = no poll; object = { question, options: ['', ''], isMultiSelect: false }
+
+    // Inline comment state
+    this.expandedDiscIds = new Set();   // IDs of discussions showing inline comments
+    this.loadedComments  = {};          // { [discId]: post[] }
+    this.commentsLoading = {};          // { [discId]: bool }
+    this._rtFeedHandler  = null;        // sg:post-created DOM listener
   }
 
   oncreate(vnode) {
@@ -61,6 +67,25 @@ export default class GroupFeed extends Component {
       }
     };
     document.addEventListener('click', this._closeMenu);
+
+    // Live-update inline comment lists when a new post arrives via WebSocket.
+    this._rtFeedHandler = (e) => {
+      const post   = e.detail;
+      if (!post || !post.discussionId) return;
+      const discId = post.discussionId;
+      // Only inject if the comment section for this discussion is open.
+      if (!this.expandedDiscIds.has(discId)) return;
+      const comments = this.loadedComments[discId];
+      if (!Array.isArray(comments)) return;
+      // Deduplicate — the actor's own reply is added synchronously in submitReply.
+      if (comments.some((c) => c.id === post.id)) return;
+      this.loadedComments[discId] = [...comments, post];
+      // Bump visible comment count.
+      const d = (this.discussions || []).find((x) => x.id === discId);
+      if (d) d.commentCount = (d.commentCount || 0) + 1;
+      m.redraw();
+    };
+    document.addEventListener('sg:post-created', this._rtFeedHandler);
   }
 
   onupdate(vnode) {
@@ -74,6 +99,7 @@ export default class GroupFeed extends Component {
 
   onremove() {
     document.removeEventListener('click', this._closeMenu);
+    if (this._rtFeedHandler) document.removeEventListener('sg:post-created', this._rtFeedHandler);
     revokeAll(this.postUploads);
     clearTimeout(this._previewTimer);
     clearTimeout(this._searchTimer);
@@ -244,10 +270,17 @@ export default class GroupFeed extends Component {
         if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
         return r.json();
       })
-      .then(() => {
+      .then((post) => {
         d.commentCount = (d.commentCount || 0) + 1;
-        this.replyTexts[d.id]     = '';
+        this.replyTexts[d.id]      = '';
         this.replySubmitting[d.id] = false;
+        // Auto-expand the inline comment section and append the new post.
+        this.expandedDiscIds.add(d.id);
+        if (!this.loadedComments[d.id]) this.loadedComments[d.id] = [];
+        // Deduplicate in case a WebSocket echo arrives first.
+        if (!this.loadedComments[d.id].some((c) => c.id === post.id)) {
+          this.loadedComments[d.id] = [...this.loadedComments[d.id], post];
+        }
         m.redraw();
       })
       .catch(() => {
@@ -303,6 +336,89 @@ export default class GroupFeed extends Component {
         d.isPinned = wasPinned;
         m.redraw();
       });
+  }
+
+  // ── Inline comments ──────────────────────────────────────────────────────
+
+  loadComments(d) {
+    if (this.commentsLoading[d.id]) return;
+    this.commentsLoading[d.id] = true;
+    m.redraw();
+
+    fetch(`${apiBase()}/sg-thread-posts/${d.id}`, {
+      credentials: 'same-origin',
+      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
+    })
+      .then((r) => r.ok ? r.json() : r.json().then((e) => { throw new Error(e.error || 'Error'); }))
+      .then((data) => {
+        // posts[0] is the first post (already shown as card body) — skip it.
+        this.loadedComments[d.id]  = (data.data || []).slice(1);
+        this.commentsLoading[d.id] = false;
+        m.redraw();
+      })
+      .catch(() => {
+        this.commentsLoading[d.id] = false;
+        m.redraw();
+      });
+  }
+
+  toggleComments(d) {
+    if (this.expandedDiscIds.has(d.id)) {
+      this.expandedDiscIds.delete(d.id);
+    } else {
+      this.expandedDiscIds.add(d.id);
+      if (!this.loadedComments[d.id]) {
+        this.loadComments(d);
+      }
+    }
+    m.redraw();
+  }
+
+  viewInlineComments(d) {
+    if (!this.expandedDiscIds.has(d.id)) return null;
+
+    const comments = this.loadedComments[d.id];
+    const loading  = this.commentsLoading[d.id];
+
+    if (loading && !comments) {
+      return m('.SGFeed-comments',
+        m('.SGFeed-commentsLoading', m('i.fas.fa-spinner.fa-spin'))
+      );
+    }
+
+    if (!comments || comments.length === 0) {
+      return m('.SGFeed-comments',
+        m('.SGFeed-commentsEmpty', 'No comments yet. Be the first!')
+      );
+    }
+
+    // Show the most recent 3 inline; offer "View all N comments" above if more.
+    const PREVIEW = 3;
+    const shown   = comments.slice(-PREVIEW);
+    const hidden  = Math.max(0, comments.length - PREVIEW);
+
+    return m('.SGFeed-comments', [
+      hidden > 0
+        ? m('button.SGFeed-viewAllBtn', {
+            onclick: () => this.openThread(d),
+          }, `View all ${comments.length} comments in thread`)
+        : null,
+      shown.map((post) => {
+        const user = post.user;
+        return m('.SGFeed-comment', { key: post.id }, [
+          m('.SGFeed-commentAvatar', [
+            user?.avatarUrl
+              ? m('img', { src: user.avatarUrl, alt: user.displayName })
+              : m('span.SGFeed-commentInitial', (user?.displayName || '?')[0].toUpperCase()),
+          ]),
+          m('.SGFeed-commentBody', [
+            m('span.SGFeed-commentAuthor', user?.displayName || ''),
+            m('.SGFeed-commentContent', m.trust(post.contentParsed || post.content || '')),
+            m('span.SGFeed-commentTime', humanTime(new Date(post.createdAt))),
+          ]),
+        ]);
+      }),
+    ]);
   }
 
   openThread(d) {
@@ -714,7 +830,7 @@ export default class GroupFeed extends Component {
             : null,
           totalReact > 0 && hasComments ? m('span.SGFeed-statDot', '·') : null,
           hasComments
-            ? m('button.SGFeed-statComments', { onclick: () => this.openThread(d) },
+            ? m('button.SGFeed-statComments', { onclick: () => this.toggleComments(d) },
                 app.translator.trans('ernestdefoe-social-groups.forum.discussions.comments_count', { count: d.commentCount - 1 }))
             : null,
         ]);
@@ -756,10 +872,16 @@ export default class GroupFeed extends Component {
             ])
           : null,
         m('button.SGFeed-commentBtn', {
-          onclick: () => this.openThread(d),
+          class:   this.expandedDiscIds.has(d.id) ? 'is-active' : '',
+          onclick: () => this.toggleComments(d),
         }, [m('i.fas.fa-comment'), ' ',
-            app.translator.trans('ernestdefoe-social-groups.forum.discussions.view_comments')]),
+            this.expandedDiscIds.has(d.id)
+              ? 'Hide Comments'
+              : app.translator.trans('ernestdefoe-social-groups.forum.discussions.view_comments')]),
       ]),
+
+      // Inline comments list (toggled by the Comments button)
+      this.viewInlineComments(d),
 
       // Inline reply composer (for quick replies; posts to the discussion)
       actor && this.attrs.isMember && !d.isLocked
