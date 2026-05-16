@@ -1598,15 +1598,16 @@
 
   &-likeIcon { font-size: 0.9rem; }
 
-  // Like / action bar
+  // Like / action bar — overflow:visible so the emoji picker can float above
   &-postActionBar {
     display: flex;
     border-top: 1px solid var(--control-bg);
     border-radius: 0 0 12px 12px;
-    overflow: hidden;
+    overflow: visible;
   }
 
-  &-likeBtn {
+  &-likeBtn,
+  &-reactBtn {
     flex: 1;
     display: flex;
     align-items: center;
@@ -1624,10 +1625,8 @@
 
     &:hover { background: var(--control-bg); color: var(--primary-color, @sg-primary-hex); }
 
-    &--liked {
-      color: var(--primary-color, @sg-primary-hex);
-      .fa-thumbs-up { font-weight: 900; }
-    }
+    &--liked,
+    &--active { color: var(--primary-color, @sg-primary-hex); }
   }
 
   // Reply box (bottom composer)
@@ -2031,14 +2030,15 @@
     &:hover { text-decoration: underline; }
   }
 
-  // Like | Comments action bar
+  // Like | Comments action bar — overflow:visible so the emoji picker can float above
   &-postActionBar {
     display: flex;
     border-top: 1px solid var(--control-bg);
-    overflow: hidden;
+    overflow: visible;
   }
 
   &-likeBtn,
+  &-reactBtn,
   &-commentBtn {
     flex: 1;
     display: flex; align-items: center; justify-content: center;
@@ -2052,7 +2052,8 @@
     &:hover { background: var(--control-bg); color: var(--primary-color, @sg-primary-hex); }
   }
 
-  &-likeBtn--liked { color: var(--primary-color, @sg-primary-hex); }
+  &-likeBtn--liked,
+  &-reactBtn--active { color: var(--primary-color, @sg-primary-hex); }
 
   // Inline reply row
   &-replyRow {
