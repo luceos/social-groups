@@ -28,6 +28,7 @@ class SocialGroupDiscussion extends AbstractModel
     protected $casts = [
         'is_locked'      => 'boolean',
         'is_pinned'      => 'boolean',
+        'is_gallery'     => 'boolean',
         'last_posted_at' => 'datetime',
     ];
 
