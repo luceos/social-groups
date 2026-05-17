@@ -34,6 +34,7 @@ use Ernestdefoe\SocialGroups\Api\Controller\Poll\VotePollController;
 use Ernestdefoe\SocialGroups\Api\Controller\PromoteMemberController;
 use Ernestdefoe\SocialGroups\Api\Controller\RejectJoinRequestController;
 use Ernestdefoe\SocialGroups\Api\Controller\UploadGroupImageController;
+use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupPostResource;
 use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupResource;
 use Ernestdefoe\SocialGroups\Access\SocialGroupPolicy;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
@@ -113,6 +114,7 @@ return [
         ->listen(SocialGroupPostWasCreated::class, BroadcastGroupPost::class),
 
     (new Extend\ApiResource(SocialGroupResource::class)),
+    (new Extend\ApiResource(SocialGroupPostResource::class)),
 
     (new Extend\Policy())
         ->modelPolicy(SocialGroup::class, SocialGroupPolicy::class),
