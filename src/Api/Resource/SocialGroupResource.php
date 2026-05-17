@@ -9,10 +9,13 @@ use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Flarum\Http\RequestUtil;
 use Illuminate\Database\Eloquent\Builder;
+use Psr\Log\LoggerInterface;
 use Tobyz\JsonApiServer\Context as BaseContext;
 
 class SocialGroupResource extends AbstractDatabaseResource
 {
+    public function __construct(protected LoggerInterface $log) {}
+
     public function type(): string
     {
         return 'social-groups';
@@ -25,27 +28,86 @@ class SocialGroupResource extends AbstractDatabaseResource
 
     public function find(string $id, BaseContext $context): ?object
     {
-        // Allow slug-based lookup: if the "id" is non-numeric treat it as a
-        // slug. Translate to numeric ID without applying scope(), then hand
-        // off to parent::find() so the framework runs its standard pipeline
-        // (scope + relationship eager-loading + include resolution).
+        // Earlier shape ran parent::find($id, $context), which routes through
+        // scope()'s composite WHERE/withCount/ORDER-BY pipeline. That worked
+        // locally but reproducibly returned null for users hitting their own
+        // freshly-created group on production installs — different MySQL
+        // versions / sql_modes / opcache states each interact with the scope
+        // SQL differently, and the failure mode is silent (find → null → 404
+        // → "Unable to load the group").
         //
-        // Why not just `where('slug', $id)->first()` here? It works, but it
-        // bypasses parent::find()'s call to $this->query($context), so any
-        // `?include=user` request hands back a model whose `user`
-        // relationship is null — non-fatal locally, but operators have
-        // reported the front-end choking on the missing relation in
-        // production. Going through parent::find() guarantees parity with
-        // the framework's tested code path.
-        if (! is_numeric($id)) {
-            $resolvedId = SocialGroup::where('slug', $id)->value('id');
-            if ($resolvedId === null) {
+        // Decouple the two concerns: scope() stays the Index endpoint's
+        // visibility/ordering source of truth; find() does a direct lookup
+        // plus a small inline access check. Field-level visibility on the
+        // Schema fields still gates per-field reads.
+        try {
+            if (! is_numeric($id)) {
+                $resolvedId = SocialGroup::where('slug', $id)->value('id');
+                if ($resolvedId === null) {
+                    return null;
+                }
+                $id = (string) $resolvedId;
+            }
+
+            /** @var SocialGroup|null $group */
+            $group = SocialGroup::find($id);
+            if ($group === null) {
                 return null;
             }
-            $id = (string) $resolvedId;
-        }
 
-        return parent::find($id, $context);
+            $actor = RequestUtil::getActor($context->request);
+
+            if (! $this->canSeeGroup($group, $actor)) {
+                return null;
+            }
+
+            if ($actor->exists) {
+                // Mirror the withCount() in scope() so isMember / isPending /
+                // pendingRequestCount schema fields read from pre-loaded
+                // attributes instead of issuing a fresh per-field query.
+                $group->loadCount([
+                    'members as actor_is_member'       => fn ($q) => $q->where('user_id', $actor->id),
+                    'joinRequests as actor_is_pending'  => fn ($q) => $q->where('user_id', $actor->id)->where('status', 'pending'),
+                    'joinRequests as pending_req_count' => fn ($q) => $q->where('status', 'pending'),
+                ]);
+            }
+
+            return $group;
+        } catch (\Throwable $e) {
+            // Operators have hit "Unable to load the group" with no
+            // server-side trace because the find() failure is treated as
+            // "not found" by the framework. Log so the next failure surfaces
+            // a real cause in flarum.log.
+            $this->log->error('[social-groups] SocialGroupResource::find failed', [
+                'id'        => $id,
+                'exception' => get_class($e),
+                'message'   => $e->getMessage(),
+                'file'      => $e->getFile() . ':' . $e->getLine(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Inline visibility check for Show endpoint — mirrors scope()'s WHERE
+     * clause but spelled out so a SQL-mode quirk in the composite query
+     * can't silently filter the creator out.
+     */
+    protected function canSeeGroup(SocialGroup $group, \Flarum\User\User $actor): bool
+    {
+        if ($actor->isAdmin() || $actor->hasPermission('ernestdefoe-social-groups.moderate')) {
+            return true;
+        }
+        if (! $group->is_private) {
+            return true;
+        }
+        if (! $actor->exists) {
+            return false;
+        }
+        if ((int) $actor->id === (int) $group->user_id) {
+            return true;
+        }
+        return $group->members()->where('user_id', $actor->id)->exists();
     }
 
     public function scope(Builder $query, BaseContext $context): void
