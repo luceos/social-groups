@@ -31,16 +31,32 @@ class ListJoinRequestsController implements RequestHandlerInterface
         $requests = $group->joinRequests()->where('status', 'pending')->with('user')->get();
 
         return new JsonResponse([
-            'data' => $requests->map(fn ($r) => [
-                'id'        => $r->id,
-                'userId'    => $r->user_id,
-                'user'      => [
-                    'id'          => $r->user->id,
-                    'displayName' => $r->user->display_name,
-                    'avatarUrl'   => $r->user->avatar_url,
-                ],
-                'createdAt' => $r->created_at->toIso8601String(),
-            ])->values(),
+            'data' => $requests->map(function ($r) {
+                // Defensive: a soft-deleted/deleted user leaves a join request
+                // row behind; without this guard the controller 500'd on the
+                // null user->id deref. createdAt similarly: string-vs-Carbon
+                // is handled by the model now ($timestamps=true), but if the
+                // column is genuinely null on old rows the toIso8601String
+                // call would still throw — fall back to "now".
+                $user = $r->user;
+                $created = $r->created_at;
+                $createdIso = $created instanceof \Carbon\Carbon
+                    ? $created->toIso8601String()
+                    : (is_string($created) && $created !== ''
+                        ? \Carbon\Carbon::parse($created)->toIso8601String()
+                        : \Carbon\Carbon::now()->toIso8601String());
+
+                return [
+                    'id'        => $r->id,
+                    'userId'    => $r->user_id,
+                    'user'      => $user ? [
+                        'id'          => $user->id,
+                        'displayName' => $user->display_name,
+                        'avatarUrl'   => $user->avatar_url,
+                    ] : null,
+                    'createdAt' => $createdIso,
+                ];
+            })->values(),
         ]);
     }
 }

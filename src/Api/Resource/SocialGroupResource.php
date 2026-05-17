@@ -25,21 +25,26 @@ class SocialGroupResource extends AbstractDatabaseResource
 
     public function find(string $id, BaseContext $context): ?object
     {
-        // Allow slug-based lookup: if the "id" is non-numeric treat it as a slug.
+        // Allow slug-based lookup: if the "id" is non-numeric treat it as a
+        // slug. Translate to numeric ID without applying scope(), then hand
+        // off to parent::find() so the framework runs its standard pipeline
+        // (scope + relationship eager-loading + include resolution).
         //
-        // The framework calls scope() on the Index endpoint automatically, but
-        // this overridden find() short-circuits that path for slug lookups —
-        // so we have to apply the same visibility scope here ourselves, or
-        // a non-member visiting /groups/<private-slug> would receive the
-        // private group's payload anyway (the visibility leak users were
-        // hitting before).
+        // Why not just `where('slug', $id)->first()` here? It works, but it
+        // bypasses parent::find()'s call to $this->query($context), so any
+        // `?include=user` request hands back a model whose `user`
+        // relationship is null — non-fatal locally, but operators have
+        // reported the front-end choking on the missing relation in
+        // production. Going through parent::find() guarantees parity with
+        // the framework's tested code path.
         if (! is_numeric($id)) {
-            $query = SocialGroup::query()->where('slug', $id);
-            $this->scope($query, $context);
-            return $query->first();
+            $resolvedId = SocialGroup::where('slug', $id)->value('id');
+            if ($resolvedId === null) {
+                return null;
+            }
+            $id = (string) $resolvedId;
         }
 
-        // Numeric id — parent::find() applies scope() through the framework.
         return parent::find($id, $context);
     }
 
