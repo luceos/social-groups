@@ -77,19 +77,34 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
 
             $search = trim((string) ($params['q'] ?? ''));
 
+            // Full-fledged search: match against the discussion title OR
+            // the content of ANY post in the discussion (not just the
+            // first). The previous shape joined only the MIN(id) post via
+            // a correlated subquery — replies were invisible to search,
+            // which the user community flagged as the main limitation.
+            //
+            // EXISTS subquery is the right shape here because:
+            //   - it doesn't multiply rows the way a plain join would
+            //     (a discussion with 50 matching replies counted 50
+            //     times in the original distinct-less query);
+            //   - it short-circuits on the first match per discussion,
+            //     so threads with hundreds of replies still scan
+            //     cheaply against the (discussion_id, content) index.
+            //
+            // LIKE wildcards in $search are escaped (addcslashes) so a
+            // searched-for "%" or "_" is treated literally per CLAUDE.md
+            // §10.
             $applySearch = function ($query) use ($search) {
                 if ($search === '') return;
-                $like   = '%' . addcslashes($search, '%_\\') . '%';
-                $prefix = $query->getConnection()->getTablePrefix();
-                $query->leftJoin('social_group_posts as sgp_s', function ($join) use ($prefix) {
-                    $join->on('sgp_s.discussion_id', '=', 'social_group_discussions.id')
-                         ->whereRaw("sgp_s.id = (SELECT MIN(id) FROM `{$prefix}social_group_posts` WHERE discussion_id = `{$prefix}social_group_discussions`.id)");
-                })
-                ->where(function ($q) use ($like) {
+                $like = '%' . addcslashes($search, '%_\\') . '%';
+                $query->where(function ($q) use ($like) {
                     $q->where('social_group_discussions.title', 'like', $like)
-                      ->orWhere('sgp_s.content', 'like', $like);
-                })
-                ->select('social_group_discussions.*');
+                      ->orWhereExists(function ($sub) use ($like) {
+                          $sub->from('social_group_posts')
+                              ->whereColumn('social_group_posts.discussion_id', 'social_group_discussions.id')
+                              ->where('social_group_posts.content', 'like', $like);
+                      });
+                });
             };
 
             $excludeGallery = function ($q) use ($schema) {
