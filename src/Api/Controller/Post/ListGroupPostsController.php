@@ -61,11 +61,13 @@ class ListGroupPostsController implements RequestHandlerInterface
             $now     = \Carbon\Carbon::now()->toIso8601String();
 
             // Resolve actor's moderation rights once — reused for every post in the list.
+            // Role canonical name is 'moderator' (set by PromoteMemberController).
+            // The old 'admin' value was a rename remnant.
             $isAdmin     = $actor->isAdmin();
             $isModerator = $actorId && ! $isAdmin
                 ? $group->members()
                     ->where('user_id', $actorId)
-                    ->whereIn('role', ['creator', 'admin'])
+                    ->whereIn('role', ['creator', 'moderator'])
                     ->exists()
                 : false;
 

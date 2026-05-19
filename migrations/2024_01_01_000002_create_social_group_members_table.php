@@ -9,7 +9,7 @@ return [
             $table->bigIncrements('id');
             $table->unsignedBigInteger('group_id')->index();
             $table->unsignedBigInteger('user_id')->index();
-            $table->string('role', 20)->default('member'); // 'creator' | 'admin' | 'member'
+            $table->string('role', 20)->default('member'); // 'creator' | 'moderator' | 'member'
             $table->timestamp('joined_at')->useCurrent();
 
             $table->unique(['group_id', 'user_id']);

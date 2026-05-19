@@ -26,9 +26,12 @@ class DeleteGroupPostController implements RequestHandlerInterface
         }
         $post   = SocialGroupPost::findOrFail($postId);
 
+        // Role canonical name is 'moderator' (set by PromoteMemberController).
+        // The old 'admin' value was a rename remnant — users promoted via
+        // the normal flow were silently locked out of post deletion.
         $isModerator = $post->group->members()
             ->where('user_id', $actor->id)
-            ->whereIn('role', ['creator', 'admin'])
+            ->whereIn('role', ['creator', 'moderator'])
             ->exists();
 
         if ($actor->id !== $post->user_id && ! $actor->isAdmin() && ! $isModerator) {
