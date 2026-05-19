@@ -4,6 +4,7 @@ namespace Ernestdefoe\SocialGroups\Listener;
 
 use Ernestdefoe\SocialGroups\Event\SocialGroupPostWasCreated;
 use Flarum\Formatter\Formatter;
+use Illuminate\Contracts\Container\Container;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -16,12 +17,16 @@ class BroadcastGroupPost
     public function __construct(
         private Formatter $formatter,
         private LoggerInterface $log,
+        private Container $container,
     ) {}
 
     public function handle(SocialGroupPostWasCreated $event): void
     {
         // Graceful no-op when flarum/realtime is not installed.
-        if (! app()->bound('flarum-realtime.pusher')) {
+        // Container is injected so the binding lookup is discoverable
+        // and the listener stays testable — app() would hide the
+        // dependency and break under tests that don't boot the facade.
+        if (! $this->container->bound('flarum-realtime.pusher')) {
             return;
         }
 
@@ -66,7 +71,7 @@ class BroadcastGroupPost
         ];
 
         try {
-            app('flarum-realtime.pusher')->trigger('public', 'sg-post-created', $payload);
+            $this->container->make('flarum-realtime.pusher')->trigger('public', 'sg-post-created', $payload);
         } catch (\Throwable $e) {
             $this->log->error('[social-groups] Realtime broadcast failed: ' . $e->getMessage());
         }

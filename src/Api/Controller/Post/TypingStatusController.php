@@ -4,6 +4,7 @@ namespace Ernestdefoe\SocialGroups\Api\Controller\Post;
 
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Flarum\Http\RequestUtil;
+use Illuminate\Contracts\Container\Container;
 use Laminas\Diactoros\Response\EmptyResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -21,7 +22,10 @@ use Psr\Log\LoggerInterface;
  */
 class TypingStatusController implements RequestHandlerInterface
 {
-    public function __construct(private LoggerInterface $log) {}
+    public function __construct(
+        private LoggerInterface $log,
+        private Container $container,
+    ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -55,10 +59,12 @@ class TypingStatusController implements RequestHandlerInterface
             return new EmptyResponse(403);
         }
 
-        // Broadcast via Realtime if available.
-        if (app()->bound('flarum-realtime.pusher')) {
+        // Broadcast via Realtime if available. Container is injected
+        // rather than reached for via app() so the dependency is
+        // discoverable and the listener stays testable.
+        if ($this->container->bound('flarum-realtime.pusher')) {
             try {
-                app('flarum-realtime.pusher')->trigger('public', 'sg-typing', [
+                $this->container->make('flarum-realtime.pusher')->trigger('public', 'sg-typing', [
                     'discussionId' => $discussionId,
                     'userId'       => $actor->id,
                     'displayName'  => $actor->display_name,
