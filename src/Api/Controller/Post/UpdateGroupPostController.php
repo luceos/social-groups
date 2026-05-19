@@ -25,10 +25,28 @@ class UpdateGroupPostController implements RequestHandlerInterface
             preg_match('#/sg-posts/(\d+)#', $request->getUri()->getPath(), $m);
             $postId = $m[1] ?? null;
         }
-        $post    = SocialGroupPost::findOrFail($postId);
+        $post = SocialGroupPost::with('group')->findOrFail($postId);
 
         if ($actor->id !== $post->user_id) {
             return new JsonResponse(['error' => 'You cannot edit this post.'], 403);
+        }
+
+        // Even authors must still hold an active (non-banned) membership
+        // in the post's group to edit. Without this check a member who
+        // was later kicked or banned retains edit rights on every post
+        // they ever authored — letting them rewrite group content after
+        // moderation. Admins bypass.
+        if (! $actor->isAdmin()) {
+            $hasActiveMembership = $post->group
+                ? $post->group->members()
+                    ->where('user_id', $actor->id)
+                    ->whereNull('banned_at')
+                    ->exists()
+                : false;
+
+            if (! $hasActiveMembership) {
+                return new JsonResponse(['error' => 'You cannot edit this post.'], 403);
+            }
         }
 
         $body    = (array) ($request->getParsedBody() ?? []);

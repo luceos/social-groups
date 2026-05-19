@@ -29,8 +29,26 @@ class TogglePostReactionController implements RequestHandlerInterface
                 $postId = (int) ($m[1] ?? 0);
             }
 
-            if (! $postId || ! SocialGroupPost::where('id', $postId)->exists()) {
+            if (! $postId) {
                 return new JsonResponse(['error' => 'Post not found.'], 404);
+            }
+
+            // Load post + group so we can authorize. Without a
+            // membership check, any registered user can enumerate
+            // sequential post IDs and add/remove reactions on posts
+            // inside private groups they have no right to access.
+            $post = SocialGroupPost::with('group')->find($postId);
+            if (! $post || ! $post->group) {
+                return new JsonResponse(['error' => 'Post not found.'], 404);
+            }
+
+            $isMember = $post->group->members()
+                ->where('user_id', $actor->id)
+                ->whereNull('banned_at')
+                ->exists();
+
+            if (! $isMember && ! $actor->isAdmin()) {
+                return new JsonResponse(['error' => 'Forbidden.'], 403);
             }
 
             $path = $request->getUri()->getPath();
