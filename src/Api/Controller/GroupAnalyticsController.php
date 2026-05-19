@@ -57,13 +57,32 @@ class GroupAnalyticsController implements RequestHandlerInterface
             }
 
             // ── Post volume: last 8 weeks ─────────────────────────────────
+            // Was: 8 separate COUNT() queries (one per week). Collapsed
+            // to a single grouped query that counts posts per calendar
+            // day, then bucketed into weeks in PHP. Avoids both the N+1
+            // and MySQL-only YEARWEEK(), so analytics stays portable
+            // across the three databases Flarum 2.x supports.
+            $earliestWeekStart = Carbon::now()->subWeeks(7)->startOfWeek();
+
+            $postsByDay = SocialGroupPost::where('group_id', $groupId)
+                ->where('created_at', '>=', $earliestWeekStart)
+                ->selectRaw('DATE(created_at) as day, COUNT(*) as cnt')
+                ->groupBy('day')
+                ->pluck('cnt', 'day')
+                ->all();
+
             $postVolume = [];
             for ($i = 7; $i >= 0; $i--) {
-                $start = Carbon::now()->subWeeks($i)->startOfWeek();
-                $end   = $start->copy()->endOfWeek();
-                $count = SocialGroupPost::where('group_id', $groupId)
-                    ->whereBetween('created_at', [$start, $end])
-                    ->count();
+                $start    = Carbon::now()->subWeeks($i)->startOfWeek();
+                $end      = $start->copy()->endOfWeek();
+                $startStr = $start->format('Y-m-d');
+                $endStr   = $end->format('Y-m-d');
+                $count    = 0;
+                foreach ($postsByDay as $day => $cnt) {
+                    if ($day >= $startStr && $day <= $endStr) {
+                        $count += (int) $cnt;
+                    }
+                }
                 $postVolume[] = ['weekStart' => $start->format('M j'), 'count' => $count];
             }
 

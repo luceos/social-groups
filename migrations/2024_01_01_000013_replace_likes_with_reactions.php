@@ -18,15 +18,37 @@ return [
                     ->onDelete('cascade');
             });
 
-            // Migrate existing likes → reactions
+            // Migrate existing likes → reactions. The previous version
+            // used `INSERT ... ON DUPLICATE KEY UPDATE`, which is
+            // MySQL/MariaDB-only and crashes on PostgreSQL + SQLite
+            // (both supported by Flarum 2.x). Use Eloquent's portable
+            // upsert() instead: it compiles to the driver's native
+            // upsert (MySQL's ON DUPLICATE, PostgreSQL/SQLite's
+            // ON CONFLICT) at runtime, with the same idempotency
+            // guarantee against re-runs.
             if ($schema->hasTable('social_group_post_likes')) {
-                $db     = $schema->getConnection();
-                $prefix = $db->getTablePrefix();
-                $db->statement(
-                    "INSERT INTO `{$prefix}social_group_post_reactions` (`post_id`, `user_id`, `reaction`)
-                     SELECT `post_id`, `user_id`, 'like' FROM `{$prefix}social_group_post_likes`
-                     ON DUPLICATE KEY UPDATE `reaction` = `reaction`"
-                );
+                $db = $schema->getConnection();
+                $db->table('social_group_post_likes')
+                    ->select(['post_id', 'user_id'])
+                    ->orderBy('post_id')
+                    ->orderBy('user_id')
+                    ->chunk(500, function ($rows) use ($db) {
+                        $payload = [];
+                        foreach ($rows as $row) {
+                            $payload[] = [
+                                'post_id'  => $row->post_id,
+                                'user_id'  => $row->user_id,
+                                'reaction' => 'like',
+                            ];
+                        }
+                        if (! empty($payload)) {
+                            $db->table('social_group_post_reactions')->upsert(
+                                $payload,
+                                ['post_id', 'user_id'],
+                                ['reaction']
+                            );
+                        }
+                    });
             }
         }
 
