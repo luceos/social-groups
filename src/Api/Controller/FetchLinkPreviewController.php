@@ -51,7 +51,16 @@ class FetchLinkPreviewController implements RequestHandlerInterface
         // http://169.254.169.254/latest/meta-data/iam/security-credentials/
         // and exfiltrate cloud-provider IAM credentials; or probe internal
         // services (Redis, admin panels, DB UIs) on self-hosted forums.
-        if (! $this->hostIsPublic((string) parse_url($url, PHP_URL_HOST))) {
+        //
+        // Resolves once and returns the validated IP list, then we pin
+        // libcurl to a specific IP via CURLOPT_RESOLVE so the connect
+        // phase can NOT re-resolve. Without the pin, a sub-second-TTL
+        // attacker domain can hand a public IP to dns_get_record() then
+        // 169.254.169.254 to libcurl's resolver (DNS rebinding).
+        $hostParts = parse_url($url);
+        $host = (string) ($hostParts['host'] ?? '');
+        $publicIps = $this->resolvePublicIps($host);
+        if ($publicIps === null) {
             return new JsonResponse(['error' => 'URL host is not allowed.'], 422);
         }
 
@@ -61,9 +70,26 @@ class FetchLinkPreviewController implements RequestHandlerInterface
             return new JsonResponse($cached);
         }
 
+        $port = isset($hostParts['port']) && $hostParts['port']
+            ? (int) $hostParts['port']
+            : (($hostParts['scheme'] ?? 'https') === 'http' ? 80 : 443);
+
+        // CURLOPT_RESOLVE format: "host:port:ip1,ip2,..." — libcurl
+        // skips DNS for this tuple and dials the listed IPs in order.
+        $resolveSpec = [sprintf('%s:%d:%s', strtolower($host), $port, implode(',', $publicIps))];
+
         try {
             $response = $this->http->request('GET', $url, [
                 'stream'  => true,
+                // Redirect handling is intentionally disabled. If
+                // re-enabled later, every redirect target must be
+                // re-validated through resolvePublicIps() — libcurl's
+                // built-in redirect follower would re-resolve a NEW
+                // host without our SSRF guard.
+                'allow_redirects' => false,
+                'curl'    => [
+                    CURLOPT_RESOLVE => $resolveSpec,
+                ],
                 'headers' => [
                     'User-Agent' => self::USER_AGENT,
                     'Accept'     => 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
@@ -85,9 +111,15 @@ class FetchLinkPreviewController implements RequestHandlerInterface
     }
 
     /**
-     * True only when EVERY DNS record for the host resolves to a publicly
-     * routable IP. Rejects loopback, link-local, RFC-1918 / RFC-4193
-     * private ranges, and unspecified addresses.
+     * Resolve a host to every IP libcurl would dial, validate each, and
+     * return them as a flat list — or null if any record fails the
+     * public-routability check.
+     *
+     * Caller pins the returned IPs via CURLOPT_RESOLVE so libcurl skips
+     * its own DNS resolver; this closes the DNS-rebinding window where
+     * a sub-second-TTL attacker domain answers the check phase with a
+     * public IP and the connect phase with 169.254.169.254 or
+     * RFC-1918.
      *
      * IPv4 is screened by PHP's FILTER_FLAG_NO_PRIV_RANGE +
      * FILTER_FLAG_NO_RES_RANGE which together catch 10/8, 172.16/12,
@@ -95,14 +127,11 @@ class FetchLinkPreviewController implements RequestHandlerInterface
      * IPv6 is filtered explicitly because PHP's reserved-range filter is
      * narrower for v6 (it allows ::1 and fe80::/10 through).
      *
-     * Note: this is a TOCTOU-flavoured check — DNS could rebind between
-     * this resolution and Guzzle's. Mitigated by Guzzle's short timeouts
-     * (5 s connect / 8 s total). Pinning the resolved IP via
-     * CURLOPT_RESOLVE would close the window entirely; deferred.
+     * @return list<string>|null
      */
-    private function hostIsPublic(string $host): bool
+    private function resolvePublicIps(string $host): ?array
     {
-        if ($host === '') return false;
+        if ($host === '') return null;
 
         // Trim trailing dot + lowercase + IDN-normalise to defeat
         // case / encoding / homoglyph bypass attempts.
@@ -131,12 +160,12 @@ class FetchLinkPreviewController implements RequestHandlerInterface
             }
         }
 
-        if (empty($ips)) return false;
+        if (empty($ips)) return null;
 
         foreach ($ips as $ip) {
-            if (! $this->ipIsPublic($ip)) return false;
+            if (! $this->ipIsPublic($ip)) return null;
         }
-        return true;
+        return array_values(array_unique($ips));
     }
 
     private function ipIsPublic(string $ip): bool
