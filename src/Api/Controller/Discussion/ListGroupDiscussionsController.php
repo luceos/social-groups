@@ -11,6 +11,7 @@ use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPostReaction;
 use Flarum\Formatter\Formatter;
 use Flarum\Http\RequestUtil;
+use Illuminate\Database\ConnectionInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -24,6 +25,7 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
     public function __construct(
         private Formatter $formatter,
         private LoggerInterface $log,
+        private ConnectionInterface $db,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -35,9 +37,11 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
             // Check once per request and degrade gracefully rather than 500.
             static $schema = null;
             if ($schema === null) {
-                // Use the DB manager directly — the Schema facade root is not
-                // guaranteed to be bound in Flarum's container setup.
-                $sb = resolve('db')->getSchemaBuilder();
+                // Use the injected ConnectionInterface — the Schema facade
+                // root is not guaranteed to be bound in Flarum's container
+                // setup, and resolve()/app() short-circuits the
+                // dependency graph that tests + DI care about.
+                $sb = $this->db->getSchemaBuilder();
                 $schema = [
                     'is_gallery'   => $sb->hasColumn('social_group_discussions', 'is_gallery'),
                     'is_pinned'    => $sb->hasColumn('social_group_discussions', 'is_pinned'),
@@ -274,13 +278,11 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Group not found.'], 404);
         } catch (\Throwable $e) {
+            // Internal details (exception class, raw message, file/line)
+            // go to the server log only — they leak server internals
+            // (SQL fragments, file paths, table names) to any caller.
             $this->log->error('[social-groups] ListGroupDiscussionsController: ' . $e->getMessage(), ['exception' => $e]);
-            return new JsonResponse([
-                'error'     => 'An unexpected error occurred.',
-                'exception' => get_class($e),
-                'message'   => $e->getMessage(),
-                'at'        => basename($e->getFile()) . ':' . $e->getLine(),
-            ], 500);
+            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }
 

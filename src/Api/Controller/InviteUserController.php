@@ -9,9 +9,12 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 class InviteUserController implements RequestHandlerInterface
 {
+    public function __construct(private LoggerInterface $log) {}
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         try {
@@ -34,10 +37,14 @@ class InviteUserController implements RequestHandlerInterface
 
             $group = SocialGroup::findOrFail($groupId);
 
-            // Only creator or moderator (admin role) or forum admin can invite
+            // Only creator/moderator/forum-admin can invite. The audit
+            // caught a role-name drift here: PromoteMemberController
+            // sets role='moderator', but this check used the obsolete
+            // 'admin' role, silently denying invite rights to every
+            // user promoted through the normal flow.
             $actorMember = $group->members()->where('user_id', $actor->id)->first();
             $canInvite   = $actor->isAdmin()
-                || ($actorMember && in_array($actorMember->role, ['creator', 'admin']));
+                || ($actorMember && in_array($actorMember->role, ['creator', 'moderator'], true));
 
             if (! $canInvite) {
                 return new JsonResponse(['error' => 'Only group moderators can invite users.'], 403);
@@ -72,7 +79,10 @@ class InviteUserController implements RequestHandlerInterface
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return new JsonResponse(['error' => 'Group not found.'], 404);
         } catch (\Throwable $e) {
-            return new JsonResponse(['error' => $e->getMessage()], 500);
+            // Internal exception details (raw message, SQL fragments,
+            // file paths) go to the server log only.
+            $this->log->error('[social-groups] InviteUserController: ' . $e->getMessage(), ['exception' => $e]);
+            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
     }
 }
