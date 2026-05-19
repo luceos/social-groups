@@ -7,6 +7,7 @@ use Ernestdefoe\SocialGroups\Model\SgPoll;
 use Ernestdefoe\SocialGroups\Model\SgPollVote;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Flarum\Http\RequestUtil;
+use Illuminate\Database\ConnectionInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -17,7 +18,10 @@ class VotePollController implements RequestHandlerInterface
 {
     use SerializesPoll;
 
-    public function __construct(private LoggerInterface $log) {}
+    public function __construct(
+        private LoggerInterface $log,
+        private ConnectionInterface $db,
+    ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -71,18 +75,24 @@ class VotePollController implements RequestHandlerInterface
                 return new JsonResponse(['error' => 'This poll only allows one choice.'], 422);
             }
 
-            // Replace existing votes atomically
-            SgPollVote::where('poll_id', $pollId)
-                ->where('user_id', $actor->id)
-                ->delete();
+            // Replace existing votes atomically. Without the transaction
+            // the delete+insert pair is observable mid-flight by a
+            // concurrent reader (they'd see zero votes for this actor)
+            // and a failure on insert leaves the actor with no votes at
+            // all even though they had votes before the request.
+            $this->db->transaction(function () use ($pollId, $optionIds, $actor) {
+                SgPollVote::where('poll_id', $pollId)
+                    ->where('user_id', $actor->id)
+                    ->delete();
 
-            foreach ($optionIds as $optionId) {
-                SgPollVote::create([
-                    'poll_id'   => $pollId,
-                    'option_id' => $optionId,
-                    'user_id'   => $actor->id,
-                ]);
-            }
+                foreach ($optionIds as $optionId) {
+                    SgPollVote::create([
+                        'poll_id'   => $pollId,
+                        'option_id' => $optionId,
+                        'user_id'   => $actor->id,
+                    ]);
+                }
+            });
 
             return new JsonResponse($this->serializePoll($poll, $actor->id));
         } catch (\Throwable $e) {
