@@ -13,31 +13,11 @@ import UserGroupBadges from './forum/components/UserGroupBadges';
 import PrimaryGroupSelector from './forum/components/PrimaryGroupSelector';
 
 app.initializers.add('ernestdefoe-social-groups', (app) => {
-  // NOTE: priority -10 ensures this initializer runs after flarum/realtime's
-  // (which registers at the default priority 0).  Without this, app.realtime
-  // is undefined when the Realtime extender below calls extend(app, id) and
-  // the WebSocket event registrations silently fail.
-  // ── flarum/realtime integration (optional) ────────────────────────────────
-  // Bridge WebSocket public-channel events to DOM CustomEvents so individual
-  // components can subscribe/unsubscribe cleanly without direct Pusher access.
-  // Calling rtExtender.extend(app, id) directly is equivalent to returning the
-  // extender from the module export — without triggering the autoExportLoader.
-  try {
-    const mod = require('flarum-realtime/forum/extenders/Realtime');
-    const RealtimeExtender = mod?.default ?? mod;
-    if (RealtimeExtender) {
-      new RealtimeExtender()
-        .onPublicChannelEvent('sg-post-created', (data) => {
-          document.dispatchEvent(new CustomEvent('sg:post-created', { detail: data }));
-        })
-        .onPublicChannelEvent('sg-typing', (data) => {
-          document.dispatchEvent(new CustomEvent('sg:typing', { detail: data }));
-        })
-        .extend(app, 'ernestdefoe-social-groups');
-    }
-  } catch (_) {
-    // flarum/realtime not installed — live updates silently disabled.
-  }
+  // flarum/realtime integration is per-discussion now: GroupDiscussionThread
+  // subscribes to its group's `private-sg-group.{groupId}` channel on mount
+  // so the WebSocket layer enforces the same membership gate the HTTP layer
+  // does.  No global public-channel handlers — events delivered there would
+  // be visible to every connected client, including non-members.
   app.store.models['social-groups'] = SocialGroup;
 
   // Notification components

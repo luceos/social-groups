@@ -3,7 +3,6 @@
 namespace Ernestdefoe\SocialGroups\Listener;
 
 use Ernestdefoe\SocialGroups\Event\SocialGroupPostWasCreated;
-use Flarum\Formatter\Formatter;
 use Illuminate\Contracts\Container\Container;
 use Psr\Log\LoggerInterface;
 
@@ -15,7 +14,6 @@ use Psr\Log\LoggerInterface;
 class BroadcastGroupPost
 {
     public function __construct(
-        private Formatter $formatter,
         private LoggerInterface $log,
         private Container $container,
     ) {}
@@ -30,48 +28,28 @@ class BroadcastGroupPost
             return;
         }
 
-        $post       = $event->post;
-        $actor      = $event->actor;
-        $discussion = $event->discussion;
+        $post = $event->post;
 
-        // Render the stored parsed content to HTML exactly as the
-        // CreateGroupPostController does in its JSON response.
-        $contentParsed = null;
-        try {
-            if ($post->content_parsed !== null) {
-                $contentParsed = $this->formatter->render($post->content_parsed);
-            }
-        } catch (\Throwable) {
-            $contentParsed = e($post->content);
-        }
-
+        // Broadcast only IDs on a group-scoped private channel. Two layers
+        // of defense against the public-channel leak the previous version
+        // had: (1) Pusher's protocol requires server-side auth for any
+        // `private-*` subscription, so flarum/realtime's auth endpoint
+        // gets a chance to deny non-members at the WebSocket layer; (2)
+        // even if auth were bypassed, the payload carries no post content,
+        // user identity, or rendered HTML — clients must rehydrate via
+        // `/api/sg-thread-posts/{discussionId}` which is membership-gated.
+        // This mirrors CLAUDE.md §29's "broadcast IDs only" pattern.
         $payload = [
-            'id'            => $post->id,
-            'discussionId'  => $post->discussion_id,
-            'groupId'       => $post->group_id,
-            'content'       => $post->content,
-            'contentParsed' => $contentParsed,
-            'createdAt'     => $post->created_at->toIso8601String(),
-            'updatedAt'     => $post->updated_at->toIso8601String(),
-            'reactions'     => (object) [],
-            'actorReaction' => null,
-            'parentPostId'  => $post->parent_post_id,
-            'linkPreview'   => $post->link_preview,
-            // Other members cannot edit/delete a post they didn't write.
-            // The receiver's own canEdit/canDelete is determined client-side
-            // by comparing post.user.id to app.session.user.id().
-            'canEdit'       => false,
-            'canDelete'     => false,
-            'user'          => [
-                'id'          => $actor->id,
-                'displayName' => $actor->display_name,
-                'avatarUrl'   => $actor->avatar_url,
-                'slug'        => $actor->username,
-            ],
+            'id'           => $post->id,
+            'discussionId' => $post->discussion_id,
+            'groupId'      => $post->group_id,
+            'parentPostId' => $post->parent_post_id,
         ];
 
+        $channel = 'private-sg-group.' . (int) $post->group_id;
+
         try {
-            $this->container->make('flarum-realtime.pusher')->trigger('public', 'sg-post-created', $payload);
+            $this->container->make('flarum-realtime.pusher')->trigger($channel, 'sg-post-created', $payload);
         } catch (\Throwable $e) {
             $this->log->error('[social-groups] Realtime broadcast failed: ' . $e->getMessage());
         }

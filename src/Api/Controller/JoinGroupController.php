@@ -51,6 +51,15 @@ class JoinGroupController implements RequestHandlerInterface
             return new JsonResponse(['status' => 'pending', 'memberCount' => $group->member_count]);
         }
 
+        // Invite-only: membership is granted by a moderator via
+        // InviteUserController. POST /join must refuse — falling through
+        // to the open-join path would let any registered user self-admit.
+        // The `is_private` guard above is not enough on its own: a group
+        // can be invite-only without being marked private.
+        if ($group->membership_type === 'invite') {
+            return new JsonResponse(['error' => 'This group is invite-only.'], 403);
+        }
+
         $group->members()->create([
             'user_id'   => $actor->id,
             'role'      => 'member',

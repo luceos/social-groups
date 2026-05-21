@@ -56,7 +56,8 @@ export default class GroupDiscussionThread extends Page {
     super.oncreate(vnode);
     this.load();
     this._rtActive = true;
-    this._setupRealtime();
+    // Realtime subscription has to wait for load() to resolve, because
+    // the per-group private channel name depends on this.discussion.groupId.
 
     this._closeMenu = (e) => {
       if (this.openMenuId !== null && !e.target.closest('.SGThread-postMenu')) {
@@ -74,27 +75,20 @@ export default class GroupDiscussionThread extends Page {
   // ── Realtime setup / teardown ──────────────────────────────────────────────
 
   _setupRealtime() {
-    // ── Shared handlers (work with both binding modes) ────────────────────
+    // Idempotent: called after load() resolves; guard against double-subscribe
+    // on retries / refresh after error.
+    if (this._rtChannel || !this.discussion || !this.discussion.groupId) return;
+
+    const channelName = 'private-sg-group.' + this.discussion.groupId;
+
+    // sg-post-created now carries only IDs.  Refresh the thread in the
+    // background and the seen-set dedupe in load() handles ordering.
     const handlePost = (data) => {
       if (!this._rtActive) return;
       if (!data || !data.id) return;
-      // Only inject posts for the discussion currently on screen.
       if (String(data.discussionId) !== String(this.attrs.discussionId)) return;
-      // Deduplicate: skip if we already have this post (own posts are added
-      // immediately from the POST response; this filters the WebSocket echo).
       if (this._seenPostIds.has(data.id)) return;
-
-      this._seenPostIds.add(data.id);
-      // The broadcast always sends canEdit/canDelete as false (server can't
-      // know who is receiving). Patch them client-side for the author.
-      const me = app.session.user;
-      if (me && data.user && String(data.user.id) === String(me.id())) {
-        data.canEdit   = true;
-        data.canDelete = true;
-      }
-      this.posts.push(data);
-      if (this.discussion) this.discussion.commentCount = (this.discussion.commentCount || 0) + 1;
-      m.redraw();
+      this._refreshSilently();
     };
 
     const handleTyping = (data) => {
@@ -124,33 +118,72 @@ export default class GroupDiscussionThread extends Page {
       }, 4500);
     };
 
-    // ── Binding strategy ──────────────────────────────────────────────────
-    // oncreate() fires after the full app boot, so app.realtime is
-    // guaranteed to be initialised if flarum/realtime is installed.
-    // Prefer direct binding so we bypass the DOM-event bridge entirely
-    // and avoid any initialiser-ordering races in forum.js.
-    const rt = app.realtime;
-    if (rt && typeof rt.onPublicChannelEvent === 'function') {
-      rt.onPublicChannelEvent('sg-post-created', handlePost);
-      rt.onPublicChannelEvent('sg-typing',       handleTyping);
-      this._rtMode = 'direct';
-    } else {
-      // Fall back to DOM CustomEvents dispatched by the forum.js bridge.
-      this._rtPostHandler   = (e) => handlePost(e.detail);
-      this._rtTypingHandler = (e) => handleTyping(e.detail);
-      document.addEventListener('sg:post-created', this._rtPostHandler);
-      document.addEventListener('sg:typing',       this._rtTypingHandler);
-      this._rtMode = 'dom';
+    // ── Subscribe to the per-group private channel ────────────────────────
+    // Pusher's protocol gates `private-*` subscriptions through flarum/
+    // realtime's auth endpoint, which is what enforces group membership at
+    // the WebSocket layer.  Try the raw Pusher client first (most common
+    // shape), then fall back to a `subscribePrivate` helper if the extender
+    // exposes one.  No subscription = no live updates, but no leak either.
+    const pusher = app.realtime?.pusher || app.pusher || null;
+    if (pusher && typeof pusher.subscribe === 'function') {
+      try {
+        const ch = pusher.subscribe(channelName);
+        ch.bind('sg-post-created', handlePost);
+        ch.bind('sg-typing',       handleTyping);
+        this._rtChannel     = ch;
+        this._rtChannelName = channelName;
+        this._rtPusher      = pusher;
+      } catch (_) {
+        this._rtChannel = null;
+      }
+    } else if (typeof app.realtime?.subscribePrivate === 'function') {
+      try {
+        const ch = app.realtime.subscribePrivate(channelName);
+        ch.bind?.('sg-post-created', handlePost);
+        ch.bind?.('sg-typing',       handleTyping);
+        this._rtChannel     = ch;
+        this._rtChannelName = channelName;
+      } catch (_) {
+        this._rtChannel = null;
+      }
     }
+  }
+
+  // Background refetch — no loading flicker, no scroll jump.  load() reseeds
+  // the seen-set and the diff is rendered transparently on the next redraw.
+  _refreshSilently() {
+    const discussionId = this.attrs.discussionId;
+    fetch(`${apiBase()}/sg-thread-posts/${discussionId}`, {
+      credentials: 'same-origin',
+      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data || !this._rtActive) return;
+        if (String(discussionId) !== String(this.attrs.discussionId)) return;
+        this.discussion   = data.discussion ?? this.discussion;
+        this.posts        = data.data || [];
+        this._seenPostIds = new Set(this.posts.map((p) => p.id));
+        m.redraw();
+      })
+      .catch(() => { /* transient — next event triggers another refresh */ });
   }
 
   _teardownRealtime() {
     this._rtActive = false;
-    // Direct-mode handlers guard themselves via this._rtActive = false above.
-    // DOM-mode handlers must be explicitly removed.
-    if (this._rtMode === 'dom') {
-      document.removeEventListener('sg:post-created', this._rtPostHandler);
-      document.removeEventListener('sg:typing',       this._rtTypingHandler);
+    if (this._rtChannel) {
+      try {
+        this._rtChannel.unbind?.('sg-post-created');
+        this._rtChannel.unbind?.('sg-typing');
+      } catch (_) {}
+      try {
+        if (this._rtPusher?.unsubscribe && this._rtChannelName) {
+          this._rtPusher.unsubscribe(this._rtChannelName);
+        } else if (typeof app.realtime?.unsubscribe === 'function' && this._rtChannelName) {
+          app.realtime.unsubscribe(this._rtChannelName);
+        }
+      } catch (_) {}
+      this._rtChannel = null;
     }
     clearTimeout(this._typingTimer);
     // Tell the server we stopped typing (fire-and-forget).
@@ -220,6 +253,8 @@ export default class GroupDiscussionThread extends Page {
         this.loading    = false;
         document.title  = `${this.discussion.title} — ${app.forum.attribute('title')}`;
         m.redraw();
+        // Subscribe to the per-group private channel now that we know groupId.
+        this._setupRealtime();
       })
       .catch((err) => {
         this.error   = err.message;

@@ -59,12 +59,20 @@ class TypingStatusController implements RequestHandlerInterface
             return new EmptyResponse(403);
         }
 
-        // Broadcast via Realtime if available. Container is injected
-        // rather than reached for via app() so the dependency is
-        // discoverable and the listener stays testable.
+        // Broadcast via Realtime on a group-scoped private channel.  The
+        // previous 'public' channel let any logged-in client — including
+        // non-members of the group — receive every typing event, which
+        // disclosed who was active in which private discussion. Pusher's
+        // protocol requires server-side auth for `private-*` subscriptions,
+        // so flarum/realtime's auth endpoint enforces the same membership
+        // gate at the WebSocket layer that this controller enforces at the
+        // HTTP layer above. Container is injected rather than reached for
+        // via app() so the dependency is discoverable and the listener
+        // stays testable.
         if ($this->container->bound('flarum-realtime.pusher')) {
+            $channel = 'private-sg-group.' . (int) $discussion->group_id;
             try {
-                $this->container->make('flarum-realtime.pusher')->trigger('public', 'sg-typing', [
+                $this->container->make('flarum-realtime.pusher')->trigger($channel, 'sg-typing', [
                     'discussionId' => $discussionId,
                     'userId'       => $actor->id,
                     'displayName'  => $actor->display_name,

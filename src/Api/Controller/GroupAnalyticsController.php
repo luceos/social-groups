@@ -42,13 +42,23 @@ class GroupAnalyticsController implements RequestHandlerInterface
             }
 
             // ── Member growth: last 30 days ───────────────────────────────
-            $joinsByDay = $group->members()
+            // Day-bucketing happens in PHP so the query stays portable
+            // across MySQL, PostgreSQL, and SQLite — PostgreSQL has no
+            // scalar DATE() function, and SQLite's behaviour with
+            // datetime columns differs.
+            $joinedAtList = $group->members()
                 ->whereNull('banned_at')
                 ->where('joined_at', '>=', Carbon::now()->subDays(29)->startOfDay())
-                ->selectRaw('DATE(joined_at) as day, COUNT(*) as count')
-                ->groupBy('day')
-                ->pluck('count', 'day')
-                ->all();
+                ->pluck('joined_at');
+
+            $joinsByDay = [];
+            foreach ($joinedAtList as $joinedAt) {
+                if ($joinedAt === null) continue;
+                $day = $joinedAt instanceof Carbon
+                    ? $joinedAt->format('Y-m-d')
+                    : Carbon::parse($joinedAt)->format('Y-m-d');
+                $joinsByDay[$day] = ($joinsByDay[$day] ?? 0) + 1;
+            }
 
             $memberGrowth = [];
             for ($i = 29; $i >= 0; $i--) {
@@ -57,19 +67,24 @@ class GroupAnalyticsController implements RequestHandlerInterface
             }
 
             // ── Post volume: last 8 weeks ─────────────────────────────────
-            // Was: 8 separate COUNT() queries (one per week). Collapsed
-            // to a single grouped query that counts posts per calendar
-            // day, then bucketed into weeks in PHP. Avoids both the N+1
-            // and MySQL-only YEARWEEK(), so analytics stays portable
+            // Pull raw timestamps and bucket by day in PHP, then by week.
+            // Avoids both the N+1 (8 separate COUNTs) and the MySQL-only
+            // DATE()/YEARWEEK() functions, so analytics stays portable
             // across the three databases Flarum 2.x supports.
             $earliestWeekStart = Carbon::now()->subWeeks(7)->startOfWeek();
 
-            $postsByDay = SocialGroupPost::where('group_id', $groupId)
+            $postCreatedAtList = SocialGroupPost::where('group_id', $groupId)
                 ->where('created_at', '>=', $earliestWeekStart)
-                ->selectRaw('DATE(created_at) as day, COUNT(*) as cnt')
-                ->groupBy('day')
-                ->pluck('cnt', 'day')
-                ->all();
+                ->pluck('created_at');
+
+            $postsByDay = [];
+            foreach ($postCreatedAtList as $createdAt) {
+                if ($createdAt === null) continue;
+                $day = $createdAt instanceof Carbon
+                    ? $createdAt->format('Y-m-d')
+                    : Carbon::parse($createdAt)->format('Y-m-d');
+                $postsByDay[$day] = ($postsByDay[$day] ?? 0) + 1;
+            }
 
             $postVolume = [];
             for ($i = 7; $i >= 0; $i--) {
