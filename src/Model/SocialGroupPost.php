@@ -20,13 +20,30 @@ class SocialGroupPost extends AbstractModel
 {
     protected $table = 'social_group_posts';
 
-    protected $guarded = [];
+    /**
+     * Whitelist explícito de mass assignment. Bloqueia que um caller futuro
+     * passando `$request->getParsedBody()` direto a `create()/fill()` consiga
+     * sobrescrever `is_pinned`, `group_id`, `parent_post_id` etc. com valores
+     * vindos do cliente.
+     */
+    protected $fillable = [
+        'discussion_id',
+        'group_id',
+        'user_id',
+        'content',
+        'content_parsed',
+        'parent_post_id',
+        'link_preview',
+        'is_pinned',
+    ];
 
     public $timestamps = true;
 
-    // Do NOT cast link_preview via $casts — Laravel's 'array' cast throws
-    // JsonException on malformed JSON, which would kill the entire feed query.
-    // We decode defensively in the accessor instead.
+    /**
+     * `link_preview` fica fora do cast `array` porque o cast do Laravel
+     * lança `JsonException` em JSON malformado, derrubando a query de feed
+     * inteira. Decodificamos defensivamente no accessor.
+     */
     protected $casts = [
         'is_pinned' => 'boolean',
     ];

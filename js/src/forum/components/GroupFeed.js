@@ -151,14 +151,11 @@ export default class GroupFeed extends Component {
         this.loadError   = false;
         this.loading     = false;
 
-        // Auto-expand replies for every discussion that has them so users
-        // see comments immediately without having to click.
-        this.discussions.forEach((d) => {
-          if (d.commentCount > 1) {
-            this.expandedDiscIds.add(d.id);
-            this.loadComments(d);
-          }
-        });
+        // Comments are loaded lazily when the user clicks the Comments
+        // button (see toggleComments). The previous behaviour fanned out
+        // one /sg-thread-posts/{id} request per discussion on every page
+        // load, hammering the DB with up to 20 simultaneous full-table
+        // scans on social_group_posts ordered by (is_pinned, created_at).
 
         m.redraw();
       })

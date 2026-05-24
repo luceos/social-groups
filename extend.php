@@ -40,6 +40,7 @@ use Ernestdefoe\SocialGroups\Access\SocialGroupPolicy;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Notification\SocialGroupNewPostBlueprint;
 use Ernestdefoe\SocialGroups\Notification\SocialGroupNewReplyBlueprint;
+use Ernestdefoe\SocialGroups\SocialGroupsServiceProvider;
 use Flarum\Extend;
 use Flarum\Frontend\Document;
 use Flarum\Http\RequestUtil;
@@ -125,5 +126,8 @@ return [
 
     (new Extend\Settings())
         ->default('ernestdefoe-social-groups.create_permission', 'member'),
+
+    (new Extend\ServiceProvider())
+        ->register(SocialGroupsServiceProvider::class),
 
 ];

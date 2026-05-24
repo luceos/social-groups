@@ -3,7 +3,9 @@
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
+use Flarum\Http\Exception\RouteNotFoundException;
 use Flarum\Http\RequestUtil;
+use Flarum\User\Exception\PermissionDeniedException;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -11,23 +13,41 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class ListGroupMembersController implements RequestHandlerInterface
 {
+    /**
+     * Devolve o roster de membros de um grupo. Exige actor registrado;
+     * para grupos privados, restringe a membros ativos, ao dono e a
+     * admins — guests e estranhos recebem 403 sem vazar existência ou
+     * tamanho do roster.
+     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
+        $actor->assertRegistered();
+
         $params = $request->getQueryParams();
         $id     = $params['id'] ?? null;
         if (! $id) {
             preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
             $id = $m[1] ?? null;
         }
-        $group = SocialGroup::findOrFail($id);
+        if (! $id || ! ctype_digit((string) $id)) {
+            throw new RouteNotFoundException();
+        }
 
-        $actorMember = $actor->exists
-            ? $group->members()->where('user_id', $actor->id)->first()
-            : null;
+        $group = SocialGroup::findOrFail((int) $id);
+
+        $actorId     = (int) $actor->id;
+        $isCreator   = $actorId === (int) $group->user_id;
+        $actorMember = $group->members()->where('user_id', $actorId)->first();
         $actorRole   = $actorMember?->role;
         $actorCanMod = $actor->isAdmin() || in_array($actorRole, ['creator', 'moderator'], true);
-        $isCreator   = $actor->exists && $actor->id === $group->user_id;
+
+        if ($group->is_private) {
+            $isMember = $actorMember && $actorMember->banned_at === null;
+            if (! ($isCreator || $actor->isAdmin() || $isMember)) {
+                throw new PermissionDeniedException();
+            }
+        }
 
         $members = $group->members()->with('user')->whereNull('banned_at')->get()->map(function ($member) use ($actorCanMod, $isCreator, $actor) {
             $user = $member->user;
