@@ -43,6 +43,16 @@ class SocialGroupJoinRequestResource extends AbstractDatabaseResource
         $actor = RequestUtil::getActor($context->request);
         $params = $context->request->getQueryParams();
 
+        // scope() runs for Index AND for approve/reject action endpoints
+        // which load $context->model by PK. Only Index needs the
+        // ?groupId=N filter; PK-lookup paths apply ->can('approve'|'delete')
+        // through the policy.
+        $isIndex = $context->endpoint instanceof Endpoint\Index;
+        if (! $isIndex) {
+            $query->with('user');
+            return;
+        }
+
         // `?groupId=N` plain query param — not JSON:API filter[group]
         // because AbstractDatabaseResource::filters() is final + throws.
         $groupId = isset($params['groupId']) ? (int) $params['groupId'] : 0;

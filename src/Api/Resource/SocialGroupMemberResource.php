@@ -45,6 +45,17 @@ class SocialGroupMemberResource extends AbstractDatabaseResource
         $actor  = RequestUtil::getActor($context->request);
         $params = $context->request->getQueryParams();
 
+        // scope() runs for Index AND for the action endpoints
+        // (kick/promote/demote) which load $context->model by PK. The
+        // `?groupId=N` requirement only makes sense for Index — on the
+        // PK-lookup path we still want to load the row so the action's
+        // ->can('delete'|'promote'|'demote') policy gate can evaluate.
+        $isIndex = $context->endpoint instanceof Endpoint\Index;
+        if (! $isIndex) {
+            $query->with('user');
+            return;
+        }
+
         // `?groupId=N` plain query param — not JSON:API filter[group]
         // because AbstractDatabaseResource::filters() is final + throws.
         $groupId = isset($params['groupId']) ? (int) $params['groupId'] : 0;

@@ -62,6 +62,20 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         $actor = RequestUtil::getActor($context->request);
         $params = $context->request->getQueryParams();
 
+        // scope() runs for BOTH Index (?GET listing) and Show (find by
+        // id, plus include-driven hydration from sibling resources).
+        // The `?groupId=` requirement only makes sense for Index — Show
+        // looks up by primary key and would otherwise be blanket-killed
+        // here. The Show endpoint's `->can('view')` policy gate enforces
+        // per-row visibility for that path.
+        $isIndex = $context->endpoint instanceof Endpoint\Index;
+        if (! $isIndex) {
+            // Eager loads still help here for the include=firstPost.user
+            // case — applied below after the group-scope branch.
+            $this->applyEagerLoads($query);
+            return;
+        }
+
         // Use plain query params instead of JSON:API `?filter[group]`
         // because Flarum 2's AbstractDatabaseResource::filters() is
         // final and throws — JSON:API filter syntax requires registering
@@ -114,16 +128,24 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         }
         $query->orderByDesc('social_group_discussions.last_posted_at');
 
-        /**
-         * Eager-loads para evitar N+1 quando os campos computados
-         * (`sharedFrom`, `poll`, `firstPost`) forem renderizados. Cada
-         * `with()` aqui economiza N consultas no escopo da página
-         * (20 discussões → 1 consulta por relação em vez de 20).
-         *
-         * `firstPost.reactions` é o que alimenta o campo `reactions`
-         * do SocialGroupPostResource — sem essa pré-carga, cada post
-         * incluído como firstPost emite 1 query extra de reactions.
-         */
+        $this->applyEagerLoads($query);
+    }
+
+    /**
+     * Eager-loads para evitar N+1 quando os campos computados
+     * (`sharedFrom`, `poll`, `firstPost`) forem renderizados. Cada
+     * `with()` aqui economiza N consultas no escopo da página
+     * (20 discussões → 1 consulta por relação em vez de 20).
+     *
+     * `firstPost.reactions` é o que alimenta o campo `reactions` do
+     * SocialGroupPostResource — sem essa pré-carga, cada post incluído
+     * como firstPost emite 1 query extra de reactions.
+     *
+     * Compartilhado entre os branches Index e Show de scope() porque o
+     * include=firstPost.user via Show também se beneficia.
+     */
+    protected function applyEagerLoads(Builder $query): void
+    {
         $query->with([
             'user',
             'lastPostedUser',

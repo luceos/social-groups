@@ -74,16 +74,27 @@ class SocialGroupPostResource extends AbstractDatabaseResource
     {
         $actor = RequestUtil::getActor($context->request);
 
-        // Suporte ao Index endpoint: `?discussionId=N` lista os posts
-        // de UMA discussão (substituto do antigo /sg-thread-posts).
-        // Sem o param, o endpoint Index responde vazio — não fazemos
-        // listagem global de posts cross-discussion. Query param simples
-        // em vez de `?filter[discussion]` porque a filters() do
-        // AbstractDatabaseResource é final e throw.
-        $params = $context->request->getQueryParams();
-        $discId = isset($params['discussionId']) ? (int) $params['discussionId'] : 0;
+        // scope() runs for both Index and Show/include paths. Three
+        // distinct branches:
+        //   1. Index + discussionId=N  → discussion-specific listing.
+        //   2. Index sem discussionId   → recusa (não queremos vazar
+        //      posts globalmente; o frontend sempre passa o param).
+        //   3. Show / include          → lookup por PK; aplica só o
+        //      filtro de visibilidade de grupo, sem exigir o param.
+        $isIndex = $context->endpoint instanceof Endpoint\Index;
+        $params  = $context->request->getQueryParams();
+        $discId  = isset($params['discussionId']) ? (int) $params['discussionId'] : 0;
 
-        if ($discId > 0) {
+        if ($isIndex) {
+            if ($discId <= 0) {
+                // Index sem filtro de discussão: nunca devolve nada.
+                // Evita que `?include=posts` em outro endpoint vire
+                // listagem global de posts visíveis (vazaria via
+                // visibilidade-de-grupo, mas seria caro e inesperado).
+                $query->whereRaw('1 = 0');
+                return;
+            }
+
             $discussion = SocialGroupDiscussion::with('group')->find($discId);
             if ($discussion === null || $discussion->group === null) {
                 $query->whereRaw('1 = 0');
@@ -108,17 +119,16 @@ class SocialGroupPostResource extends AbstractDatabaseResource
             return;
         }
 
+        // Show / include path: lookup por PK ou hidratação polimórfica
+        // (ex.: notificação que aponta um post como subject). Admin /
+        // moderador veem qualquer post; resto fica restrito por
+        // visibilidade-de-grupo via subquery batch.
         if ($actor->isAdmin()
             || $actor->hasPermission('ernestdefoe-social-groups.moderate')
         ) {
             return;
         }
 
-        /**
-         * Sem filtro de discussão (ex.: include de notificação por
-         * polimorfismo), restringe a posts cujo grupo o actor pode ver.
-         * Espelha GroupVisibility::canSee mas como subquery batch.
-         */
         $actorId = $actor->exists ? (int) $actor->id : null;
 
         $query->whereExists(function ($sub) use ($actorId) {
