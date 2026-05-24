@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiDelete } from '../utils/api';
+import { listMembers, promoteMember, demoteMember, kickMember } from '../utils/api';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -24,7 +24,7 @@ export default class MemberList extends Component {
     const { groupId } = this.attrs;
     this.loading = true;
 
-    apiGet(`/social-groups/${groupId}/members`)
+    listMembers(groupId)
       .then((data) => {
         this.members = data.data || [];
         this.loading = false;
@@ -39,9 +39,8 @@ export default class MemberList extends Component {
 
   promote(member) {
     this.actioning[member.userId] = 'promote';
-    const { groupId } = this.attrs;
 
-    apiPost(`/social-groups/${groupId}/members/${member.userId}/promote`)
+    promoteMember(member.id)
       .then((data) => {
         const idx = this.members.findIndex((m) => m.userId === member.userId);
         if (idx !== -1) this.members[idx] = { ...this.members[idx], role: data.role || 'moderator' };
@@ -56,9 +55,8 @@ export default class MemberList extends Component {
 
   demote(member) {
     this.actioning[member.userId] = 'demote';
-    const { groupId } = this.attrs;
 
-    apiPost(`/social-groups/${groupId}/members/${member.userId}/demote`)
+    demoteMember(member.id)
       .then((data) => {
         const idx = this.members.findIndex((m) => m.userId === member.userId);
         if (idx !== -1) this.members[idx] = { ...this.members[idx], role: data.role || 'member' };
@@ -77,7 +75,7 @@ export default class MemberList extends Component {
     this.actioning[member.userId] = 'remove';
     m.redraw();
 
-    apiDelete(`/social-groups/${this.attrs.groupId}/members/${member.userId}`)
+    kickMember(member.id)
       .then(() => {
         this.members = this.members.filter((m) => m.userId !== member.userId);
         delete this.actioning[member.userId];
@@ -92,17 +90,11 @@ export default class MemberList extends Component {
   openInvite() {
     app.modal.show(InviteUserModal, {
       groupId:   this.attrs.groupId,
-      onInvited: (data) => {
-        this.members.push({
-          userId:      data.userId,
-          displayName: data.displayName,
-          avatarUrl:   data.avatarUrl,
-          slug:        data.slug,
-          role:        'member',
-          canModerate: true,
-        });
-        m.redraw();
-      },
+      // Reload from the Resource so the new membership row carries its
+      // real `id` (used by promote/demote/kick action URLs). Optimistic
+      // append would have a missing `id` field and break those actions
+      // until the next page refresh.
+      onInvited: () => this.loadMembers(),
     });
   }
 

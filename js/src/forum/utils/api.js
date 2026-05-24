@@ -305,6 +305,46 @@ export function unreactToPost(id) {
     }));
 }
 
+// ── Members ──────────────────────────────────────────────────────────────
+
+function projectMember(r) {
+  const a = r.attributes || {};
+  return {
+    id:          Number(r.id),
+    userId:      Number(a.userId),
+    role:        a.role || 'member',
+    displayName: a.displayName || '',
+    avatarUrl:   a.avatarUrl || null,
+    slug:        a.slug || '',
+    joinedAt:    a.joinedAt || null,
+    canModerate: !!a.canModerate,
+    canRemove:   !!a.canRemove,
+  };
+}
+
+export function listMembers(groupId) {
+  return apiGet('/social-group-members', {
+    'filter[group]': groupId,
+    include:         'user',
+  }).then((body) => ({
+    data: (body.data || []).map(projectMember),
+  }));
+}
+
+export function promoteMember(memberId) {
+  return apiPost(`/social-group-members/${memberId}/promote`)
+    .then((body) => ({ role: body.data?.attributes?.role || 'moderator' }));
+}
+
+export function demoteMember(memberId) {
+  return apiPost(`/social-group-members/${memberId}/demote`)
+    .then((body) => ({ role: body.data?.attributes?.role || 'member' }));
+}
+
+export function kickMember(memberId) {
+  return apiDelete(`/social-group-members/${memberId}`);
+}
+
 export function listThreadPosts(discussionId) {
   const params = {
     'filter[discussion]': discussionId,

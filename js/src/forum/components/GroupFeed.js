@@ -1,6 +1,6 @@
 import {
-  apiGet, apiPost,
-  listDiscussions, listThreadPosts,
+  apiPost,
+  listDiscussions, listThreadPosts, listMembers,
   createDiscussion, deleteDiscussion as apiDeleteDiscussion,
   createPost,
   pinDiscussion as apiPinDiscussion,
@@ -371,7 +371,7 @@ export default class GroupFeed extends Component {
   loadMembers() {
     if (this.members !== null || this.membersLoading) return;
     this.membersLoading = true;
-    apiGet(`/social-groups/${this.attrs.groupId}/members`)
+    listMembers(this.attrs.groupId)
       .then((data) => {
         this.members        = data.data || [];
         this.membersLoading = false;

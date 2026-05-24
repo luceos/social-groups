@@ -3,12 +3,9 @@
 use Ernestdefoe\SocialGroups\Api\Controller\ApproveJoinRequestController;
 use Ernestdefoe\SocialGroups\Api\Controller\FeatureGroupController;
 use Ernestdefoe\SocialGroups\Api\Controller\GroupAnalyticsController;
-use Ernestdefoe\SocialGroups\Api\Controller\KickGroupMemberController;
 use Ernestdefoe\SocialGroups\Api\Controller\GroupRssFeedController;
 use Ernestdefoe\SocialGroups\Api\Controller\ListGroupMediaController;
 use Ernestdefoe\SocialGroups\Api\Controller\FetchLinkPreviewController;
-use Ernestdefoe\SocialGroups\Api\Controller\ListGroupMembersController;
-use Ernestdefoe\SocialGroups\Api\Controller\DemoteMemberController;
 use Ernestdefoe\SocialGroups\Api\Controller\InviteUserController;
 use Ernestdefoe\SocialGroups\Api\Controller\JoinGroupController;
 use Ernestdefoe\SocialGroups\Api\Controller\LeaveGroupController;
@@ -20,17 +17,19 @@ use Ernestdefoe\SocialGroups\Api\Controller\ListUserGroupsController;
 use Ernestdefoe\SocialGroups\Api\Controller\SetPrimaryGroupController;
 use Ernestdefoe\SocialGroups\Api\Controller\StoreGroupMediaPostController;
 use Ernestdefoe\SocialGroups\Api\Controller\Poll\VotePollController;
-use Ernestdefoe\SocialGroups\Api\Controller\PromoteMemberController;
 use Ernestdefoe\SocialGroups\Api\Controller\RejectJoinRequestController;
 use Ernestdefoe\SocialGroups\Api\Controller\UploadGroupImageController;
 use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupDiscussionResource;
+use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupMemberResource;
 use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupPostResource;
 use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupResource;
 use Ernestdefoe\SocialGroups\Access\SocialGroupDiscussionPolicy;
+use Ernestdefoe\SocialGroups\Access\SocialGroupMemberPolicy;
 use Ernestdefoe\SocialGroups\Access\SocialGroupPolicy;
 use Ernestdefoe\SocialGroups\Access\SocialGroupPostPolicy;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
+use Ernestdefoe\SocialGroups\Model\SocialGroupMember;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Ernestdefoe\SocialGroups\Notification\SocialGroupNewPostBlueprint;
 use Ernestdefoe\SocialGroups\Notification\SocialGroupNewReplyBlueprint;
@@ -82,11 +81,11 @@ return [
         ->get('/social-groups/{id}/requests',                        'sg.join-requests.list',    ListJoinRequestsController::class)
         ->post('/social-groups/{id}/requests/{requestId}/approve',   'sg.join-requests.approve', ApproveJoinRequestController::class)
         ->delete('/social-groups/{id}/requests/{requestId}',         'sg.join-requests.reject',  RejectJoinRequestController::class)
-        // Member moderation
-        ->get('/social-groups/{id}/members',                         'sg.members.list',          ListGroupMembersController::class)
-        ->post('/social-groups/{id}/members/{userId}/promote',       'sg.members.promote',       PromoteMemberController::class)
-        ->post('/social-groups/{id}/members/{userId}/demote',        'sg.members.demote',        DemoteMemberController::class)
-        ->delete('/social-groups/{id}/members/{userId}',             'sg.members.kick',          KickGroupMemberController::class)
+        // Member moderation: served by SocialGroupMemberResource at /api/social-group-members
+        //   GET    ?filter[group]=N     list
+        //   DELETE /{id}                kick (soft-delete via banned_at)
+        //   POST   /{id}/promote        promote
+        //   POST   /{id}/demote         demote
         // User group badges
         ->get('/sg-user-groups/{userId}',   'sg.user-groups',   ListUserGroupsController::class)
         // Polls
@@ -100,11 +99,13 @@ return [
     (new Extend\ApiResource(SocialGroupResource::class)),
     (new Extend\ApiResource(SocialGroupPostResource::class)),
     (new Extend\ApiResource(SocialGroupDiscussionResource::class)),
+    (new Extend\ApiResource(SocialGroupMemberResource::class)),
 
     (new Extend\Policy())
         ->modelPolicy(SocialGroup::class, SocialGroupPolicy::class)
         ->modelPolicy(SocialGroupDiscussion::class, SocialGroupDiscussionPolicy::class)
-        ->modelPolicy(SocialGroupPost::class, SocialGroupPostPolicy::class),
+        ->modelPolicy(SocialGroupPost::class, SocialGroupPostPolicy::class)
+        ->modelPolicy(SocialGroupMember::class, SocialGroupMemberPolicy::class),
 
     (new Extend\Notification())
         ->type(SocialGroupNewPostBlueprint::class,  ['alert'])
