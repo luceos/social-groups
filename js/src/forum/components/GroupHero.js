@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiPost } from '../utils/api';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 
@@ -124,12 +124,7 @@ export default class GroupHero extends Component {
     if (this.joining) return;
     this.joining = true;
 
-    fetch(`${apiBase()}/social-groups/${group.id()}/join`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken },
-    })
-      .then((res) => res.json())
+    apiPost(`/social-groups/${group.id()}/join`)
       .then((data) => {
         this.joining = false;
         if (data.status === 'pending') {
@@ -148,12 +143,7 @@ export default class GroupHero extends Component {
     if (this.joining) return;
     this.joining = true;
 
-    fetch(`${apiBase()}/social-groups/${group.id()}/leave`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken },
-    })
-      .then((res) => res.json())
+    apiPost(`/social-groups/${group.id()}/leave`)
       .then((data) => {
         this.joining = false;
         group.pushData({ attributes: { isMember: false, memberCount: data.memberCount } });
@@ -167,11 +157,7 @@ export default class GroupHero extends Component {
     if (this.joining) return;
     this.joining = true;
 
-    fetch(`${apiBase()}/social-groups/${group.id()}/leave`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken },
-    })
+    apiPost(`/social-groups/${group.id()}/leave`)
       .then(() => {
         this.joining = false;
         this.isPending = false;

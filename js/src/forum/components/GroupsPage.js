@@ -3,6 +3,7 @@ import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import GroupCard from './GroupCard';
 import CreateGroupModal from './CreateGroupModal';
+import { apiPatch } from '../utils/api';
 
 export default class GroupsPage extends Page {
   oninit(vnode) {
@@ -61,12 +62,7 @@ export default class GroupsPage extends Page {
     group.pushData({ attributes: { isFeatured: !was } });
     m.redraw();
 
-    fetch(`${app.forum.attribute('apiUrl')}/social-groups/${group.id()}/feature`, {
-      method:      'PATCH',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.json())
+    apiPatch(`/social-groups/${group.id()}/feature`)
       .then((data) => {
         group.pushData({ attributes: { isFeatured: data.isFeatured } });
         m.redraw();

@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiPost } from '../utils/api';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import Link from 'flarum/common/components/Link';
@@ -234,18 +234,9 @@ export default class GroupCard extends Component {
     if (this.joining) return;
     this.joining = true;
 
-    const url = this.isMember
-      ? `${apiBase()}/social-groups/${group.id()}/leave`
-      : `${apiBase()}/social-groups/${group.id()}/join`;
+    const action = this.isMember ? 'leave' : 'join';
 
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken,
-      },
-    })
-      .then((res) => res.json())
+    apiPost(`/social-groups/${group.id()}/${action}`)
       .then((data) => {
         if (data.status === 'pending') {
           this.isPending = true;
@@ -269,10 +260,7 @@ export default class GroupCard extends Component {
     if (this.joining) return;
     this.joining = true;
 
-    fetch(`${apiBase()}/social-groups/${group.id()}/leave`, {
-      method: 'POST',
-      headers: { 'X-CSRF-Token': app.session.csrfToken },
-    })
+    apiPost(`/social-groups/${group.id()}/leave`)
       .then(() => {
         this.isPending = false;
         group.pushData({ attributes: { isPending: false } });
