@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiGet, apiPost } from '../utils/api';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -25,11 +25,7 @@ export default class PrimaryGroupSelector extends Component {
   loadGroups() {
     if (!app.session.user) { this.loading = false; return; }
 
-    fetch(`${apiBase()}/sg-user-groups/${app.session.user.id()}`, {
-      credentials: 'same-origin',
-      headers: { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.ok ? r.json() : Promise.reject())
+    apiGet(`/sg-user-groups/${app.session.user.id()}`)
       .then((data) => {
         this.groups = data.data || [];
         // Restore saved selection from isPrimary flag returned by the API
@@ -51,16 +47,7 @@ export default class PrimaryGroupSelector extends Component {
     this.error    = null;
     m.redraw();
 
-    fetch(`${apiBase()}/sg-primary-group`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: JSON.stringify({ groupId: groupId || null }),
-    })
-      .then((r) => r.ok ? r.json() : r.json().then((e) => { throw new Error(e.error || 'Failed'); }))
+    apiPost('/sg-primary-group', { groupId: groupId || null })
       .then(() => {
         // Reflect new isPrimary state locally so the badge updates without a reload
         if (this.groups) {
@@ -70,7 +57,7 @@ export default class PrimaryGroupSelector extends Component {
         m.redraw();
       })
       .catch((err) => {
-        this.error  = err.message || 'Failed to save.';
+        this.error  = err.response?.error || err.message || 'Failed to save.';
         this.saving = false;
         m.redraw();
       });

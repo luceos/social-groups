@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiGet } from '../utils/api';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Link from 'flarum/common/components/Link';
@@ -24,11 +24,7 @@ export default class UserGroupBadges extends Component {
   }
 
   load() {
-    fetch(`${apiBase()}/sg-user-groups/${this.attrs.userId}`, {
-      credentials: 'same-origin',
-      headers: { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.ok ? r.json() : Promise.reject())
+    apiGet(`/sg-user-groups/${this.attrs.userId}`)
       .then((data) => {
         this.groups  = data.data || [];
         this.loading = false;

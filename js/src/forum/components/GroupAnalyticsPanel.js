@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiGet } from '../utils/api';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -26,14 +26,7 @@ export default class GroupAnalyticsPanel extends Component {
   load() {
     this.loading = true;
 
-    fetch(`${apiBase()}/sg-analytics/${this.attrs.groupId}`, {
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
+    apiGet(`/sg-analytics/${this.attrs.groupId}`)
       .then((data) => {
         this.data    = data;
         this.loading = false;

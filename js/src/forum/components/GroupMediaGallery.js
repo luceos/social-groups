@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiGet, apiPost, apiUpload } from '../utils/api';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -50,11 +50,7 @@ export default class GroupMediaGallery extends Component {
     this.loading = true;
     this.page    = page;
 
-    fetch(`${apiBase()}/sg-media/${this.attrs.groupId}?page=${page}`, {
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.json())
+    apiGet(`/sg-media/${this.attrs.groupId}`, { page })
       .then((data) => {
         this.items   = data.data  || [];
         this.total   = data.total || 0;
@@ -80,16 +76,7 @@ export default class GroupMediaGallery extends Component {
     const uploads = Array.from(files).map((file) => {
       const fd = new FormData();
       fd.append('files[]', file);
-      return fetch(`${apiBase()}/fof/upload`, {
-        method:      'POST',
-        credentials: 'same-origin',
-        headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-        body:        fd,
-      })
-        .then((r) => {
-          if (!r.ok) return r.json().then((e) => { throw new Error(e.errors?.[0]?.detail || e.error || 'Upload failed'); });
-          return r.json();
-        })
+      return apiUpload('/fof/upload', fd)
         .then((data) => {
           const fileData = Array.isArray(data.data) ? data.data[0] : data.data;
           // Prefer direct URL so the gallery controller can use it without
@@ -103,22 +90,7 @@ export default class GroupMediaGallery extends Component {
     });
 
     Promise.all(uploads)
-      .then((urls) => {
-        const content = urls.join('\n');
-        return fetch(`${apiBase()}/sg-media-post/${this.attrs.groupId}`, {
-          method:      'POST',
-          credentials: 'same-origin',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': app.session.csrfToken || '',
-          },
-          body: JSON.stringify({ content }),
-        });
-      })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Failed to save to gallery'); });
-        return r.json();
-      })
+      .then((urls) => apiPost(`/sg-media-post/${this.attrs.groupId}`, { content: urls.join('\n') }))
       .then(() => {
         this.uploading = false;
         this._brokenIndexes = new Set();
@@ -126,7 +98,10 @@ export default class GroupMediaGallery extends Component {
       })
       .catch((err) => {
         this.uploading   = false;
-        this.uploadError = err.message || 'Upload failed.';
+        this.uploadError = err.response?.errors?.[0]?.detail
+          || err.response?.error
+          || err.message
+          || 'Upload failed.';
         m.redraw();
       });
   }

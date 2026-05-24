@@ -1,5 +1,4 @@
-import { apiBase } from './api';
-import app from 'flarum/forum/app';
+import { apiUpload } from './api';
 
 /**
  * Returns any image files found in a paste event's clipboardData.
@@ -26,16 +25,7 @@ export function handleFiles(component, files, uploadsKey, textKey) {
     const fd = new FormData();
     fd.append('files[]', file);
 
-    fetch(`${apiBase()}/fof/upload`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-      body:        fd,
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.errors?.[0]?.detail || e.error || 'Upload failed'); });
-        return r.json();
-      })
+    apiUpload('/fof/upload', fd)
       .then((data) => {
         const fileData = Array.isArray(data.data) ? data.data[0] : data.data;
         const uuid     = fileData?.attributes?.uuid || fileData?.id;
@@ -50,7 +40,13 @@ export function handleFiles(component, files, uploadsKey, textKey) {
       })
       .catch((err) => {
         const upload = component[uploadsKey].find((u) => u.id === id);
-        if (upload) { upload.uploading = false; upload.error = err.message; }
+        if (upload) {
+          upload.uploading = false;
+          upload.error     = err.response?.errors?.[0]?.detail
+            || err.response?.error
+            || err.message
+            || 'Upload failed';
+        }
         m.redraw();
       });
   }

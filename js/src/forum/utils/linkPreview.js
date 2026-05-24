@@ -1,5 +1,4 @@
-import { apiBase } from './api';
-import app from 'flarum/forum/app';
+import { apiGet } from './api';
 
 const URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
 
@@ -29,11 +28,7 @@ export function scheduleLinkPreview(component, text) {
     component.previewLoading = true;
     m.redraw();
 
-    fetch(`${apiBase()}/sg-link-preview?${new URLSearchParams({ url })}`, {
-      credentials: 'same-origin',
-      headers: { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
+    apiGet('/sg-link-preview', { url })
       .then((data) => {
         if (component.previewUrl !== url) return;
         component.linkPreview    = data;

@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiUpload } from '../utils/api';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 
@@ -99,15 +99,7 @@ export default class ImageUploadButton extends Component {
     const type = this.attrs.type;
     const endpoint = type === 'banner' ? 'banner' : 'image';
 
-    fetch(`${apiBase()}/social-groups/${groupId}/${endpoint}`, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'X-CSRF-Token': app.session.csrfToken,
-      },
-      body: formData,
-    })
-      .then((res) => res.json())
+    apiUpload(`/social-groups/${groupId}/${endpoint}`, formData)
       .then((data) => {
         this.loading = false;
         if (data.url) {
