@@ -47,6 +47,19 @@ class SocialGroupDiscussion extends AbstractModel
         return $this->hasMany(SocialGroupPost::class, 'discussion_id');
     }
 
+    /**
+     * Relação para o "primeiro post" da discussão — o mais antigo por
+     * `created_at`. Usa `oneOfMany` do Laravel para que o SocialGroupDiscussionResource
+     * possa fazer eager loading via `include=firstPost` sem incorrer em
+     * N+1, eliminando a batch query manual feita pelo antigo
+     * ListGroupDiscussionsController.
+     */
+    public function firstPost()
+    {
+        return $this->hasOne(SocialGroupPost::class, 'discussion_id')
+            ->oldestOfMany('created_at');
+    }
+
     public function lastPostedUser()
     {
         return $this->belongsTo(User::class, 'last_posted_user_id');

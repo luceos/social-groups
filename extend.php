@@ -34,10 +34,13 @@ use Ernestdefoe\SocialGroups\Api\Controller\Poll\VotePollController;
 use Ernestdefoe\SocialGroups\Api\Controller\PromoteMemberController;
 use Ernestdefoe\SocialGroups\Api\Controller\RejectJoinRequestController;
 use Ernestdefoe\SocialGroups\Api\Controller\UploadGroupImageController;
+use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupDiscussionResource;
 use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupPostResource;
 use Ernestdefoe\SocialGroups\Api\Resource\SocialGroupResource;
+use Ernestdefoe\SocialGroups\Access\SocialGroupDiscussionPolicy;
 use Ernestdefoe\SocialGroups\Access\SocialGroupPolicy;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
+use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Notification\SocialGroupNewPostBlueprint;
 use Ernestdefoe\SocialGroups\Notification\SocialGroupNewReplyBlueprint;
 use Ernestdefoe\SocialGroups\SocialGroupsServiceProvider;
@@ -116,9 +119,11 @@ return [
 
     (new Extend\ApiResource(SocialGroupResource::class)),
     (new Extend\ApiResource(SocialGroupPostResource::class)),
+    (new Extend\ApiResource(SocialGroupDiscussionResource::class)),
 
     (new Extend\Policy())
-        ->modelPolicy(SocialGroup::class, SocialGroupPolicy::class),
+        ->modelPolicy(SocialGroup::class, SocialGroupPolicy::class)
+        ->modelPolicy(SocialGroupDiscussion::class, SocialGroupDiscussionPolicy::class),
 
     (new Extend\Notification())
         ->type(SocialGroupNewPostBlueprint::class,  ['alert'])
