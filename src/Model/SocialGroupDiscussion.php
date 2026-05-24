@@ -4,6 +4,7 @@ namespace Ernestdefoe\SocialGroups\Model;
 
 use Flarum\Database\AbstractModel;
 use Flarum\User\User;
+use Ernestdefoe\SocialGroups\Model\SgPoll;
 
 /**
  * @property int         $id
@@ -68,5 +69,14 @@ class SocialGroupDiscussion extends AbstractModel
     public function sharedFromDiscussion()
     {
         return $this->belongsTo(self::class, 'shared_from_discussion_id');
+    }
+
+    /**
+     * Enquete associada à discussão (1:1). Existe quando `sg_polls`
+     * estiver instalada; o SchemaCapabilities filtra os call sites.
+     */
+    public function poll()
+    {
+        return $this->hasOne(SgPoll::class, 'discussion_id');
     }
 }

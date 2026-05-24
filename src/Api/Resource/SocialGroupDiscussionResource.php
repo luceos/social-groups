@@ -3,6 +3,7 @@
 namespace Ernestdefoe\SocialGroups\Api\Resource;
 
 use Ernestdefoe\SocialGroups\Access\GroupVisibility;
+use Ernestdefoe\SocialGroups\Model\SgPollVote;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Schema\SchemaCapabilities;
@@ -98,6 +99,38 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
             $query->orderByDesc('social_group_discussions.is_pinned');
         }
         $query->orderByDesc('social_group_discussions.last_posted_at');
+
+        /**
+         * Eager-loads para evitar N+1 quando os campos computados
+         * (`sharedFrom`, `poll`, `firstPost`) forem renderizados. Cada
+         * `with()` aqui economiza N consultas no escopo da página
+         * (20 discussões → 1 consulta por relação em vez de 20).
+         *
+         * `firstPost.reactions` é o que alimenta o campo `reactions`
+         * do SocialGroupPostResource — sem essa pré-carga, cada post
+         * incluído como firstPost emite 1 query extra de reactions.
+         */
+        $query->with([
+            'user',
+            'lastPostedUser',
+            'firstPost.user',
+        ]);
+
+        if ($this->capabilities->reactions) {
+            $query->with('firstPost.reactions');
+        }
+
+        if ($this->capabilities->sharedFrom) {
+            $query->with([
+                'sharedFromDiscussion.group',
+                'sharedFromDiscussion.user',
+                'sharedFromDiscussion.firstPost.user',
+            ]);
+        }
+
+        if ($this->capabilities->polls) {
+            $query->with('poll.options');
+        }
     }
 
     public function endpoints(): array
@@ -169,6 +202,24 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
                     return $context->getActor()->can('pin', $d);
                 }),
 
+            Schema\Arr::make('sharedFrom')
+                ->visible(fn () => $this->capabilities->sharedFrom)
+                ->get(function (SocialGroupDiscussion $d) {
+                    if (! $this->capabilities->sharedFrom) {
+                        return null;
+                    }
+                    return $this->buildSharedFrom($d);
+                }),
+
+            Schema\Arr::make('poll')
+                ->visible(fn () => $this->capabilities->polls)
+                ->get(function (SocialGroupDiscussion $d, Context $context) {
+                    if (! $this->capabilities->polls) {
+                        return null;
+                    }
+                    return $this->buildPoll($d, $context);
+                }),
+
             Schema\Relationship\ToOne::make('user')
                 ->type('users')
                 ->includable(),
@@ -180,6 +231,83 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
             Schema\Relationship\ToOne::make('firstPost')
                 ->type('social-group-posts')
                 ->includable(),
+        ];
+    }
+
+    /**
+     * Constrói a estrutura denormalizada de "compartilhado de" no
+     * formato esperado pelo frontend (SGFeed-sharedCard). Lê das
+     * relações pré-carregadas em scope() — `sharedFromDiscussion`,
+     * `sharedFromDiscussion.group`, `sharedFromDiscussion.firstPost.user`.
+     * Se a coluna `shared_from_discussion_id` ainda não foi migrada,
+     * o campo já é hidden via `visible()` — esta função não roda.
+     */
+    protected function buildSharedFrom(SocialGroupDiscussion $d): ?array
+    {
+        $orig = $d->sharedFromDiscussion;
+        if ($orig === null) {
+            return null;
+        }
+        $fp = $orig->firstPost;
+        return [
+            'discussionId' => (int) $orig->id,
+            'title'        => $orig->title,
+            'groupId'      => (int) $orig->group_id,
+            'groupName'    => $orig->group?->name,
+            'groupSlug'    => $orig->group?->slug,
+            'snippet'      => $fp ? mb_substr(strip_tags($fp->content ?? ''), 0, 200) : '',
+            'user'         => $orig->user ? [
+                'displayName' => $orig->user->display_name,
+                'avatarUrl'   => $orig->user->avatar_url,
+            ] : null,
+        ];
+    }
+
+    /**
+     * Constrói o payload de poll no formato que o frontend espera. As
+     * contagens de voto por opção e o voto do actor exigem queries
+     * adicionais — fazemos um único batch query por discussão com
+     * poll. Para um feed com N discussões e M com poll, isso é 2*M
+     * queries em vez de N+M (sem batching seria 2*M ou pior; com
+     * batching de scope haveria 1 query global, mas adiar essa
+     * otimização não compensa enquanto o número médio de polls por
+     * página for baixo).
+     */
+    protected function buildPoll(SocialGroupDiscussion $d, Context $context): ?array
+    {
+        $poll = $d->poll;
+        if ($poll === null) {
+            return null;
+        }
+        $actor   = $context->getActor();
+        $options = $poll->options->sortBy('sort_order');
+
+        $optionIds   = $options->pluck('id')->all();
+        $voteCounts  = SgPollVote::whereIn('option_id', $optionIds)
+            ->selectRaw('option_id, COUNT(*) as cnt')
+            ->groupBy('option_id')
+            ->pluck('cnt', 'option_id')
+            ->all();
+
+        $actorVotes = $actor->exists
+            ? SgPollVote::where('poll_id', $poll->id)
+                ->where('user_id', $actor->id)
+                ->pluck('option_id')
+                ->all()
+            : [];
+
+        return [
+            'id'                  => (int) $poll->id,
+            'question'            => $poll->question,
+            'isMultiSelect'       => (bool) $poll->is_multi_select,
+            'endsAt'              => $poll->ends_at?->toIso8601String(),
+            'totalVotes'          => (int) array_sum($voteCounts),
+            'actorVotedOptionIds' => array_map('intval', $actorVotes),
+            'options'             => $options->map(fn ($o) => [
+                'id'        => (int) $o->id,
+                'text'      => $o->text,
+                'voteCount' => (int) ($voteCounts[$o->id] ?? 0),
+            ])->values()->all(),
         ];
     }
 
