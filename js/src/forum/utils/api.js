@@ -345,6 +345,37 @@ export function kickMember(memberId) {
   return apiDelete(`/social-group-members/${memberId}`);
 }
 
+// ── Join requests ────────────────────────────────────────────────────────
+
+function projectJoinRequest(r) {
+  const a = r.attributes || {};
+  return {
+    id:          Number(r.id),
+    userId:      Number(a.userId),
+    user:        a.displayName
+      ? { id: Number(a.userId), displayName: a.displayName, avatarUrl: a.avatarUrl || null }
+      : null,
+    createdAt:   a.createdAt || null,
+  };
+}
+
+export function listJoinRequests(groupId) {
+  return apiGet('/social-group-join-requests', {
+    'filter[group]': groupId,
+    include:         'user',
+  }).then((body) => ({
+    data: (body.data || []).map(projectJoinRequest),
+  }));
+}
+
+export function approveJoinRequest(requestId) {
+  return apiPost(`/social-group-join-requests/${requestId}/approve`);
+}
+
+export function rejectJoinRequest(requestId) {
+  return apiDelete(`/social-group-join-requests/${requestId}`);
+}
+
 export function listThreadPosts(discussionId) {
   const params = {
     'filter[discussion]': discussionId,

@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiDelete } from '../utils/api';
+import { listJoinRequests, approveJoinRequest, rejectJoinRequest } from '../utils/api';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
@@ -25,7 +25,7 @@ export default class JoinRequestsPanel extends Component {
     const groupId = this.attrs.groupId;
     this.loading  = true;
 
-    apiGet(`/social-groups/${groupId}/requests`)
+    listJoinRequests(groupId)
       .then((data) => {
         this.requests = data.data || [];
         this.loading  = false;
@@ -40,13 +40,16 @@ export default class JoinRequestsPanel extends Component {
 
   approve(request) {
     this.actioning[request.id] = 'approve';
-    const groupId = this.attrs.groupId;
 
-    apiPost(`/social-groups/${groupId}/requests/${request.id}/approve`)
-      .then((data) => {
+    approveJoinRequest(request.id)
+      .then(() => {
         this.requests = this.requests.filter((r) => r.id !== request.id);
         delete this.actioning[request.id];
-        if (this.attrs.onApproved) this.attrs.onApproved(data.memberCount);
+        // Resource action returns the join-request itself, not a memberCount.
+        // Parent caller increments optimistically (+1) — approval always
+        // grows the count unless the user was already a member, which the
+        // server guards against.
+        if (this.attrs.onApproved) this.attrs.onApproved();
         m.redraw();
       })
       .catch(() => {
@@ -57,9 +60,8 @@ export default class JoinRequestsPanel extends Component {
 
   reject(request) {
     this.actioning[request.id] = 'reject';
-    const groupId = this.attrs.groupId;
 
-    apiDelete(`/social-groups/${groupId}/requests/${request.id}`)
+    rejectJoinRequest(request.id)
       .then(() => {
         this.requests = this.requests.filter((r) => r.id !== request.id);
         delete this.actioning[request.id];

@@ -1,0 +1,164 @@
+<?php
+
+namespace Ernestdefoe\SocialGroups\Api\Resource;
+
+use Ernestdefoe\SocialGroups\Model\SocialGroup;
+use Ernestdefoe\SocialGroups\Model\SocialGroupJoinRequest;
+use Flarum\Api\Context;
+use Flarum\Api\Endpoint;
+use Flarum\Api\Resource\AbstractDatabaseResource;
+use Flarum\Api\Schema;
+use Flarum\Http\RequestUtil;
+use Flarum\User\Exception\PermissionDeniedException;
+use Illuminate\Database\Eloquent\Builder;
+use Tobyz\JsonApiServer\Context as BaseContext;
+use Tobyz\JsonApiServer\Exception\BadRequestException;
+
+/**
+ * Recurso JSON:API para pedidos de membership pendentes em um grupo.
+ * Substitui ListJoinRequestsController + ApproveJoinRequestController
+ * + RejectJoinRequestController.
+ *
+ * Index requer `?filter[group]=<id>` e que o actor seja dono do grupo
+ * ou admin (filtros adicionais como `status=pending` ficam no scope).
+ * Approve é um Endpoint\Endpoint::make() action que muda status para
+ * 'approved' e cria a linha de membership se ainda não existir.
+ * Delete (rejeitar) marca o status como 'rejected' em vez de fazer
+ * hard delete, preservando o histórico para anti-spam.
+ */
+class SocialGroupJoinRequestResource extends AbstractDatabaseResource
+{
+    public function type(): string
+    {
+        return 'social-group-join-requests';
+    }
+
+    public function model(): string
+    {
+        return SocialGroupJoinRequest::class;
+    }
+
+    public function scope(Builder $query, BaseContext $context): void
+    {
+        $actor = RequestUtil::getActor($context->request);
+        $raw   = $context->request->getQueryParams()['filter'] ?? [];
+        $filter = is_array($raw) ? $raw : [];
+
+        $groupId = isset($filter['group']) ? (int) $filter['group'] : 0;
+        if ($groupId <= 0) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $group = SocialGroup::find($groupId);
+        if ($group === null) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $actor->assertRegistered();
+        // Listing pedidos é privilégio só de dono do grupo ou admin —
+        // mesma regra que ListJoinRequestsController usava.
+        if ((int) $actor->id !== (int) $group->user_id && ! $actor->isAdmin()) {
+            throw new PermissionDeniedException();
+        }
+
+        $query->where('social_group_join_requests.group_id', $groupId)
+              ->where('social_group_join_requests.status', 'pending')
+              ->with('user');
+    }
+
+    public function endpoints(): array
+    {
+        return [
+            Endpoint\Index::make()
+                ->defaultInclude(['user']),
+
+            Endpoint\Endpoint::make('social-group-join-requests.approve')
+                ->route('POST', '/{id}/approve')
+                ->authenticated()
+                ->can('approve')
+                ->action(fn (Context $context) => $this->doApprove($context)),
+
+            // Reject é soft (status='rejected') em vez de hard delete
+            // para que tentativas repetidas do mesmo usuário não criem
+            // floods de pedidos pendentes — o dono já decidiu.
+            Endpoint\Endpoint::make('social-group-join-requests.reject')
+                ->route('DELETE', '/{id}')
+                ->authenticated()
+                ->can('delete')
+                ->action(fn (Context $context) => $this->doReject($context)),
+        ];
+    }
+
+    public function fields(): array
+    {
+        return [
+            Schema\Integer::make('groupId')
+                ->property('group_id'),
+
+            Schema\Integer::make('userId')
+                ->property('user_id'),
+
+            Schema\Str::make('status'),
+
+            Schema\Str::make('displayName')
+                ->nullable()
+                ->get(fn (SocialGroupJoinRequest $r) => $r->user?->display_name),
+
+            Schema\Str::make('avatarUrl')
+                ->nullable()
+                ->get(fn (SocialGroupJoinRequest $r) => $r->user?->avatar_url),
+
+            Schema\DateTime::make('createdAt')
+                ->property('created_at')
+                ->nullable(),
+
+            Schema\Relationship\ToOne::make('user')
+                ->type('users')
+                ->includable(),
+        ];
+    }
+
+    /**
+     * Aprova o pedido + cria a linha de membership idempotente +
+     * incrementa member_count denormalizado. Mirror do
+     * ApproveJoinRequestController legado.
+     */
+    protected function doApprove(Context $context): SocialGroupJoinRequest
+    {
+        /** @var SocialGroupJoinRequest $req */
+        $req = $context->model;
+
+        if ($req->status !== 'pending') {
+            throw new BadRequestException('Request is not pending');
+        }
+
+        $req->status = 'approved';
+        $req->save();
+
+        $group = $req->group;
+        if ($group !== null) {
+            $existing = $group->members()->where('user_id', $req->user_id)->first();
+            if ($existing === null) {
+                $group->members()->create([
+                    'user_id'   => $req->user_id,
+                    'role'      => 'member',
+                    'joined_at' => \Carbon\Carbon::now(),
+                ]);
+                $group->increment('member_count');
+            }
+        }
+
+        return $req;
+    }
+
+    protected function doReject(Context $context): SocialGroupJoinRequest
+    {
+        /** @var SocialGroupJoinRequest $req */
+        $req = $context->model;
+        $req->status = 'rejected';
+        $req->save();
+        return $req;
+    }
+}

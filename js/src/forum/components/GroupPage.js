@@ -115,8 +115,12 @@ export default class GroupPage extends Page {
           (isCreator || canEdit) && isApproval
             ? m(JoinRequestsPanel, {
                 groupId:    group.id(),
-                onApproved: (memberCount) => {
-                  group.pushData({ attributes: { memberCount } });
+                onApproved: () => {
+                  // Optimistic +1: approve always grows the count
+                  // (the server skips if user was already a member,
+                  // which JoinRequestsPanel wouldn't have shown anyway).
+                  const cur = group.memberCount() || 0;
+                  group.pushData({ attributes: { memberCount: cur + 1 } });
                   m.redraw();
                 },
               })
