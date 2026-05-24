@@ -1,4 +1,4 @@
-import { apiPost } from '../utils/api';
+import { createDiscussion } from '../utils/api';
 import app from 'flarum/forum/app';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
@@ -69,7 +69,7 @@ export default class CreateDiscussionModal extends Modal {
     this.loading = true;
     this.error   = null;
 
-    apiPost('/sg-discussions', { groupId: this.attrs.groupId, title, content })
+    createDiscussion({ groupId: this.attrs.groupId, title, content })
       .then((discussion) => {
         this.loading = false;
         if (this.attrs.onCreated) this.attrs.onCreated(discussion);

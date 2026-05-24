@@ -1,4 +1,8 @@
-import { apiGet, apiPost, apiPatch, apiDelete, listDiscussions, listThreadPosts } from '../utils/api';
+import {
+  apiGet, apiPost, apiPatch,
+  listDiscussions, listThreadPosts,
+  createDiscussion, deleteDiscussion as apiDeleteDiscussion,
+} from '../utils/api';
 import { pastedImages, handleFiles, removeUpload, revokeAll } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview } from '../utils/linkPreview';
 import { MentionDropdown } from './feed/MentionDropdown';
@@ -242,7 +246,7 @@ export default class GroupFeed extends Component {
     this.postSubmitting = true;
     this.postError      = null;
 
-    apiPost('/sg-discussions', {
+    createDiscussion({
       groupId:     this.attrs.groupId,
       content,
       linkPreview: this.linkPreview || null,
@@ -308,7 +312,7 @@ export default class GroupFeed extends Component {
     this.deleting   = d.id;
     this.openMenuId = null;
 
-    apiDelete(`/sg-discussions/${d.id}`)
+    apiDeleteDiscussion(d.id)
       .then(() => {
         this.discussions = this.discussions.filter((x) => x.id !== d.id);
         this.total       = Math.max(0, this.total - 1);

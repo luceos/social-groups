@@ -1,4 +1,4 @@
-import { apiDelete, listDiscussions } from '../utils/api';
+import { listDiscussions, deleteDiscussion as apiDeleteDiscussion } from '../utils/api';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
@@ -61,7 +61,7 @@ export default class GroupDiscussionList extends Component {
     if (!confirm(app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete_confirm'))) return;
     this.deleting = d.id;
 
-    apiDelete(`/sg-discussions/${d.id}`)
+    apiDeleteDiscussion(d.id)
       .then(() => {
         this.discussions = this.discussions.filter((x) => x.id !== d.id);
         this.total       = Math.max(0, this.total - 1);

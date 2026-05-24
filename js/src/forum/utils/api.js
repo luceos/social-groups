@@ -223,6 +223,47 @@ export function listDiscussions(groupId, { page = 1, q = '' } = {}) {
  * When threads grow past 200 we'll teach the parent to paginate
  * properly; for now the JS expects the full list.
  */
+/**
+ * Wraps a flat attributes object into a JSON:API request body and POSTs
+ * it to the discussion Resource. Returns the projected legacy-shape
+ * discussion (same as listDiscussions items) so GroupFeed can splice
+ * it into the list without special-casing.
+ *
+ *   createDiscussion({groupId, content, title, linkPreview, poll})
+ *     -> legacy discussion object
+ */
+export function createDiscussion(attrs) {
+  return apiPost('/social-group-discussions', {
+    data: { type: 'social-group-discussions', attributes: attrs },
+  }).then((body) => mapDiscussion(body.data, body.included || []));
+}
+
+export function deleteDiscussion(id) {
+  return apiDelete(`/social-group-discussions/${id}`);
+}
+
+/**
+ * Same idea as createDiscussion but for posts. Returns the projected
+ * legacy-shape post.
+ */
+export function createPost(attrs) {
+  return apiPost('/social-group-posts', {
+    data: { type: 'social-group-posts', attributes: attrs },
+  }).then((body) => projectPostFull(body.data, body.included || []));
+}
+
+export function updatePost(id, attrs) {
+  return app.request({
+    method: 'PATCH',
+    url:    resolveUrl(`/social-group-posts/${id}`),
+    body:   { data: { type: 'social-group-posts', id: String(id), attributes: attrs } },
+  }).then((body) => projectPostFull(body.data, body.included || []));
+}
+
+export function deletePost(id) {
+  return apiDelete(`/social-group-posts/${id}`);
+}
+
 export function listThreadPosts(discussionId) {
   const params = {
     'filter[discussion]': discussionId,

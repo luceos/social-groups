@@ -3,14 +3,19 @@
 namespace Ernestdefoe\SocialGroups\Api\Resource;
 
 use Ernestdefoe\SocialGroups\Access\GroupVisibility;
+use Ernestdefoe\SocialGroups\Api\Concern\SanitizesLinkPreview;
+use Ernestdefoe\SocialGroups\Model\SgPoll;
+use Ernestdefoe\SocialGroups\Model\SgPollOption;
 use Ernestdefoe\SocialGroups\Model\SgPollVote;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
+use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Ernestdefoe\SocialGroups\Schema\SchemaCapabilities;
 use Flarum\Api\Context;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
+use Flarum\Formatter\Formatter;
 use Flarum\Http\RequestUtil;
 use Flarum\User\Exception\PermissionDeniedException;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,8 +39,12 @@ use Tobyz\JsonApiServer\Exception\BadRequestException;
  */
 class SocialGroupDiscussionResource extends AbstractDatabaseResource
 {
-    public function __construct(protected SchemaCapabilities $capabilities)
-    {
+    use SanitizesLinkPreview;
+
+    public function __construct(
+        protected SchemaCapabilities $capabilities,
+        protected Formatter $formatter,
+    ) {
     }
 
     public function type(): string
@@ -349,12 +358,115 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
             throw new PermissionDeniedException();
         }
 
-        $model->user_id       = $actor->id;
-        $model->comment_count = 1;
-        $model->last_posted_at = \Carbon\Carbon::now();
+        $body  = (array) ($context->request->getParsedBody() ?? []);
+        $attrs = (array) ($body['data']['attributes'] ?? []);
+
+        $content     = trim((string) ($attrs['content'] ?? ''));
+        $linkPreview = is_array($attrs['linkPreview'] ?? null)
+            ? $this->sanitizeLinkPreview($attrs['linkPreview'])
+            : null;
+        $pollData    = $this->normalisePollInput($attrs['poll'] ?? null);
+
+        if ($content === '' && $pollData === null) {
+            throw new BadRequestException('content or poll required');
+        }
+        if (mb_strlen($content) > 20000) {
+            throw new BadRequestException('Post content may not exceed 20 000 characters.');
+        }
+
+        if (empty($model->title)) {
+            $derived = $content !== ''
+                ? mb_substr(preg_replace('/\s+/', ' ', $content), 0, 80)
+                : mb_substr($pollData['question'], 0, 80);
+            if (mb_strlen($content) > 80) {
+                $derived .= '…';
+            }
+            $model->title = $derived;
+        }
+        if (mb_strlen($model->title) > 255) {
+            throw new BadRequestException('Title may not exceed 255 characters.');
+        }
+
+        $model->user_id             = $actor->id;
+        $model->comment_count       = 1;
+        $model->last_posted_at      = \Carbon\Carbon::now();
         $model->last_posted_user_id = $actor->id;
+        $model->is_locked           = false;
+
+        // Stash payload bits the created() hook needs to spawn the
+        // first post + poll atomically with the discussion. Dynamic
+        // properties on AbstractModel work without strict-property
+        // declarations; the values never persist because there are no
+        // matching columns.
+        $model->_sgPendingContent     = $content;
+        $model->_sgPendingLinkPreview = $linkPreview;
+        $model->_sgPendingPoll        = $pollData;
 
         return null;
+    }
+
+    public function created(object $model, BaseContext $context): ?object
+    {
+        /** @var SocialGroupDiscussion $model */
+        $content     = (string) ($model->_sgPendingContent ?? '');
+        $linkPreview = $model->_sgPendingLinkPreview ?? null;
+        $pollData    = $model->_sgPendingPoll ?? null;
+
+        SocialGroupPost::create([
+            'discussion_id'  => $model->id,
+            'group_id'       => $model->group_id,
+            'user_id'        => $model->user_id,
+            'content'        => $content,
+            'content_parsed' => $content !== '' ? $this->formatter->parse($content) : null,
+            'link_preview'   => $linkPreview,
+        ]);
+
+        if ($pollData !== null && $this->capabilities->polls) {
+            $poll = SgPoll::create([
+                'discussion_id'   => $model->id,
+                'question'        => $pollData['question'],
+                'is_multi_select' => $pollData['is_multi_select'],
+                'ends_at'         => $pollData['ends_at'],
+            ]);
+            foreach ($pollData['options'] as $i => $optionText) {
+                SgPollOption::create([
+                    'poll_id'    => $poll->id,
+                    'text'       => $optionText,
+                    'sort_order' => $i,
+                ]);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalise the raw poll input from the request body into the shape
+     * the SgPoll/SgPollOption inserts expect, or null if the input
+     * doesn't pass the minimum validity bar (question + 2-6 options).
+     */
+    protected function normalisePollInput($raw): ?array
+    {
+        if (! is_array($raw)) {
+            return null;
+        }
+        $question = trim((string) ($raw['question'] ?? ''));
+        $options  = array_values(array_filter(
+            array_map(
+                fn ($t) => mb_substr(trim((string) $t), 0, 255),
+                (array) ($raw['options'] ?? [])
+            ),
+            fn ($t) => $t !== ''
+        ));
+        if ($question === '' || count($options) < 2 || count($options) > 6) {
+            return null;
+        }
+        return [
+            'question'        => mb_substr($question, 0, 500),
+            'options'         => $options,
+            'is_multi_select' => ! empty($raw['isMultiSelect']),
+            'ends_at'         => null,
+        ];
     }
 
 }
