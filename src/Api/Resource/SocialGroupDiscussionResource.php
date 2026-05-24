@@ -187,9 +187,22 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
                     if (! $actor->exists) {
                         return false;
                     }
-                    return (int) $actor->id === (int) $d->user_id
-                        || $actor->isAdmin()
-                        || $actor->hasPermission('ernestdefoe-social-groups.moderate');
+                    if ((int) $actor->id === (int) $d->user_id) {
+                        return true;
+                    }
+                    if ($actor->isAdmin()
+                        || $actor->hasPermission('ernestdefoe-social-groups.moderate')
+                    ) {
+                        return true;
+                    }
+                    $group = $d->group;
+                    if ($group === null) {
+                        return false;
+                    }
+                    return $group->members()
+                        ->where('user_id', $actor->id)
+                        ->whereIn('role', ['creator', 'moderator'])
+                        ->exists();
                 }),
 
             Schema\Boolean::make('canShare')

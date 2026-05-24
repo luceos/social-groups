@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPatch, apiUpload } from '../utils/api';
+import { apiPost, apiPatch, apiUpload, listThreadPosts } from '../utils/api';
 import { pastedImages } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview, viewPostLinkPreview } from '../utils/linkPreview';
 import app from 'flarum/forum/app';
@@ -153,7 +153,7 @@ export default class GroupDiscussionThread extends Page {
   // the seen-set and the diff is rendered transparently on the next redraw.
   _refreshSilently() {
     const discussionId = this.attrs.discussionId;
-    apiGet(`/sg-thread-posts/${discussionId}`)
+    listThreadPosts(discussionId)
       .then((data) => {
         if (!data || !this._rtActive) return;
         if (String(discussionId) !== String(this.attrs.discussionId)) return;
@@ -226,14 +226,16 @@ export default class GroupDiscussionThread extends Page {
     this.loading = true;
     this.error   = null;
 
-    apiGet(`/sg-thread-posts/${discussionId}`)
+    listThreadPosts(discussionId)
       .then((data) => {
         this.discussion = data.discussion;
         this.posts      = data.data || [];
         // Seed the seen-set so WebSocket echoes of already-loaded posts are ignored.
         this._seenPostIds = new Set(this.posts.map((p) => p.id));
         this.loading    = false;
-        document.title  = `${this.discussion.title} — ${app.forum.attribute('title')}`;
+        if (this.discussion) {
+          document.title = `${this.discussion.title} — ${app.forum.attribute('title')}`;
+        }
         m.redraw();
         // Subscribe to the per-group private channel now that we know groupId.
         this._setupRealtime();

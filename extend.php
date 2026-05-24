@@ -19,7 +19,6 @@ use Ernestdefoe\SocialGroups\Api\Controller\LeaveGroupController;
 use Ernestdefoe\SocialGroups\Api\Controller\ListJoinRequestsController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\CreateGroupPostController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\DeleteGroupPostController;
-use Ernestdefoe\SocialGroups\Api\Controller\Post\ListGroupPostsController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\PinGroupPostController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\TogglePostReactionController;
 use Ernestdefoe\SocialGroups\Api\Controller\Post\TypingStatusController;
@@ -90,7 +89,7 @@ return [
         ->patch('/sg-discussions/{discussionId}/pin',   'sg-discussions.pin',   PinGroupDiscussionController::class)
         ->post('/sg-discussions/{discussionId}/share',  'sg-discussions.share', ShareGroupDiscussionController::class)
         // Posts
-        ->get('/sg-thread-posts/{discussionId}', 'sg-posts.list',   ListGroupPostsController::class)
+        // List served by SocialGroupPostResource at /api/social-group-posts?filter[discussion]=N.
         ->post('/sg-posts',                      'sg-posts.create', CreateGroupPostController::class)
         ->patch('/sg-posts/{postId}',             'sg-posts.update', UpdateGroupPostController::class)
         ->patch('/sg-posts/{postId}/pin',        'sg-posts.pin',    PinGroupPostController::class)

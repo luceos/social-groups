@@ -150,6 +150,41 @@ function mapDiscussion(d, included) {
   };
 }
 
+function projectPostFull(r, included) {
+  const a = r.attributes || {};
+  return {
+    id:            Number(r.id),
+    discussionId:  Number(a.discussionId),
+    content:       a.content || '',
+    contentParsed: a.contentParsed || '',
+    createdAt:     a.createdAt || null,
+    updatedAt:     a.updatedAt || a.createdAt || null,
+    reactions:     a.reactions || {},
+    actorReaction: a.actorReaction || null,
+    parentPostId:  a.parentPostId ?? null,
+    linkPreview:   a.linkPreview || null,
+    isPinned:      !!a.isPinned,
+    canEdit:       !!a.canEdit,
+    canDelete:     !!a.canDelete,
+    canPin:        !!a.canPin,
+    user:          projectUser(included, r.relationships?.user?.data),
+  };
+}
+
+function projectDiscussionFromResource(r) {
+  if (!r) return null;
+  const a = r.attributes || {};
+  return {
+    id:           Number(r.id),
+    groupId:      Number(a.groupId),
+    title:        a.title || '',
+    commentCount: Number(a.commentCount) || 0,
+    isLocked:     !!a.isLocked,
+    createdAt:    a.createdAt || a.lastPostedAt || null,
+    canDelete:    !!a.canDelete,
+  };
+}
+
 /**
  * Lists discussions in a group via the new JSON:API endpoint and
  * returns the legacy `{ data, total, pages }` shape so call sites
@@ -175,4 +210,40 @@ export function listDiscussions(groupId, { page = 1, q = '' } = {}) {
     pages: body.meta?.page?.lastPage ?? 1,
     q:    trimmed || null,
   }));
+}
+
+/**
+ * Lists all posts in a discussion. Returns the legacy thread-posts
+ * shape `{ discussion: {...}, data: [...posts] }`. The discussion
+ * meta comes through `?include=discussion` and is projected via
+ * projectDiscussion(); each post via projectPostFull().
+ *
+ * Page size is high so the thread loads in one shot (matching the
+ * legacy controller which paginated via Eloquent default 'get-all').
+ * When threads grow past 200 we'll teach the parent to paginate
+ * properly; for now the JS expects the full list.
+ */
+export function listThreadPosts(discussionId) {
+  const params = {
+    'filter[discussion]': discussionId,
+    'page[size]':         200,
+    include:              'user,discussion',
+  };
+
+  return apiGet('/social-group-posts', params).then((body) => {
+    const included = body.included || [];
+    const posts    = (body.data || []).map((r) => projectPostFull(r, included));
+    const discRes  = included.find((r) => r.type === 'social-group-discussions');
+
+    if (discRes) {
+      return { discussion: projectDiscussionFromResource(discRes), data: posts };
+    }
+    // Discussão sem nenhum post — JSON:API include não tem nada para
+    // hidratar; busca a discussão sozinha para que o caller ainda
+    // receba o meta esperado (title, etc.).
+    return apiGet(`/social-group-discussions/${discussionId}`).then((discBody) => ({
+      discussion: projectDiscussionFromResource(discBody.data),
+      data:       posts,
+    }));
+  });
 }
