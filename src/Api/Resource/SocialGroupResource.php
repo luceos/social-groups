@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Resource;
 
+use Ernestdefoe\SocialGroups\Access\GroupVisibility;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Flarum\Api\Context;
 use Flarum\Api\Endpoint;
@@ -105,25 +106,14 @@ class SocialGroupResource extends AbstractDatabaseResource
     }
 
     /**
-     * Inline visibility check for Show endpoint — mirrors scope()'s WHERE
-     * clause but spelled out so a SQL-mode quirk in the composite query
-     * can't silently filter the creator out.
+     * Wrapper para o Show endpoint. A checagem real mora em
+     * `Access\GroupVisibility::canSee` para ficar idêntica entre todos
+     * os call sites (Resource Show, Resource Index, Policy, controllers
+     * legados).
      */
     protected function canSeeGroup(SocialGroup $group, \Flarum\User\User $actor): bool
     {
-        if ($actor->isAdmin() || $actor->hasPermission('ernestdefoe-social-groups.moderate')) {
-            return true;
-        }
-        if (! $group->is_private) {
-            return true;
-        }
-        if (! $actor->exists) {
-            return false;
-        }
-        if ((int) $actor->id === (int) $group->user_id) {
-            return true;
-        }
-        return $group->members()->where('user_id', $actor->id)->exists();
+        return GroupVisibility::canSee($actor, $group);
     }
 
     public function scope(Builder $query, BaseContext $context): void

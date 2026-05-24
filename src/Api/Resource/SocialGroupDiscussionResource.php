@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Resource;
 
+use Ernestdefoe\SocialGroups\Access\GroupVisibility;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Schema\SchemaCapabilities;
@@ -69,10 +70,8 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
             return;
         }
 
-        if ($group->is_private) {
-            if (! $this->canSeePrivateGroup($actor, $group)) {
-                throw new PermissionDeniedException();
-            }
+        if (! GroupVisibility::canSee($actor, $group)) {
+            throw new PermissionDeniedException();
         }
 
         if ($this->capabilities->isGallery) {
@@ -216,20 +215,4 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         return null;
     }
 
-    protected function canSeePrivateGroup($actor, SocialGroup $group): bool
-    {
-        if ($actor->isAdmin() || $actor->hasPermission('ernestdefoe-social-groups.moderate')) {
-            return true;
-        }
-        if (! $actor->exists) {
-            return false;
-        }
-        if ((int) $actor->id === (int) $group->user_id) {
-            return true;
-        }
-        return $group->members()
-            ->where('user_id', $actor->id)
-            ->whereNull('banned_at')
-            ->exists();
-    }
 }

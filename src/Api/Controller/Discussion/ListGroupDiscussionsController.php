@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller\Discussion;
 
+use Ernestdefoe\SocialGroups\Access\GroupVisibility;
 use Ernestdefoe\SocialGroups\Api\Concern\SerializesPoll;
 use Ernestdefoe\SocialGroups\Model\SgPoll;
 use Ernestdefoe\SocialGroups\Model\SgPollVote;
@@ -52,16 +53,9 @@ class ListGroupDiscussionsController implements RequestHandlerInterface
 
             if ($group->is_private) {
                 $actor->assertRegistered();
-                // Accept membership OR creator-of-this-group OR admin.
-                // The creator check is a belt against installs where the
-                // social_group_members row wasn't created (e.g., groups
-                // created before created() callback was wired, manual
-                // SQL seeding, or a race during create + immediate read).
-                $isMember  = $group->members()->where('user_id', $actor->id)->exists();
-                $isCreator = (int) $group->user_id === (int) $actor->id;
-                if (! $isMember && ! $isCreator && ! $actor->isAdmin()) {
-                    return new JsonResponse(['error' => 'This group is private.'], 403);
-                }
+            }
+            if (! GroupVisibility::canSee($actor, $group)) {
+                return new JsonResponse(['error' => 'This group is private.'], 403);
             }
 
             $search = trim((string) ($params['q'] ?? ''));

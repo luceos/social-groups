@@ -2,7 +2,6 @@
 
 namespace Ernestdefoe\SocialGroups\Access;
 
-use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Flarum\User\Access\AbstractPolicy;
 use Flarum\User\User;
@@ -32,7 +31,7 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
         if ($group === null) {
             return null;
         }
-        if (! $this->canSeeGroup($actor, $group)) {
+        if (! GroupVisibility::canSee($actor, $group)) {
             return $this->deny();
         }
         return null;
@@ -90,23 +89,4 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
         return $isModInGroup ? $this->allow() : null;
     }
 
-    protected function canSeeGroup(User $actor, SocialGroup $group): bool
-    {
-        if ($actor->isAdmin() || $actor->hasPermission('ernestdefoe-social-groups.moderate')) {
-            return true;
-        }
-        if (! $group->is_private) {
-            return true;
-        }
-        if (! $actor->exists) {
-            return false;
-        }
-        if ((int) $actor->id === (int) $group->user_id) {
-            return true;
-        }
-        return $group->members()
-            ->where('user_id', $actor->id)
-            ->whereNull('banned_at')
-            ->exists();
-    }
 }

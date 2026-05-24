@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
+use Ernestdefoe\SocialGroups\Access\GroupVisibility;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Flarum\Http\Exception\RouteNotFoundException;
 use Flarum\Http\RequestUtil;
@@ -42,11 +43,8 @@ class ListGroupMembersController implements RequestHandlerInterface
         $actorRole   = $actorMember?->role;
         $actorCanMod = $actor->isAdmin() || in_array($actorRole, ['creator', 'moderator'], true);
 
-        if ($group->is_private) {
-            $isMember = $actorMember && $actorMember->banned_at === null;
-            if (! ($isCreator || $actor->isAdmin() || $isMember)) {
-                throw new PermissionDeniedException();
-            }
+        if (! GroupVisibility::canSee($actor, $group)) {
+            throw new PermissionDeniedException();
         }
 
         $members = $group->members()->with('user')->whereNull('banned_at')->get()->map(function ($member) use ($actorCanMod, $isCreator, $actor) {
