@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiGet, apiPost, apiDelete } from '../utils/api';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -24,11 +24,7 @@ export default class MemberList extends Component {
     const { groupId } = this.attrs;
     this.loading = true;
 
-    fetch(`${apiBase()}/social-groups/${groupId}/members`, {
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.json())
+    apiGet(`/social-groups/${groupId}/members`)
       .then((data) => {
         this.members = data.data || [];
         this.loading = false;
@@ -45,15 +41,7 @@ export default class MemberList extends Component {
     this.actioning[member.userId] = 'promote';
     const { groupId } = this.attrs;
 
-    fetch(`${apiBase()}/social-groups/${groupId}/members/${member.userId}/promote`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
+    apiPost(`/social-groups/${groupId}/members/${member.userId}/promote`)
       .then((data) => {
         const idx = this.members.findIndex((m) => m.userId === member.userId);
         if (idx !== -1) this.members[idx] = { ...this.members[idx], role: data.role || 'moderator' };
@@ -70,15 +58,7 @@ export default class MemberList extends Component {
     this.actioning[member.userId] = 'demote';
     const { groupId } = this.attrs;
 
-    fetch(`${apiBase()}/social-groups/${groupId}/members/${member.userId}/demote`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
+    apiPost(`/social-groups/${groupId}/members/${member.userId}/demote`)
       .then((data) => {
         const idx = this.members.findIndex((m) => m.userId === member.userId);
         if (idx !== -1) this.members[idx] = { ...this.members[idx], role: data.role || 'member' };
@@ -97,15 +77,7 @@ export default class MemberList extends Component {
     this.actioning[member.userId] = 'remove';
     m.redraw();
 
-    fetch(`${apiBase()}/social-groups/${this.attrs.groupId}/members/${member.userId}`, {
-      method:      'DELETE',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
+    apiDelete(`/social-groups/${this.attrs.groupId}/members/${member.userId}`)
       .then(() => {
         this.members = this.members.filter((m) => m.userId !== member.userId);
         delete this.actioning[member.userId];

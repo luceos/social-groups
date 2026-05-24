@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiGet, apiPost, apiPatch, apiUpload } from '../utils/api';
 import { pastedImages } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview, viewPostLinkPreview } from '../utils/linkPreview';
 import app from 'flarum/forum/app';
@@ -153,11 +153,7 @@ export default class GroupDiscussionThread extends Page {
   // the seen-set and the diff is rendered transparently on the next redraw.
   _refreshSilently() {
     const discussionId = this.attrs.discussionId;
-    fetch(`${apiBase()}/sg-thread-posts/${discussionId}`, {
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => (r.ok ? r.json() : null))
+    apiGet(`/sg-thread-posts/${discussionId}`)
       .then((data) => {
         if (!data || !this._rtActive) return;
         if (String(discussionId) !== String(this.attrs.discussionId)) return;
@@ -202,15 +198,8 @@ export default class GroupDiscussionThread extends Page {
     this._isTyping       = isTyping;
     this._lastTypingSent = now;
 
-    fetch(`${apiBase()}/sg-typing`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: JSON.stringify({ discussionId: this.discussion.id, isTyping }),
-    }).catch(() => {}); // fire-and-forget — errors are non-critical
+    apiPost('/sg-typing', { discussionId: this.discussion.id, isTyping })
+      .catch(() => {}); // fire-and-forget — errors are non-critical
   }
 
   onupdate(vnode) {
@@ -237,14 +226,7 @@ export default class GroupDiscussionThread extends Page {
     this.loading = true;
     this.error   = null;
 
-    fetch(`${apiBase()}/sg-thread-posts/${discussionId}`, {
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
+    apiGet(`/sg-thread-posts/${discussionId}`)
       .then((data) => {
         this.discussion = data.discussion;
         this.posts      = data.data || [];
@@ -257,7 +239,7 @@ export default class GroupDiscussionThread extends Page {
         this._setupRealtime();
       })
       .catch((err) => {
-        this.error   = err.message;
+        this.error   = err.response?.error || err.message || 'Error';
         this.loading = false;
         m.redraw();
       });
@@ -276,16 +258,7 @@ export default class GroupDiscussionThread extends Page {
       const fd = new FormData();
       fd.append('files[]', file);
 
-      fetch(`${apiBase()}/fof/upload`, {
-        method:      'POST',
-        credentials: 'same-origin',
-        headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-        body:        fd,
-      })
-        .then((r) => {
-          if (!r.ok) return r.json().then((e) => { throw new Error(e.errors?.[0]?.detail || e.error || 'Upload failed'); });
-          return r.json();
-        })
+      apiUpload('/fof/upload', fd)
         .then((data) => {
           const fileData = Array.isArray(data.data) ? data.data[0] : data.data;
           const uuid     = fileData?.attributes?.uuid || fileData?.id;
@@ -300,7 +273,10 @@ export default class GroupDiscussionThread extends Page {
         })
         .catch((err) => {
           const upload = this[uploadsKey].find((u) => u.id === id);
-          if (upload) { upload.uploading = false; upload.error = err.message; }
+          if (upload) {
+            upload.uploading = false;
+            upload.error     = err.response?.errors?.[0]?.detail || err.response?.error || err.message || 'Upload failed';
+          }
           m.redraw();
         });
     }
@@ -341,22 +317,10 @@ export default class GroupDiscussionThread extends Page {
     this.pickerPostId = null;
     m.redraw();
 
-    const reactUrl = nextReaction
-      ? `${apiBase()}/sg-posts/${post.id}/react`
-      : `${apiBase()}/sg-posts/${post.id}/unreact`;
-    fetch(reactUrl, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        ...(nextReaction ? { 'Content-Type': 'application/json' } : {}),
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: nextReaction ? JSON.stringify({ reaction: nextReaction }) : undefined,
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error('reaction_failed');
-        return r.json();
-      })
+    const reactionRequest = nextReaction
+      ? apiPost(`/sg-posts/${post.id}/react`, { reaction: nextReaction })
+      : apiPost(`/sg-posts/${post.id}/unreact`);
+    reactionRequest
       .then((data) => {
         post.reactions     = data.reactions || {};
         post.actorReaction = data.actorReaction || null;
@@ -378,19 +342,11 @@ export default class GroupDiscussionThread extends Page {
     this.submitting = true;
     this.replyError = null;
 
-    fetch(`${apiBase()}/sg-posts`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: JSON.stringify({ discussionId: this.discussion.id, content, linkPreview: this.linkPreview || null }),
+    apiPost('/sg-posts', {
+      discussionId: this.discussion.id,
+      content,
+      linkPreview:  this.linkPreview || null,
     })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
       .then((post) => {
         // Register as seen so the WebSocket echo doesn't double-insert it.
         this._seenPostIds.add(post.id);
@@ -409,7 +365,7 @@ export default class GroupDiscussionThread extends Page {
         });
       })
       .catch((err) => {
-        this.replyError = err.message;
+        this.replyError = err.response?.error || err.message || 'Error';
         this.submitting = false;
         m.redraw();
       });
@@ -435,19 +391,7 @@ export default class GroupDiscussionThread extends Page {
     const content = this.editText.trim();
     if (!content) return;
 
-    fetch(`${apiBase()}/sg-posts/${post.id}`, {
-      method:      'PATCH',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: JSON.stringify({ content }),
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
+    apiPatch(`/sg-posts/${post.id}`, { content })
       .then((updated) => {
         const idx = this.posts.findIndex((p) => p.id === post.id);
         if (idx !== -1) this.posts[idx] = { ...this.posts[idx], ...updated };
@@ -457,7 +401,7 @@ export default class GroupDiscussionThread extends Page {
         m.redraw();
       })
       .catch((err) => {
-        this.editError = err.message || 'Failed to save edit.';
+        this.editError = err.response?.error || err.message || 'Failed to save edit.';
         m.redraw();
       });
   }
@@ -475,12 +419,7 @@ export default class GroupDiscussionThread extends Page {
     this._resortPinned();
     m.redraw();
 
-    fetch(`${apiBase()}/sg-posts/${post.id}/pin`, {
-      method:      'PATCH',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.json())
+    apiPatch(`/sg-posts/${post.id}/pin`)
       .then((data) => {
         if (typeof data.isPinned === 'boolean') {
           post.isPinned = data.isPinned;
@@ -517,23 +456,21 @@ export default class GroupDiscussionThread extends Page {
     this.deletingId = post.id;
     this.openMenuId = null;
 
-    fetch(`${apiBase()}/sg-posts/${post.id}/delete`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    }).then(() => {
-      // Also remove any child replies (DB cascade handles the data side)
-      const removed = new Set([post.id]);
-      this.posts.filter((p) => p.parentPostId && removed.has(p.parentPostId)).forEach((p) => removed.add(p.id));
-      const removedCount = removed.size;
-      this.posts = this.posts.filter((p) => !removed.has(p.id));
-      if (this.discussion) this.discussion.commentCount = Math.max(0, (this.discussion.commentCount || removedCount) - removedCount);
-      this.deletingId = null;
-      m.redraw();
-    }).catch(() => {
-      this.deletingId = null;
-      m.redraw();
-    });
+    apiPost(`/sg-posts/${post.id}/delete`)
+      .then(() => {
+        // Also remove any child replies (DB cascade handles the data side)
+        const removed = new Set([post.id]);
+        this.posts.filter((p) => p.parentPostId && removed.has(p.parentPostId)).forEach((p) => removed.add(p.id));
+        const removedCount = removed.size;
+        this.posts = this.posts.filter((p) => !removed.has(p.id));
+        if (this.discussion) this.discussion.commentCount = Math.max(0, (this.discussion.commentCount || removedCount) - removedCount);
+        this.deletingId = null;
+        m.redraw();
+      })
+      .catch(() => {
+        this.deletingId = null;
+        m.redraw();
+      });
   }
 
   startInlineReply(post) {
@@ -549,19 +486,11 @@ export default class GroupDiscussionThread extends Page {
 
     this.inlineReplySubmitting = true;
 
-    fetch(`${apiBase()}/sg-posts`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: JSON.stringify({ discussionId: this.discussion.id, content, parentPostId: this.replyingToId }),
+    apiPost('/sg-posts', {
+      discussionId: this.discussion.id,
+      content,
+      parentPostId: this.replyingToId,
     })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
       .then((post) => {
         this._seenPostIds.add(post.id);
         this._sendTyping(false);

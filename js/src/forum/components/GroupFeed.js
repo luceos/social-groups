@@ -1,4 +1,4 @@
-import { apiBase } from '../utils/api';
+import { apiGet, apiPost, apiPatch, apiDelete } from '../utils/api';
 import { pastedImages, handleFiles, removeUpload, revokeAll, viewUploadChips } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview, viewPostLinkPreview } from '../utils/linkPreview';
 import ShareDiscussionModal from './ShareDiscussionModal';
@@ -133,17 +133,7 @@ export default class GroupFeed extends Component {
     this.loadedComments  = {};
     this.commentsLoading = {};
 
-    const qs = new URLSearchParams({ page });
-    if (q) qs.set('q', q);
-
-    fetch(`${apiBase()}/sg-discussions/${groupId}?${qs}`, {
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
+    apiGet(`/sg-discussions/${groupId}`, { page, ...(q ? { q } : {}) })
       .then((data) => {
         this.discussions = data.data || [];
         this.total       = data.total || 0;
@@ -199,22 +189,10 @@ export default class GroupFeed extends Component {
     this.pickerDiscId = null;
     m.redraw();
 
-    const reactUrl = nextReaction
-      ? `${apiBase()}/sg-posts/${fp.id}/react`
-      : `${apiBase()}/sg-posts/${fp.id}/unreact`;
-    fetch(reactUrl, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        ...(nextReaction ? { 'Content-Type': 'application/json' } : {}),
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: nextReaction ? JSON.stringify({ reaction: nextReaction }) : undefined,
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error('reaction_failed');
-        return r.json();
-      })
+    const reactionRequest = nextReaction
+      ? apiPost(`/sg-posts/${fp.id}/react`, { reaction: nextReaction })
+      : apiPost(`/sg-posts/${fp.id}/unreact`);
+    reactionRequest
       .then((data) => {
         fp.reactions     = data.reactions || {};
         fp.actorReaction = data.actorReaction || null;
@@ -245,19 +223,10 @@ export default class GroupFeed extends Component {
     this.pickerCommentId = null;
     m.redraw();
 
-    const reactUrl = nextReaction
-      ? `${apiBase()}/sg-posts/${post.id}/react`
-      : `${apiBase()}/sg-posts/${post.id}/unreact`;
-    fetch(reactUrl, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        ...(nextReaction ? { 'Content-Type': 'application/json' } : {}),
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: nextReaction ? JSON.stringify({ reaction: nextReaction }) : undefined,
-    })
-      .then((r) => r.ok ? r.json() : r.json().then((e) => { throw new Error(e.error || 'Error'); }))
+    const reactionRequest = nextReaction
+      ? apiPost(`/sg-posts/${post.id}/react`, { reaction: nextReaction })
+      : apiPost(`/sg-posts/${post.id}/unreact`);
+    reactionRequest
       .then((data) => {
         post.reactions     = data.reactions || {};
         post.actorReaction = data.actorReaction || null;
@@ -279,30 +248,18 @@ export default class GroupFeed extends Component {
     this.postSubmitting = true;
     this.postError      = null;
 
-    fetch(`${apiBase()}/sg-discussions`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: JSON.stringify({
-        groupId:     this.attrs.groupId,
-        content,
-        linkPreview: this.linkPreview || null,
-        poll:        this.poll && this.poll.question.trim() && this.poll.options.filter((o) => o.trim()).length >= 2
-          ? {
-              question:      this.poll.question.trim(),
-              options:       this.poll.options.filter((o) => o.trim()),
-              isMultiSelect: this.poll.isMultiSelect,
-            }
-          : null,
-      }),
+    apiPost('/sg-discussions', {
+      groupId:     this.attrs.groupId,
+      content,
+      linkPreview: this.linkPreview || null,
+      poll:        this.poll && this.poll.question.trim() && this.poll.options.filter((o) => o.trim()).length >= 2
+        ? {
+            question:      this.poll.question.trim(),
+            options:       this.poll.options.filter((o) => o.trim()),
+            isMultiSelect: this.poll.isMultiSelect,
+          }
+        : null,
     })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
       .then((d) => {
         this.discussions    = [d, ...(this.discussions || [])];
         this.total++;
@@ -316,7 +273,7 @@ export default class GroupFeed extends Component {
         m.redraw();
       })
       .catch((err) => {
-        this.postError      = err.message;
+        this.postError      = err.response?.error || err.message || 'Error';
         this.postSubmitting = false;
         m.redraw();
       });
@@ -330,19 +287,7 @@ export default class GroupFeed extends Component {
 
     this.replySubmitting[d.id] = true;
 
-    fetch(`${apiBase()}/sg-posts`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: JSON.stringify({ discussionId: d.id, content }),
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => { throw new Error(e.error || 'Error'); });
-        return r.json();
-      })
+    apiPost('/sg-posts', { discussionId: d.id, content })
       .then((post) => {
         d.commentCount = (d.commentCount || 0) + 1;
         this.replyTexts[d.id]      = '';
@@ -369,19 +314,17 @@ export default class GroupFeed extends Component {
     this.deleting   = d.id;
     this.openMenuId = null;
 
-    fetch(`${apiBase()}/sg-discussions/${d.id}`, {
-      method:      'DELETE',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    }).then(() => {
-      this.discussions = this.discussions.filter((x) => x.id !== d.id);
-      this.total       = Math.max(0, this.total - 1);
-      this.deleting    = null;
-      m.redraw();
-    }).catch(() => {
-      this.deleting = null;
-      m.redraw();
-    });
+    apiDelete(`/sg-discussions/${d.id}`)
+      .then(() => {
+        this.discussions = this.discussions.filter((x) => x.id !== d.id);
+        this.total       = Math.max(0, this.total - 1);
+        this.deleting    = null;
+        m.redraw();
+      })
+      .catch(() => {
+        this.deleting = null;
+        m.redraw();
+      });
   }
 
   pinDiscussion(d) {
@@ -390,12 +333,7 @@ export default class GroupFeed extends Component {
     this.openMenuId = null;
     m.redraw();
 
-    fetch(`${apiBase()}/sg-discussions/${d.id}/pin`, {
-      method:      'PATCH',
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.json())
+    apiPatch(`/sg-discussions/${d.id}/pin`)
       .then((data) => {
         d.isPinned = data.isPinned;
         // Re-sort: pinned items first
@@ -418,11 +356,7 @@ export default class GroupFeed extends Component {
     this.commentsLoading[d.id] = true;
     m.redraw();
 
-    fetch(`${apiBase()}/sg-thread-posts/${d.id}`, {
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.ok ? r.json() : r.json().then((e) => { throw new Error(e.error || 'Error'); }))
+    apiGet(`/sg-thread-posts/${d.id}`)
       .then((data) => {
         // posts[0] is the first post (already shown as card body) — skip it.
         this.loadedComments[d.id]  = (data.data || []).slice(1);
@@ -440,11 +374,7 @@ export default class GroupFeed extends Component {
   loadMembers() {
     if (this.members !== null || this.membersLoading) return;
     this.membersLoading = true;
-    fetch(`${apiBase()}/social-groups/${this.attrs.groupId}/members`, {
-      credentials: 'same-origin',
-      headers:     { 'X-CSRF-Token': app.session.csrfToken || '' },
-    })
-      .then((r) => r.ok ? r.json() : Promise.reject())
+    apiGet(`/social-groups/${this.attrs.groupId}/members`)
       .then((data) => {
         this.members        = data.data || [];
         this.membersLoading = false;
@@ -910,16 +840,7 @@ export default class GroupFeed extends Component {
     poll.totalVotes = poll.options.reduce((s, o) => s + o.voteCount, 0);
     m.redraw();
 
-    fetch(`${apiBase()}/sg-polls/${poll.id}/vote`, {
-      method:      'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': app.session.csrfToken || '',
-      },
-      body: JSON.stringify({ optionIds: newVoteIds }),
-    })
-      .then((r) => r.ok ? r.json() : r.json().then((e) => { throw new Error(e.error || 'Error'); }))
+    apiPost(`/sg-polls/${poll.id}/vote`, { optionIds: newVoteIds })
       .then((updated) => {
         d.poll = updated;
         m.redraw();
