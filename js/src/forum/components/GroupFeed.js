@@ -1,15 +1,14 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from '../utils/api';
 import { pastedImages, handleFiles, removeUpload, revokeAll, viewUploadChips } from '../utils/uploads';
-import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview, viewPostLinkPreview } from '../utils/linkPreview';
-import ShareDiscussionModal from './ShareDiscussionModal';
-import { REACTIONS, ReactionPicker, ReactionButton, ReactionStat } from './feed/reactions';
+import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview } from '../utils/linkPreview';
 import { MentionDropdown } from './feed/MentionDropdown';
 import { PollComposer } from './feed/PollComposer';
+import { InlineCommentList } from './feed/InlineCommentList';
+import PostCard from './feed/PostCard';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Button from 'flarum/common/components/Button';
-import humanTime from 'flarum/common/utils/humanTime';
 
 export default class GroupFeed extends Component {
   oninit(vnode) {
@@ -458,103 +457,14 @@ export default class GroupFeed extends Component {
   viewInlineComments(d) {
     if (!this.expandedDiscIds.has(d.id)) return null;
 
-    const comments = this.loadedComments[d.id];
-    const loading  = this.commentsLoading[d.id];
-
-    if (loading && !comments) {
-      return m('.SGFeed-comments',
-        m('.SGFeed-commentsLoading', m('i.fa-solid.fa-spinner.fa-spin'))
-      );
-    }
-
-    if (!comments || comments.length === 0) {
-      return m('.SGFeed-comments',
-        m('.SGFeed-commentsEmpty', app.translator.trans('ernestdefoe-social-groups.forum.discussions.comments_empty'))
-      );
-    }
-
-    // Show the most recent 3 inline; offer "View all N comments" above if more.
-    const PREVIEW = 3;
-    const shown   = comments.slice(-PREVIEW);
-    const hidden  = Math.max(0, comments.length - PREVIEW);
-    const actor   = app.session.user;
-
-    return m('.SGFeed-comments', [
-      hidden > 0
-        ? m('button.SGFeed-viewAllBtn', {
-            onclick: () => this.openThread(d),
-          }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.view_all_comments', { count: comments.length }))
-        : null,
-      shown.map((post) => {
-        const user        = post.user;
-        const actorReact  = post.actorReaction || null;
-        const pickerOpen  = this.pickerCommentId === post.id;
-        const stat        = ReactionStat(post.reactions);
-        const activeEmoji = actorReact ? REACTIONS.find((r) => r.key === actorReact) : null;
-
-        return m('.SGFeed-comment', { key: post.id }, [
-          // Avatar
-          m('.SGFeed-commentAvatar', [
-            user?.avatarUrl
-              ? m('img', { src: user.avatarUrl, alt: user.displayName })
-              : m('span.SGFeed-commentInitial', (user?.displayName || '?')[0].toUpperCase()),
-          ]),
-
-          // Right column: bubble + footer
-          m('.SGFeed-commentRight', [
-            // Content bubble
-            m('.SGFeed-commentBody', [
-              m('span.SGFeed-commentAuthor', user?.displayName || ''),
-              m('.SGFeed-commentContent', m.trust(post.contentParsed || post.content || '')),
-            ]),
-
-            // Footer: time · React button · reaction count bubble
-            m('.SGFeed-commentFooter', [
-              m('span.SGFeed-commentTime', humanTime(new Date(post.createdAt))),
-
-              // React button + picker
-              actor
-                ? m('.SGFeed-commentReactWrap', [
-                    pickerOpen
-                      ? ReactionPicker({
-                          actorReaction: actorReact,
-                          wrapperClass:  'SGFeed-commentPicker',
-                          onPick:        (key) => this.toggleCommentReaction(post, key),
-                        })
-                      : null,
-                    m('button.SGFeed-commentReactBtn', {
-                      class:   activeEmoji ? 'is-active' : '',
-                      title:   activeEmoji
-                                 ? app.translator.trans('ernestdefoe-social-groups.forum.discussions.remove_reaction', { emoji: activeEmoji.label })
-                                 : app.translator.trans('ernestdefoe-social-groups.forum.discussions.react'),
-                      onclick: (e) => {
-                        e.stopPropagation();
-                        if (activeEmoji) {
-                          this.toggleCommentReaction(post, actorReact);
-                        } else {
-                          this.pickerCommentId = pickerOpen ? null : post.id;
-                          m.redraw();
-                        }
-                      },
-                    }, activeEmoji
-                        ? [activeEmoji.emoji, ' ', activeEmoji.label]
-                        : [m('i.fa-solid.fa-face-grin-beam'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.react')]),
-                  ])
-                : null,
-
-              // Reaction stat bubble (emoji stack + total count)
-              stat.total > 0
-                ? m('span.SGFeed-commentReactStat', [
-                    stat.topEmojis.map((emoji) => m('span.SGFeed-commentReactEmoji', emoji)),
-                    ' ',
-                    stat.total,
-                  ])
-                : null,
-            ]),
-          ]),
-        ]);
-      }),
-    ]);
+    return InlineCommentList({
+      comments:        this.loadedComments[d.id],
+      loading:         !!this.commentsLoading[d.id],
+      pickerCommentId: this.pickerCommentId,
+      onPickReaction:  (post, key) => this.toggleCommentReaction(post, key),
+      onTogglePicker:  (id) => { this.pickerCommentId = id; m.redraw(); },
+      onOpenThread:    () => this.openThread(d),
+    });
   }
 
   openThread(d) {
@@ -767,231 +677,47 @@ export default class GroupFeed extends Component {
       });
   }
 
-  viewPoll(d) {
-    const poll  = d.poll;
-    const actor = app.session.user;
-    if (!poll) return null;
-
-    const ended  = poll.endsAt && new Date(poll.endsAt) < new Date();
-    const canVote = actor && !ended;
-    const max    = Math.max(1, ...poll.options.map((o) => o.voteCount));
-
-    return m('.SGFeed-poll', [
-      m('.SGFeed-poll-question', [m('i.fa-solid.fa-square-poll-vertical'), ' ', poll.question]),
-      m('.SGFeed-poll-options',
-        poll.options.map((opt) => {
-          const voted  = poll.actorVotedOptionIds.includes(opt.id);
-          const pct    = poll.totalVotes > 0 ? Math.round((opt.voteCount / poll.totalVotes) * 100) : 0;
-          return m('button.SGFeed-poll-option', {
-            key:      opt.id,
-            class:    voted ? 'is-voted' : '',
-            disabled: !canVote,
-            onclick:  () => canVote && this.votePoll(d, opt.id),
-          }, [
-            m('.SGFeed-poll-optBar', { style: `width:${pct}%` }),
-            m('span.SGFeed-poll-optText', opt.text),
-            m('span.SGFeed-poll-optPct', `${pct}%`),
-            voted ? m('i.fa-solid.fa-check.SGFeed-poll-check') : null,
-          ]);
-        })
-      ),
-      m('.SGFeed-poll-footer', [
-        m('span', app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_votes', { count: poll.totalVotes })),
-        ended ? m('span.SGFeed-poll-ended', ' · ' + app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_ended')) : null,
-      ]),
-    ]);
-  }
-
   viewPostCard(d) {
-    const fp         = d.firstPost;
-    const isDeleting = this.deleting === d.id;
-    const menuOpen   = this.openMenuId === d.id;
-    const actor      = app.session.user;
-    const replyText  = this.replyTexts[d.id] || '';
-    const replyBusy  = !!this.replySubmitting[d.id];
+    return m(PostCard, {
+      key:         d.id,
+      discussion:  d,
+      groupId:     this.attrs.groupId,
+      groupSlug:   this.attrs.groupSlug,
+      isMember:    this.attrs.isMember,
 
-    // Use firstPost user if available, fall back to discussion user
-    const postUser = fp?.user || d.user;
-    const postTime = fp?.createdAt || d.createdAt;
+      menuOpen:         this.openMenuId === d.id,
+      pickerOpen:       this.pickerDiscId === d.id,
+      commentsExpanded: this.expandedDiscIds.has(d.id),
+      deleting:        this.deleting === d.id,
+      replyText:       this.replyTexts[d.id] || '',
+      replyBusy:       !!this.replySubmitting[d.id],
 
-    return m('.SGFeed-post', { key: d.id, class: isDeleting ? 'is-deleting' : '' }, [
-
-      // Header: avatar + name/time + menu
-      m('.SGFeed-postHeader', [
-        m('.SGFeed-postAvatar', [
-          postUser?.avatarUrl
-            ? m('img', { src: postUser.avatarUrl, alt: postUser.displayName })
-            : m('span.SGFeed-postInitial', (postUser?.displayName || '?')[0].toUpperCase()),
-        ]),
-        m('.SGFeed-postMeta', [
-          m('span.SGFeed-postAuthor', postUser?.displayName || ''),
-          m('span.SGFeed-postTime', { title: postTime }, humanTime(new Date(postTime))),
-          d.isPinned ? m('span.SGFeed-pinnedBadge', [m('i.fa-solid.fa-thumbtack'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.pinned')]) : null,
-        ]),
-        d.canDelete || d.canPin || (actor && d.canShare)
-          ? m('.SGFeed-postMenu', [
-              m('button.SGFeed-postMenuBtn', {
-                onclick: (e) => {
-                  e.stopPropagation();
-                  this.openMenuId = menuOpen ? null : d.id;
-                  m.redraw();
-                },
-              }, m('i.fa-solid.fa-ellipsis')),
-              menuOpen
-                ? m('.SGFeed-postDropdown', [
-                    actor && d.canShare
-                      ? m('button.SGFeed-dropdownItem', {
-                          onclick: () => {
-                            this.openMenuId = null;
-                            app.modal.show(ShareDiscussionModal, {
-                              discussionId:   d.id,
-                              currentGroupId: this.attrs.groupId,
-                            });
-                          },
-                        }, [m('i.fa-solid.fa-share'), ' Share post'])
-                      : null,
-                    d.canPin
-                      ? m('button.SGFeed-dropdownItem', {
-                          onclick: () => this.pinDiscussion(d),
-                        }, d.isPinned
-                            ? [m('i.fa-solid.fa-thumbtack'), ' Unpin post']
-                            : [m('i.fa-solid.fa-thumbtack'), ' Pin post'])
-                      : null,
-                    d.canDelete
-                      ? m('button.SGFeed-dropdownItem.SGFeed-dropdownItem--danger', {
-                          onclick: () => this.deleteDiscussion(d),
-                        }, [m('i.fa-solid.fa-trash'), ' ',
-                            app.translator.trans('ernestdefoe-social-groups.forum.discussions.delete')])
-                      : null,
-                  ])
-                : null,
-            ])
-          : null,
-      ]),
-
-      // Post body content
-      fp
-        ? m('.SGFeed-postContent', m.trust(fp.contentParsed))
-        : m('.SGFeed-postContent', m('.SGFeed-noContent', d.title)),
-      fp ? viewPostLinkPreview(fp) : null,
-
-      // Shared-from quoted card
-      d.sharedFrom
-        ? m('a.SGFeed-sharedCard', {
-            href: `/groups/${d.sharedFrom.groupSlug}/d/${d.sharedFrom.discussionId}`,
-            onclick: (e) => { e.preventDefault(); m.route.set(`/groups/${d.sharedFrom.groupSlug}/d/${d.sharedFrom.discussionId}`); },
-          }, [
-            m('.SGFeed-sharedCard-header', [
-              d.sharedFrom.user?.avatarUrl
-                ? m('img.SGFeed-sharedCard-avatar', { src: d.sharedFrom.user.avatarUrl, alt: '' })
-                : m('span.SGFeed-sharedCard-initial',
-                    (d.sharedFrom.user?.displayName || '?')[0].toUpperCase()),
-              m('span.SGFeed-sharedCard-author', d.sharedFrom.user?.displayName || ''),
-              m('span.SGFeed-sharedCard-group', [m('i.fa-solid.fa-users'), ' ', d.sharedFrom.groupName]),
-            ]),
-            m('.SGFeed-sharedCard-title', d.sharedFrom.title),
-            d.sharedFrom.snippet
-              ? m('.SGFeed-sharedCard-snippet', d.sharedFrom.snippet)
-              : null,
-          ])
-        : null,
-
-      // Poll
-      d.poll ? this.viewPoll(d) : null,
-
-      // Reaction count + comment count stat bar
-      (() => {
-        const stat        = ReactionStat(fp?.reactions);
-        const hasComments = d.commentCount > 1;
-        if (!stat.total && !hasComments) return null;
-
-        return m('.SGFeed-postStatBar', [
-          stat.total > 0
-            ? m('span.SGFeed-statLikes', [
-                stat.topEmojis.map((emoji) => m('span.SGFeed-reactionEmoji', emoji)),
-                ' ', stat.total,
-              ])
-            : null,
-          stat.total > 0 && hasComments ? m('span.SGFeed-statDot', '·') : null,
-          hasComments
-            ? m('button.SGFeed-statComments', { onclick: () => this.toggleComments(d) },
-                app.translator.trans('ernestdefoe-social-groups.forum.discussions.comments_count', { count: d.commentCount - 1 }))
-            : null,
-        ]);
-      })(),
-
-      // Reaction | Comment action bar
-      m('.SGFeed-postActionBar', [
-        actor && fp
-          ? m('.SGFeed-reactWrap', [
-              this.pickerDiscId === d.id
-                ? ReactionPicker({
-                    actorReaction: fp.actorReaction,
-                    onPick:        (key) => { this.pickerDiscId = null; this.toggleReaction(d, key); },
-                  })
-                : null,
-              ReactionButton({
-                actorReaction: fp.actorReaction,
-                onClear:       () => this.toggleReaction(d, fp.actorReaction),
-                onOpen:        () => this.togglePicker(d.id),
-              }),
-            ])
-          : null,
-        m('button.SGFeed-commentBtn', {
-          class:   this.expandedDiscIds.has(d.id) ? 'is-active' : '',
-          onclick: () => this.toggleComments(d),
-        }, [m('i.fa-solid.fa-comment'), ' ',
-            this.expandedDiscIds.has(d.id)
-              ? app.translator.trans('ernestdefoe-social-groups.forum.discussions.hide_comments')
-              : app.translator.trans('ernestdefoe-social-groups.forum.discussions.view_comments')]),
-      ]),
-
-      // Inline comments list (toggled by the Comments button)
-      this.viewInlineComments(d),
-
-      // Inline reply composer (for quick replies; posts to the discussion)
-      actor && this.attrs.isMember && !d.isLocked
-        ? m('.SGFeed-replyRow', [
-            m('.SGFeed-replyAvatar', [
-              actor.attribute('avatarUrl')
-                ? m('img', { src: actor.attribute('avatarUrl'), alt: actor.attribute('displayName') })
-                : m('span', (actor.attribute('displayName') || '?')[0].toUpperCase()),
-            ]),
-            m('.SGFeed-replyInputWrap', [
-              this.viewMentionDropdown(d.id),
-              m('textarea.SGFeed-replyInput', {
-                placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_placeholder'),
-                value:       replyText,
-                rows:        1,
-                disabled:    replyBusy,
-                oninput:     (e) => {
-                  this.replyTexts[d.id] = e.target.value;
-                  e.target.style.height = 'auto';
-                  e.target.style.height = e.target.scrollHeight + 'px';
-                  this.handleMentionInput(d.id, e);
-                },
-                onkeydown: (e) => {
-                  if (e.key === 'Escape' && this.mentionQuery !== null) {
-                    e.stopPropagation();
-                    this.mentionQuery = null; this.mentionDiscId = null; m.redraw();
-                    return;
-                  }
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    this.submitReply(d);
-                  }
-                },
-              }),
-              m('button.SGFeed-replySendBtn', {
-                disabled: replyBusy || !replyText.trim(),
-                onclick:  () => this.submitReply(d),
-                title:    app.translator.trans('ernestdefoe-social-groups.forum.discussions.post_comment'),
-              }, replyBusy
-                  ? m('i.fa-solid.fa-spinner.fa-spin')
-                  : m('i.fa-solid.fa-paper-plane')),
-            ]),
-          ])
-        : null,
-    ]);
+      onMenuToggle:     () => { this.openMenuId = this.openMenuId === d.id ? null : d.id; m.redraw(); },
+      onTogglePicker:   () => this.togglePicker(d.id),
+      onReact:          (key) => { this.pickerDiscId = null; this.toggleReaction(d, key); },
+      onClearReaction:  () => this.toggleReaction(d, d.firstPost?.actorReaction),
+      onToggleComments: () => this.toggleComments(d),
+      onPin:            () => this.pinDiscussion(d),
+      onDelete:         () => this.deleteDiscussion(d),
+      onVotePoll:       (optionId) => this.votePoll(d, optionId),
+      onReplyChange:    (text) => { this.replyTexts[d.id] = text; },
+      onReplyInput:     (e) => this.handleMentionInput(d.id, e),
+      onReplyKeydown:   (e) => {
+        if (e.key === 'Escape' && this.mentionQuery !== null) {
+          e.stopPropagation();
+          this.mentionQuery = null;
+          this.mentionDiscId = null;
+          m.redraw();
+          return;
+        }
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          this.submitReply(d);
+        }
+      },
+      onReplySubmit:    () => this.submitReply(d),
+      mentionDropdown:  this.viewMentionDropdown(d.id),
+      inlineComments:   this.viewInlineComments(d),
+    });
   }
 }
