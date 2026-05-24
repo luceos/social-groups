@@ -9,7 +9,12 @@ return [
             $schema->create('social_group_post_reactions', function (Blueprint $table) {
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('post_id');
-                $table->unsignedBigInteger('user_id');
+                // `users.id` is INT UNSIGNED in core (increments()), not
+                // BIGINT — declaring this as unsignedBigInteger made the
+                // FK constraint fail on strict MySQL 8 ("Referencing
+                // column and referenced column are incompatible"). Must
+                // match the referenced column type exactly.
+                $table->unsignedInteger('user_id');
                 $table->string('reaction', 20);
                 $table->timestamps();
 

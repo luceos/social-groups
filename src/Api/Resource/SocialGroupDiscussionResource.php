@@ -60,10 +60,14 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
     public function scope(Builder $query, BaseContext $context): void
     {
         $actor = RequestUtil::getActor($context->request);
-        $raw   = $context->request->getQueryParams()['filter'] ?? [];
-        $filter = is_array($raw) ? $raw : [];
+        $params = $context->request->getQueryParams();
 
-        $groupId = isset($filter['group']) ? (int) $filter['group'] : 0;
+        // Use plain query params instead of JSON:API `?filter[group]`
+        // because Flarum 2's AbstractDatabaseResource::filters() is
+        // final and throws — JSON:API filter syntax requires registering
+        // a Search\Filter class per param, which is heavier than the
+        // single-group scoping we actually need.
+        $groupId = isset($params['groupId']) ? (int) $params['groupId'] : 0;
 
         if ($groupId <= 0) {
             // Sem filtro de grupo, recusamos retornar lista. Mantém o
@@ -92,7 +96,7 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
             });
         }
 
-        $q = isset($filter['q']) ? trim((string) $filter['q']) : '';
+        $q = isset($params['q']) ? trim((string) $params['q']) : '';
         if ($q !== '') {
             $like = '%' . addcslashes($q, '%_\\') . '%';
             $query->where(function ($w) use ($like) {

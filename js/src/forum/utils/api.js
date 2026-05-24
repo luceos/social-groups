@@ -196,13 +196,13 @@ function projectDiscussionFromResource(r) {
  */
 export function listDiscussions(groupId, { page = 1, q = '' } = {}) {
   const params = {
-    'filter[group]': groupId,
-    'page[number]':  page,
-    'page[size]':    20,
-    include:         'firstPost,firstPost.user,user,lastPostedUser',
+    groupId,
+    'page[number]': page,
+    'page[size]':   20,
+    include:        'firstPost,firstPost.user,user,lastPostedUser',
   };
   const trimmed = (q || '').trim();
-  if (trimmed) params['filter[q]'] = trimmed;
+  if (trimmed) params.q = trimmed;
 
   return apiGet('/social-group-discussions', params).then((body) => ({
     data:  (body.data || []).map((d) => mapDiscussion(d, body.included || [])),
@@ -324,8 +324,8 @@ function projectMember(r) {
 
 export function listMembers(groupId) {
   return apiGet('/social-group-members', {
-    'filter[group]': groupId,
-    include:         'user',
+    groupId,
+    include: 'user',
   }).then((body) => ({
     data: (body.data || []).map(projectMember),
   }));
@@ -361,8 +361,8 @@ function projectJoinRequest(r) {
 
 export function listJoinRequests(groupId) {
   return apiGet('/social-group-join-requests', {
-    'filter[group]': groupId,
-    include:         'user',
+    groupId,
+    include: 'user',
   }).then((body) => ({
     data: (body.data || []).map(projectJoinRequest),
   }));
@@ -378,9 +378,9 @@ export function rejectJoinRequest(requestId) {
 
 export function listThreadPosts(discussionId) {
   const params = {
-    'filter[discussion]': discussionId,
-    'page[size]':         200,
-    include:              'user,discussion',
+    discussionId,
+    'page[size]': 200,
+    include:      'user,discussion',
   };
 
   return apiGet('/social-group-posts', params).then((body) => {

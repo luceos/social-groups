@@ -41,10 +41,11 @@ class SocialGroupJoinRequestResource extends AbstractDatabaseResource
     public function scope(Builder $query, BaseContext $context): void
     {
         $actor = RequestUtil::getActor($context->request);
-        $raw   = $context->request->getQueryParams()['filter'] ?? [];
-        $filter = is_array($raw) ? $raw : [];
+        $params = $context->request->getQueryParams();
 
-        $groupId = isset($filter['group']) ? (int) $filter['group'] : 0;
+        // `?groupId=N` plain query param — not JSON:API filter[group]
+        // because AbstractDatabaseResource::filters() is final + throws.
+        $groupId = isset($params['groupId']) ? (int) $params['groupId'] : 0;
         if ($groupId <= 0) {
             $query->whereRaw('1 = 0');
             return;

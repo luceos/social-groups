@@ -74,13 +74,14 @@ class SocialGroupPostResource extends AbstractDatabaseResource
     {
         $actor = RequestUtil::getActor($context->request);
 
-        // Suporte ao Index endpoint: `?filter[discussion]=N` lista os
-        // posts de UMA discussão (substituto do antigo /sg-thread-posts).
-        // Sem o filtro, o endpoint Index responde vazio — não fazemos
-        // listagem global de posts cross-discussion.
-        $rawFilter = $context->request->getQueryParams()['filter'] ?? [];
-        $filter    = is_array($rawFilter) ? $rawFilter : [];
-        $discId    = isset($filter['discussion']) ? (int) $filter['discussion'] : 0;
+        // Suporte ao Index endpoint: `?discussionId=N` lista os posts
+        // de UMA discussão (substituto do antigo /sg-thread-posts).
+        // Sem o param, o endpoint Index responde vazio — não fazemos
+        // listagem global de posts cross-discussion. Query param simples
+        // em vez de `?filter[discussion]` porque a filters() do
+        // AbstractDatabaseResource é final e throw.
+        $params = $context->request->getQueryParams();
+        $discId = isset($params['discussionId']) ? (int) $params['discussionId'] : 0;
 
         if ($discId > 0) {
             $discussion = SocialGroupDiscussion::with('group')->find($discId);
@@ -365,14 +366,13 @@ class SocialGroupPostResource extends AbstractDatabaseResource
         return null;
     }
 
-    public function deleting(object $model, BaseContext $context): ?object
+    public function deleting(object $model, BaseContext $context): void
     {
         /** @var SocialGroupPost $model */
         $model->_sgDeletedDiscussionId = $model->discussion_id;
-        return null;
     }
 
-    public function deleted(object $model, BaseContext $context): ?object
+    public function deleted(object $model, BaseContext $context): void
     {
         /** @var SocialGroupPost $model */
         $discussionId = $model->_sgDeletedDiscussionId ?? $model->discussion_id;
@@ -381,7 +381,6 @@ class SocialGroupPostResource extends AbstractDatabaseResource
                 ->where('comment_count', '>', 0)
                 ->decrement('comment_count');
         }
-        return null;
     }
 
     /**
