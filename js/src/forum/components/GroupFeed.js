@@ -1,10 +1,11 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from '../utils/api';
-import { pastedImages, handleFiles, removeUpload, revokeAll, viewUploadChips } from '../utils/uploads';
+import { pastedImages, handleFiles, removeUpload, revokeAll } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview } from '../utils/linkPreview';
 import { MentionDropdown } from './feed/MentionDropdown';
 import { PollComposer } from './feed/PollComposer';
 import { InlineCommentList } from './feed/InlineCommentList';
 import PostCard from './feed/PostCard';
+import PostComposer from './feed/PostComposer';
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -548,92 +549,56 @@ export default class GroupFeed extends Component {
   }
 
   viewComposer(actor) {
-    const expanded = this.postFocused || this.postText.trim().length > 0;
+    return m(PostComposer, {
+      actor,
+      postText:         this.postText,
+      postFocused:      this.postFocused,
+      postSubmitting:   this.postSubmitting,
+      postError:        this.postError,
+      postUploads:      this.postUploads,
+      hasUploading:     this.postUploads.some((u) => u.uploading),
+      poll:             this.poll,
+      linkPreviewVnode: viewComposerLinkPreview(this),
+      mentionDropdown:  this.viewMentionDropdown('feed'),
 
-    return m('.SGFeed-composer', [
-      m('.SGFeed-composerAvatar', [
-        actor.attribute('avatarUrl')
-          ? m('img', { src: actor.attribute('avatarUrl'), alt: actor.attribute('displayName') })
-          : m('span.SGFeed-composerInitial', (actor.attribute('displayName') || '?')[0].toUpperCase()),
-      ]),
-      m('.SGFeed-composerRight', [
-        this.postError ? m('.Alert.Alert--error', { style: 'margin-bottom:8px' }, this.postError) : null,
-        m('textarea.SGFeed-composerTextarea', {
-          placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.feed_placeholder'),
-          value:       this.postText,
-          rows:        expanded ? 3 : 1,
-          onfocus:     () => { this.postFocused = true; m.redraw(); },
-          oninput:     (e) => {
-            this.postText = e.target.value;
-            e.target.style.height = 'auto';
-            e.target.style.height = e.target.scrollHeight + 'px';
-            scheduleLinkPreview(this, e.target.value);
-            this.handleMentionInput('feed', e);
-          },
-          onkeydown: (e) => {
-            if (e.key === 'Escape' && this.mentionQuery !== null) {
-              e.stopPropagation();
-              this.mentionQuery = null; this.mentionDiscId = null; m.redraw();
-            }
-          },
-          onpaste: (e) => {
-            const imgs = pastedImages(e);
-            if (imgs.length) { e.preventDefault(); handleFiles(this, imgs, 'postUploads', 'postText'); }
-          },
-          disabled: this.postSubmitting,
-        }),
-        viewUploadChips(this.postUploads, (id) => removeUpload(this, id, 'postUploads', 'postText')),
-        viewComposerLinkPreview(this),
-        this.poll ? PollComposer({ poll: this.poll, onChange: () => m.redraw() }) : null,
-        this.viewMentionDropdown('feed'),
-        expanded
-          ? m('.SGFeed-composerActions', [
-              m('label.SGFeed-composerAttach', {
-                title: app.translator.trans('ernestdefoe-social-groups.forum.discussions.upload_image'),
-              }, [
-                m('input[type=file]', {
-                  accept:   'image/*',
-                  multiple: true,
-                  style:    'display:none',
-                  disabled: this.postSubmitting,
-                  onchange: (e) => {
-                    if (e.target.files.length) handleFiles(this, Array.from(e.target.files), 'postUploads', 'postText');
-                    e.target.value = '';
-                  },
-                }),
-                m('i.fa-solid.fa-paperclip'),
-              ]),
-              m('button.SGFeed-pollToggle', {
-                class:   this.poll ? 'is-active' : '',
-                title:   this.poll ? app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_remove') : app.translator.trans('ernestdefoe-social-groups.forum.discussions.poll_add'),
-                onclick: () => {
-                  this.poll = this.poll
-                    ? null
-                    : { question: '', options: ['', ''], isMultiSelect: false };
-                  m.redraw();
-                },
-              }, m('i.fa-solid.fa-square-poll-vertical')),
-              m('button.SGFeed-cancelBtn', {
-                onclick: () => {
-                  revokeAll(this.postUploads);
-                  this.postUploads = [];
-                  this.postText    = '';
-                  this.postFocused = false;
-                  this.poll        = null;
-                  clearLinkPreview(this);
-                  m.redraw();
-                },
-              }, app.translator.trans('ernestdefoe-social-groups.forum.discussions.cancel_edit')),
-              m('button.SGFeed-postBtn', {
-                disabled: this.postSubmitting || (!this.postText.trim() && !this.postUploads.length && !this.poll) || this.postUploads.some((u) => u.uploading),
-                onclick:  () => this.submitPost(),
-              }, this.postSubmitting
-                  ? m('i.fa-solid.fa-spinner.fa-spin')
-                  : app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_button')),
-            ])
-          : null,
-      ]),
-    ]);
+      onFocus:        () => { this.postFocused = true; m.redraw(); },
+      onTextChange:   (e) => {
+        this.postText = e.target.value;
+        scheduleLinkPreview(this, e.target.value);
+        this.handleMentionInput('feed', e);
+      },
+      onPaste: (e) => {
+        const imgs = pastedImages(e);
+        if (imgs.length) { e.preventDefault(); handleFiles(this, imgs, 'postUploads', 'postText'); }
+      },
+      onKeydown: (e) => {
+        if (e.key === 'Escape' && this.mentionQuery !== null) {
+          e.stopPropagation();
+          this.mentionQuery = null;
+          this.mentionDiscId = null;
+          m.redraw();
+        }
+      },
+      onUploadFiles:  (files) => handleFiles(this, files, 'postUploads', 'postText'),
+      onRemoveUpload: (id) => removeUpload(this, id, 'postUploads', 'postText'),
+      onTogglePoll:   () => {
+        this.poll = this.poll
+          ? null
+          : { question: '', options: ['', ''], isMultiSelect: false };
+        m.redraw();
+      },
+      onPollChange: () => m.redraw(),
+      onCancel:     () => {
+        revokeAll(this.postUploads);
+        this.postUploads = [];
+        this.postText    = '';
+        this.postFocused = false;
+        this.poll        = null;
+        clearLinkPreview(this);
+        m.redraw();
+      },
+      onSubmit: () => this.submitPost(),
+    });
   }
 
   votePoll(d, optionId) {
