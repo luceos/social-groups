@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
+use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Flarum\Formatter\Formatter;
@@ -14,6 +15,8 @@ use Psr\Log\LoggerInterface;
 
 class ListGroupMediaController implements RequestHandlerInterface
 {
+    use ReadsRouteParam;
+
     private const PER_PAGE = 24;
 
     public function __construct(
@@ -26,11 +29,7 @@ class ListGroupMediaController implements RequestHandlerInterface
         try {
             $actor   = RequestUtil::getActor($request);
             $params  = $request->getQueryParams();
-            $groupId = (int) $request->getAttribute('groupId');
-            if (! $groupId) {
-                preg_match('#/sg-media/(\d+)#', $request->getUri()->getPath(), $m);
-                $groupId = (int) ($m[1] ?? 0);
-            }
+            $groupId = (int) ($this->routeParam($request, 'groupId', '/sg-media/{groupId}') ?? 0);
             $page    = max(1, (int) ($params['page'] ?? 1));
             $offset  = ($page - 1) * self::PER_PAGE;
 

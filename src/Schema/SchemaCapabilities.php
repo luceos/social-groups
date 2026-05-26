@@ -29,6 +29,14 @@ class SchemaCapabilities
     public readonly bool $reactions;
     public readonly bool $linkPreview;
 
+    /**
+     * Esta é uma das raras exceções legítimas a "prefira Eloquent ao
+     * `ConnectionInterface`" (CLAUDE.md §10 / §39.3). `getSchemaBuilder()`
+     * + `hasTable()` / `hasColumn()` não tem alternativa via Eloquent
+     * model — introspecção de schema é precisamente o que `ConnectionInterface`
+     * existe para expor. Nenhuma query sobre dados do usuário roda aqui;
+     * só DDL-state.
+     */
     public function __construct(ConnectionInterface $db)
     {
         $sb = $db->getSchemaBuilder();

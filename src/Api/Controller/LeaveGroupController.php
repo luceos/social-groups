@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
+use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -11,17 +12,14 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class LeaveGroupController implements RequestHandlerInterface
 {
+    use ReadsRouteParam;
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
         $actor->assertRegistered();
 
-        $params = $request->getQueryParams();
-        $id     = $params['id'] ?? null;
-        if (! $id) {
-            preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
-            $id = $m[1] ?? null;
-        }
+        $id    = $this->routeParam($request, 'id', '/social-groups/{id}');
         $group = SocialGroup::findOrFail($id);
 
         // Creators cannot leave their own group — they must delete it

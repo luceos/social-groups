@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
+use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Flarum\Http\RequestUtil;
 use Flarum\User\User;
@@ -13,6 +14,8 @@ use Psr\Log\LoggerInterface;
 
 class InviteUserController implements RequestHandlerInterface
 {
+    use ReadsRouteParam;
+
     public function __construct(private LoggerInterface $log) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -21,12 +24,7 @@ class InviteUserController implements RequestHandlerInterface
             $actor = RequestUtil::getActor($request);
             $actor->assertRegistered();
 
-            $params  = $request->getQueryParams();
-            $groupId = $params['id'] ?? null;
-            if (! $groupId) {
-                preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
-                $groupId = $m[1] ?? null;
-            }
+            $groupId = $this->routeParam($request, 'id', '/social-groups/{id}');
 
             $body     = (array) ($request->getParsedBody() ?? []);
             $username = trim((string) ($body['username'] ?? ''));

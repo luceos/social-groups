@@ -3,6 +3,7 @@
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
 use Carbon\Carbon;
+use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPostReaction;
@@ -15,6 +16,8 @@ use Psr\Log\LoggerInterface;
 
 class GroupAnalyticsController implements RequestHandlerInterface
 {
+    use ReadsRouteParam;
+
     public function __construct(private LoggerInterface $log) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -23,12 +26,7 @@ class GroupAnalyticsController implements RequestHandlerInterface
             $actor   = RequestUtil::getActor($request);
             $actor->assertRegistered();
 
-            $params  = $request->getQueryParams();
-            $groupId = $request->getAttribute('groupId') ?? ($params['groupId'] ?? null);
-            if (! $groupId) {
-                preg_match('#/sg-analytics/(\d+)#', $request->getUri()->getPath(), $m);
-                $groupId = $m[1] ?? null;
-            }
+            $groupId = $this->routeParam($request, 'groupId', '/sg-analytics/{groupId}');
             $group   = SocialGroup::findOrFail($groupId);
 
             $actorMember = $group->members()->where('user_id', $actor->id)->first();

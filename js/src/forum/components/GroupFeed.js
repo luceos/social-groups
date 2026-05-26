@@ -1,6 +1,6 @@
 import {
   apiPost,
-  listDiscussions, listThreadPosts, listMembers,
+  listDiscussions, listThreadPosts,
   createDiscussion, deleteDiscussion as apiDeleteDiscussion,
   createPost,
   pinDiscussion as apiPinDiscussion,
@@ -8,7 +8,7 @@ import {
 } from '../utils/api';
 import { pastedImages, handleFiles, removeUpload, revokeAll } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview } from '../utils/linkPreview';
-import { MentionDropdown } from './feed/MentionDropdown';
+import MentionTracker from '../utils/MentionTracker';
 import { PollComposer } from './feed/PollComposer';
 import { InlineCommentList } from './feed/InlineCommentList';
 import PostCard from './feed/PostCard';
@@ -62,12 +62,18 @@ export default class GroupFeed extends Component {
     this._rtFeedHandler   = null;        // sg:post-created DOM listener
     this.pickerCommentId  = null;        // post.id whose reaction picker is open
 
-    // @mention state
-    this.members          = null;        // cached member list; null = not yet loaded
-    this.membersLoading   = false;
-    this.mentionQuery     = null;        // string typed after '@', null = dropdown closed
-    this.mentionDiscId    = null;        // 'feed' | discussion.id (identifies active textarea)
-    this._mentionTa       = null;        // reference to the active textarea DOM element
+    // @mention state lives in a dedicated tracker — see utils/MentionTracker.
+    // The setText callback routes the spliced text back to the right slot:
+    // 'feed' → the top-of-feed composer; any other id → that discussion's
+    // inline reply text. Extracted from this component so the @mention
+    // logic is testable in isolation instead of tangled with feed state.
+    this.mentionTracker = new MentionTracker({
+      groupId: this.attrs.groupId,
+      setText: (discId, value) => {
+        if (discId === 'feed') this.postText = value;
+        else this.replyTexts[discId] = value;
+      },
+    });
   }
 
   oncreate(vnode) {
@@ -87,9 +93,7 @@ export default class GroupFeed extends Component {
         this.pickerCommentId = null;
         m.redraw();
       }
-      if (this.mentionQuery !== null && !e.target.closest('.SGFeed-mentionDropdown')) {
-        this.mentionQuery  = null;
-        this.mentionDiscId = null;
+      if (this.mentionTracker.closeIfOutside(e.target)) {
         m.redraw();
       }
     };
@@ -368,84 +372,6 @@ export default class GroupFeed extends Component {
 
   // ── @mention helpers ────────────────────────────────────────────────────
 
-  loadMembers() {
-    if (this.members !== null || this.membersLoading) return;
-    this.membersLoading = true;
-    listMembers(this.attrs.groupId)
-      .then((data) => {
-        this.members        = data.data || [];
-        this.membersLoading = false;
-        m.redraw();
-      })
-      .catch(() => {
-        this.members        = [];
-        this.membersLoading = false;
-      });
-  }
-
-  // Called from oninput — detects whether the cursor is right after an @mention.
-  handleMentionInput(discId, e) {
-    const ta  = e.target;
-    const pos = ta.selectionStart;
-    const before = ta.value.slice(0, pos);
-    // Match '@' followed by word chars at end of text before cursor.
-    const match = before.match(/@([\w-]*)$/);
-    if (match) {
-      this.mentionQuery  = match[1];
-      this.mentionDiscId = discId;
-      this._mentionTa    = ta;
-      this.loadMembers();
-    } else if (this.mentionDiscId === discId) {
-      this.mentionQuery  = null;
-      this.mentionDiscId = null;
-    }
-  }
-
-  insertMention(member) {
-    const ta = this._mentionTa;
-    if (!ta) return;
-
-    const pos    = ta.selectionStart;
-    const text   = ta.value;
-    const before = text.slice(0, pos);
-    const match  = before.match(/@([\w-]*)$/);
-    if (!match) { this.mentionQuery = null; return; }
-
-    const start    = pos - match[0].length;
-    const inserted = '@' + member.displayName + ' ';
-    const newText  = text.slice(0, start) + inserted + text.slice(pos);
-
-    if (this.mentionDiscId === 'feed') {
-      this.postText = newText;
-    } else {
-      this.replyTexts[this.mentionDiscId] = newText;
-    }
-
-    this.mentionQuery  = null;
-    this.mentionDiscId = null;
-    m.redraw();
-
-    // Restore cursor to end of inserted mention.
-    requestAnimationFrame(() => {
-      if (!ta.isConnected) return;
-      const newPos = start + inserted.length;
-      ta.value = newText;
-      ta.focus();
-      ta.setSelectionRange(newPos, newPos);
-    });
-  }
-
-  viewMentionDropdown(discId) {
-    if (this.mentionDiscId !== discId) return null;
-
-    return MentionDropdown({
-      members:  this.members,
-      loading:  this.membersLoading,
-      query:    this.mentionQuery,
-      onSelect: (member) => this.insertMention(member),
-    });
-  }
-
   toggleComments(d) {
     if (this.expandedDiscIds.has(d.id)) {
       this.expandedDiscIds.delete(d.id);
@@ -562,23 +488,21 @@ export default class GroupFeed extends Component {
       hasUploading:     this.postUploads.some((u) => u.uploading),
       poll:             this.poll,
       linkPreviewVnode: viewComposerLinkPreview(this),
-      mentionDropdown:  this.viewMentionDropdown('feed'),
+      mentionDropdown:  this.mentionTracker.viewDropdown('feed'),
 
       onFocus:        () => { this.postFocused = true; m.redraw(); },
       onTextChange:   (e) => {
         this.postText = e.target.value;
         scheduleLinkPreview(this, e.target.value);
-        this.handleMentionInput('feed', e);
+        this.mentionTracker.onInput('feed', e);
       },
       onPaste: (e) => {
         const imgs = pastedImages(e);
         if (imgs.length) { e.preventDefault(); handleFiles(this, imgs, 'postUploads', 'postText'); }
       },
       onKeydown: (e) => {
-        if (e.key === 'Escape' && this.mentionQuery !== null) {
+        if (e.key === 'Escape' && this.mentionTracker.close()) {
           e.stopPropagation();
-          this.mentionQuery = null;
-          this.mentionDiscId = null;
           m.redraw();
         }
       },
@@ -669,12 +593,10 @@ export default class GroupFeed extends Component {
       onDelete:         () => this.deleteDiscussion(d),
       onVotePoll:       (optionId) => this.votePoll(d, optionId),
       onReplyChange:    (text) => { this.replyTexts[d.id] = text; },
-      onReplyInput:     (e) => this.handleMentionInput(d.id, e),
+      onReplyInput:     (e) => this.mentionTracker.onInput(d.id, e),
       onReplyKeydown:   (e) => {
-        if (e.key === 'Escape' && this.mentionQuery !== null) {
+        if (e.key === 'Escape' && this.mentionTracker.close()) {
           e.stopPropagation();
-          this.mentionQuery = null;
-          this.mentionDiscId = null;
           m.redraw();
           return;
         }
@@ -684,7 +606,7 @@ export default class GroupFeed extends Component {
         }
       },
       onReplySubmit:    () => this.submitReply(d),
-      mentionDropdown:  this.viewMentionDropdown(d.id),
+      mentionDropdown:  this.mentionTracker.viewDropdown(d.id),
       inlineComments:   this.viewInlineComments(d),
     });
   }

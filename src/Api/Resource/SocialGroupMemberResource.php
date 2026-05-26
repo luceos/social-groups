@@ -75,9 +75,15 @@ class SocialGroupMemberResource extends AbstractDatabaseResource
             throw new PermissionDeniedException();
         }
 
+        // Eager-load both `user` and `group`. The latter feeds the
+        // `canModerate` and `canRemove` field getters, which each read
+        // `$m->group` once per row; without this `with`, a page of N
+        // members emits N+N extra group queries (all returning the same
+        // row, since every member of an Index page belongs to the same
+        // group). 41 queries → 3.
         $query->where('social_group_members.group_id', $groupId)
               ->whereNull('social_group_members.banned_at')
-              ->with('user');
+              ->with(['user', 'group']);
     }
 
     public function endpoints(): array

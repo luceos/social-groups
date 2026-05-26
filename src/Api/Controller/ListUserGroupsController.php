@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
+use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroupMember;
 use Flarum\Http\RequestUtil;
 use Flarum\User\User;
@@ -13,17 +14,15 @@ use Psr\Log\LoggerInterface;
 
 class ListUserGroupsController implements RequestHandlerInterface
 {
+    use ReadsRouteParam;
+
     public function __construct(private LoggerInterface $log) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         try {
             $actor  = RequestUtil::getActor($request);
-            $userId = (int) $request->getAttribute('userId');
-            if (! $userId) {
-                preg_match('#/sg-user-groups/(\d+)#', $request->getUri()->getPath(), $m);
-                $userId = (int) ($m[1] ?? 0);
-            }
+            $userId = (int) ($this->routeParam($request, 'userId', '/sg-user-groups/{userId}') ?? 0);
 
             $profileUser = User::find($userId);
             if (! $profileUser) {

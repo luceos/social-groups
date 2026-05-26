@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
+use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Flarum\Http\RequestUtil;
 use Flarum\User\Exception\PermissionDeniedException;
@@ -13,6 +14,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class UploadGroupImageController implements RequestHandlerInterface
 {
+    use ReadsRouteParam;
+
     public function __construct(
         protected FilesystemFactory $filesystem
     ) {
@@ -24,11 +27,7 @@ class UploadGroupImageController implements RequestHandlerInterface
         $actor->assertRegistered();
 
         $queryParams = $request->getQueryParams();
-        $id = $queryParams['id'] ?? null;
-        if (! $id) {
-            preg_match('#/social-groups/(\d+)#', $request->getUri()->getPath(), $m);
-            $id = $m[1] ?? null;
-        }
+        $id = $this->routeParam($request, 'id', '/social-groups/{id}');
 
         // Determine upload type from URL path (route params are in query params in Flarum 2)
         // or from an explicit 'type' query param override
@@ -64,15 +63,11 @@ class UploadGroupImageController implements RequestHandlerInterface
         // Read the stream once so we can both sniff and upload without rewinding
         $streamContents = $file->getStream()->getContents();
 
-        // Sniff actual MIME type — the client-supplied extension is untrusted
-        $tmpPath = tempnam(sys_get_temp_dir(), 'sg_upload_');
-        try {
-            file_put_contents($tmpPath, $streamContents);
-            $finfo    = new \finfo(FILEINFO_MIME_TYPE);
-            $mimeType = $finfo->file($tmpPath);
-        } finally {
-            @unlink($tmpPath);
-        }
+        // Sniff actual MIME type in-memory — the client-supplied extension is
+        // untrusted. Using `finfo::buffer()` avoids a temp-file dance and the
+        // tiny TOCTOU window between write and unlink that the previous
+        // tempnam() path opened in shared `/tmp`.
+        $mimeType = (new \finfo(FILEINFO_MIME_TYPE))->buffer($streamContents);
 
         $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (! in_array($mimeType, $allowedMimes, true)) {

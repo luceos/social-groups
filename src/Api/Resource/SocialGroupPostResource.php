@@ -396,11 +396,21 @@ class SocialGroupPostResource extends AbstractDatabaseResource
     /**
      * Discussion participants minus the actor — same shape the
      * legacy CreateGroupPostController used for top-level notifications.
+     *
+     * The pluck is capped at 500 distinct user_ids by reading only the
+     * most-recent posts: an active thread with thousands of posts from
+     * dozens of users does not need every author since the start of
+     * time loaded into memory just to derive a notification recipient
+     * set. The discussion starter is unconditionally appended so they
+     * are always notified even when they posted earlier than the
+     * 500-row window.
      */
     protected function discussionParticipants(SocialGroupDiscussion $discussion, int $actorId): array
     {
         $ids = SocialGroupPost::where('discussion_id', $discussion->id)
             ->where('user_id', '!=', $actorId)
+            ->orderByDesc('id')
+            ->take(500)
             ->pluck('user_id')
             ->push($discussion->user_id)
             ->unique()

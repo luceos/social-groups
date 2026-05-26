@@ -2,6 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
+use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
@@ -21,6 +22,8 @@ use Psr\Log\LoggerInterface;
  */
 class StoreGroupMediaPostController implements RequestHandlerInterface
 {
+    use ReadsRouteParam;
+
     public function __construct(private LoggerInterface $log) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -29,11 +32,7 @@ class StoreGroupMediaPostController implements RequestHandlerInterface
             $actor = RequestUtil::getActor($request);
             $actor->assertRegistered();
 
-            $groupId = (int) ($request->getQueryParams()['groupId'] ?? 0);
-            if (! $groupId) {
-                preg_match('#/sg-media-post/(\d+)#', $request->getUri()->getPath(), $m);
-                $groupId = (int) ($m[1] ?? 0);
-            }
+            $groupId = (int) ($this->routeParam($request, 'groupId', '/sg-media-post/{groupId}') ?? 0);
 
             $body    = (array) ($request->getParsedBody() ?? []);
             $content = trim((string) ($body['content'] ?? ''));
