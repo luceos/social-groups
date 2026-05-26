@@ -1,5 +1,11 @@
 # Social Groups for Flarum
 
+[![Floxum](https://floxum.com/extension/ernestdefoe/social-groups/badge/name)](https://floxum.com/extension/ernestdefoe/social-groups)
+[![Version](https://floxum.com/extension/ernestdefoe/social-groups/badge/highest-version)](https://floxum.com/extension/ernestdefoe/social-groups)
+[![Downloads](https://floxum.com/extension/ernestdefoe/social-groups/badge/downloads)](https://floxum.com/extension/ernestdefoe/social-groups)
+[![Review](https://floxum.com/extension/ernestdefoe/social-groups/badge/review)](https://floxum.com/extension/ernestdefoe/social-groups)
+[![License](https://floxum.com/extension/ernestdefoe/social-groups/badge/license)](https://floxum.com/extension/ernestdefoe/social-groups)
+
 ![Flarum 2.x](https://img.shields.io/badge/Flarum-2.x-3B2ADB?logo=flarum&logoColor=white)
 ![PHP 8.3+](https://img.shields.io/badge/PHP-8.3%2B-777BB4?logo=php&logoColor=white)
 ![License MIT](https://img.shields.io/badge/License-MIT-22c55e)
