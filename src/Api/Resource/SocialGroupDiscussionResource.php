@@ -6,7 +6,6 @@ use Ernestdefoe\SocialGroups\Access\GroupVisibility;
 use Ernestdefoe\SocialGroups\Api\Concern\SanitizesLinkPreview;
 use Ernestdefoe\SocialGroups\Model\SgPoll;
 use Ernestdefoe\SocialGroups\Model\SgPollOption;
-use Ernestdefoe\SocialGroups\Model\SgPollVote;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
@@ -23,23 +22,41 @@ use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
 /**
- * Recurso JSON:API para discussões em grupos sociais. Substituiu o
- * antigo `ListGroupDiscussionsController` (removido em Phase 2b do
- * audit #4); o JS chama via `listDiscussions()` em utils/api.js, que
- * projeta a resposta JSON:API no shape legado para que o restante do
- * pipeline de feed não precise mudar.
+ * JSON:API resource for social-group discussions. Replaced the legacy
+ * `ListGroupDiscussionsController` (removed in Phase 2b of audit #4);
+ * the JS calls it via `listDiscussions()` in utils/api.js, which
+ * projects the JSON:API response into the legacy shape so the rest of
+ * the feed pipeline doesn't need to change.
  *
- * Index requer `?filter[group]=<id>` (sem ele responde vazio). A
- * checagem de privacidade do grupo roda em scope(); o policy gate em
- * `view` cobre fetches individuais de Show. Search via `?filter[q]`
- * faz LIKE escapado em título e content do primeiro post. is_pinned e
- * sort por is_pinned só entram quando o `SchemaCapabilities` reporta
- * que a coluna existe — extensões instaladas antes da migração que a
- * cria continuam funcionando sem crash.
+ * Index requires `?filter[group]=<id>` (without it responds empty). The
+ * group privacy check runs in scope(); the policy gate on `view` covers
+ * individual Show fetches. Search via `?filter[q]` performs an escaped
+ * LIKE against title and first-post content. is_pinned and sorting by
+ * is_pinned only kick in when `SchemaCapabilities` reports the column
+ * exists — installs that pre-date the migration creating it keep
+ * working without a crash.
  */
 class SocialGroupDiscussionResource extends AbstractDatabaseResource
 {
     use SanitizesLinkPreview;
+
+    /**
+     * Per-request memo keyed by "actorId:groupId" → bool. The canDelete
+     * Schema field used to call `$group->members()->where(...)->exists()`
+     * on every row of an Index page; for 20 discussions all in the same
+     * group that meant 20 identical queries. Cache the answer once per
+     * (actor, group) pair so a paginated listing of N discussions in M
+     * groups runs at most M queries instead of N.
+     *
+     * The cache is per Resource instance — tobyz/jsonapi-server resolves
+     * the Resource fresh per JSON:API request, so the lifetime never
+     * leaks across actors. Reset on each scope() invocation as a belt-
+     * and-braces guard in case a future container binding turns this
+     * into a singleton (see CLAUDE.md §44.2).
+     *
+     * @var array<string, bool>
+     */
+    protected array $moderatorCheckCache = [];
 
     public function __construct(
         protected SchemaCapabilities $capabilities,
@@ -59,6 +76,8 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
 
     public function scope(Builder $query, BaseContext $context): void
     {
+        $this->moderatorCheckCache = [];
+
         $actor = RequestUtil::getActor($context->request);
         $params = $context->request->getQueryParams();
 
@@ -70,9 +89,11 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         // per-row visibility for that path.
         $isIndex = $context->endpoint instanceof Endpoint\Index;
         if (! $isIndex) {
-            // Eager loads still help here for the include=firstPost.user
-            // case — applied below after the group-scope branch.
-            $this->applyEagerLoads($query);
+            /*
+             * Eager loads still help here for the include=firstPost.user
+             * case — applied below after the group-scope branch.
+             */
+            $this->applyEagerLoads($query, $actor);
             return;
         }
 
@@ -84,9 +105,9 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         $groupId = isset($params['groupId']) ? (int) $params['groupId'] : 0;
 
         if ($groupId <= 0) {
-            // Sem filtro de grupo, recusamos retornar lista. Mantém o
-            // contrato do antigo /sg-discussions/{groupId}: discussões
-            // sempre são listadas dentro do escopo de UM grupo.
+            // Without a group filter, refuse to return a listing. Preserves
+            // the legacy /sg-discussions/{groupId} contract: discussions
+            // are always listed within the scope of ONE group.
             $query->whereRaw('1 = 0');
             return;
         }
@@ -128,28 +149,37 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         }
         $query->orderByDesc('social_group_discussions.last_posted_at');
 
-        $this->applyEagerLoads($query);
+        $this->applyEagerLoads($query, $actor);
     }
 
     /**
-     * Eager-loads para evitar N+1 quando os campos computados
-     * (`sharedFrom`, `poll`, `firstPost`) forem renderizados. Cada
-     * `with()` aqui economiza N consultas no escopo da página
-     * (20 discussões → 1 consulta por relação em vez de 20).
+     * Eager loads to avoid N+1 when the computed fields (`sharedFrom`,
+     * `poll`, `firstPost`) are rendered. Each `with()` here saves N
+     * queries across the page (20 discussions → 1 query per relation
+     * instead of 20).
      *
-     * `firstPost.reactions` é o que alimenta o campo `reactions` do
-     * SocialGroupPostResource — sem essa pré-carga, cada post incluído
-     * como firstPost emite 1 query extra de reactions.
+     * `firstPost.reactions` is what feeds the `reactions` field of
+     * SocialGroupPostResource — without this pre-load, every post
+     * included as firstPost fires 1 extra reactions query.
      *
-     * Compartilhado entre os branches Index e Show de scope() porque o
-     * include=firstPost.user via Show também se beneficia.
+     * Shared between scope()'s Index and Show branches because
+     * include=firstPost.user via Show also benefits.
      */
-    protected function applyEagerLoads(Builder $query): void
+    protected function applyEagerLoads(Builder $query, ?\Flarum\User\User $actor = null): void
     {
         $query->with([
             'user',
             'lastPostedUser',
             'firstPost.user',
+            /*
+             * The canDelete Schema field reaches into `$d->group` to
+             * resolve per-actor moderator status. Without this eager
+             * load, every row of an Index page fires a SELECT against
+             * `social_groups` to hydrate the relation — one query per
+             * discussion regardless of how many distinct groups are
+             * involved.
+             */
+            'group',
         ]);
 
         if ($this->capabilities->reactions) {
@@ -165,7 +195,28 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         }
 
         if ($this->capabilities->polls) {
-            $query->with('poll.options');
+            /*
+             * `withCount('votes')` on each option materialises a
+             * `votes_count` attribute via a single GROUP BY query for
+             * the entire page — replaces the per-row
+             * `SgPollVote::whereIn(...)` that buildPoll() used to run
+             * for every discussion with a poll. The actor's own votes
+             * are eager-loaded into `poll.votes` constrained by
+             * `user_id = $actor->id`, which is one more query for the
+             * whole page (and skipped entirely for guests).
+             *
+             * Net: 20 discussions × 15 polls used to be 30 queries
+             * (vote-count + actor-vote per poll). Now it's 2 — one
+             * `withCount`, one constrained `with`.
+             */
+            $query->with([
+                'poll.options' => fn ($q) => $q->withCount('votes'),
+            ]);
+            if ($actor !== null && $actor->exists) {
+                $query->with([
+                    'poll.votes' => fn ($q) => $q->where('user_id', $actor->id),
+                ]);
+            }
         }
     }
 
@@ -337,14 +388,11 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
                     ) {
                         return true;
                     }
-                    $group = $d->group;
-                    if ($group === null) {
-                        return false;
-                    }
-                    return $group->members()
-                        ->where('user_id', $actor->id)
-                        ->whereIn('role', ['creator', 'moderator'])
-                        ->exists();
+                    return $this->isGroupModerator(
+                        (int) $actor->id,
+                        (int) $d->group_id,
+                        $d->group,
+                    );
                 }),
 
             Schema\Boolean::make('canShare')
@@ -391,13 +439,54 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
     }
 
     /**
-     * Constrói a estrutura denormalizada de "compartilhado de" no
-     * formato esperado pelo frontend (SGFeed-sharedCard). Lê das
-     * relações pré-carregadas em scope() — `sharedFromDiscussion`,
+     * Builds the denormalised "shared from" structure in the shape the
+     * frontend expects (SGFeed-sharedCard). Reads from the relations
+     * eager-loaded in scope() — `sharedFromDiscussion`,
      * `sharedFromDiscussion.group`, `sharedFromDiscussion.firstPost.user`.
-     * Se a coluna `shared_from_discussion_id` ainda não foi migrada,
-     * o campo já é hidden via `visible()` — esta função não roda.
+     * If `shared_from_discussion_id` hasn't been migrated yet, the field
+     * is already hidden via `visible()` — this function doesn't run.
      */
+    /**
+     * Memoized check — is the actor a group moderator/creator for the
+     * given group? Cached on $this->moderatorCheckCache (reset per
+     * request in scope()). Group membership state doesn't change within
+     * a single API request, so one query per (actor, group) pair is the
+     * minimum work this can do.
+     *
+     * Takes `?SocialGroup $group` so callers that have the eager-loaded
+     * relation in hand can skip a re-fetch. If $group is null AND the
+     * cache miss path runs, we fall back to a direct membership query
+     * against the pivot table — keeps the helper correct in include
+     * paths where group wasn't loaded.
+     */
+    protected function isGroupModerator(int $actorId, int $groupId, ?SocialGroup $group): bool
+    {
+        if ($actorId <= 0 || $groupId <= 0) {
+            return false;
+        }
+        $key = $actorId . ':' . $groupId;
+        if (isset($this->moderatorCheckCache[$key])) {
+            return $this->moderatorCheckCache[$key];
+        }
+
+        if ($group !== null) {
+            $result = $group->members()
+                ->where('user_id', $actorId)
+                ->whereIn('role', ['creator', 'moderator'])
+                ->exists();
+        } else {
+            $result = SocialGroup::query()
+                ->where('id', $groupId)
+                ->whereHas('members', fn ($q) =>
+                    $q->where('user_id', $actorId)
+                      ->whereIn('role', ['creator', 'moderator'])
+                )
+                ->exists();
+        }
+
+        return $this->moderatorCheckCache[$key] = $result;
+    }
+
     protected function buildSharedFrom(SocialGroupDiscussion $d): ?array
     {
         $orig = $d->sharedFromDiscussion;
@@ -420,14 +509,17 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
     }
 
     /**
-     * Constrói o payload de poll no formato que o frontend espera. As
-     * contagens de voto por opção e o voto do actor exigem queries
-     * adicionais — fazemos um único batch query por discussão com
-     * poll. Para um feed com N discussões e M com poll, isso é 2*M
-     * queries em vez de N+M (sem batching seria 2*M ou pior; com
-     * batching de scope haveria 1 query global, mas adiar essa
-     * otimização não compensa enquanto o número médio de polls por
-     * página for baixo).
+     * Builds the poll payload in the frontend's expected shape, reading
+     * entirely from the eager-loaded relation tree:
+     *
+     *   • `$option->votes_count` — materialised by `withCount('votes')`
+     *     in applyEagerLoads(); one GROUP BY query for the whole page.
+     *   • `$poll->votes` — constrained eager-load of the actor's votes
+     *     in applyEagerLoads(); one SELECT for the whole page.
+     *
+     * Net per Index page: 2 extra queries regardless of how many
+     * discussions carry polls. Was 2N before (one count + one
+     * actor-vote query per discussion-with-poll).
      */
     protected function buildPoll(SocialGroupDiscussion $d, Context $context): ?array
     {
@@ -438,31 +530,31 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         $actor   = $context->getActor();
         $options = $poll->options->sortBy('sort_order');
 
-        $optionIds   = $options->pluck('id')->all();
-        $voteCounts  = SgPollVote::whereIn('option_id', $optionIds)
-            ->selectRaw('option_id, COUNT(*) as cnt')
-            ->groupBy('option_id')
-            ->pluck('cnt', 'option_id')
-            ->all();
-
-        $actorVotes = $actor->exists
-            ? SgPollVote::where('poll_id', $poll->id)
-                ->where('user_id', $actor->id)
-                ->pluck('option_id')
-                ->all()
+        /*
+         * `votes_count` is loaded by `withCount` on the options relation.
+         * The actor's option ids come straight from the eager-loaded
+         * `votes` collection on the poll — `poll.votes` is constrained
+         * to `user_id = actor.id` upstream, so no per-row filtering is
+         * needed here. Guests have an empty `votes` collection (the
+         * constrained eager-load is skipped for them).
+         */
+        $actorVotes = $actor->exists && $poll->relationLoaded('votes')
+            ? $poll->votes->pluck('option_id')->all()
             : [];
+
+        $totalVotes = (int) $options->sum(fn ($o) => (int) ($o->votes_count ?? 0));
 
         return [
             'id'                  => (int) $poll->id,
             'question'            => $poll->question,
             'isMultiSelect'       => (bool) $poll->is_multi_select,
             'endsAt'              => $poll->ends_at?->toIso8601String(),
-            'totalVotes'          => (int) array_sum($voteCounts),
+            'totalVotes'          => $totalVotes,
             'actorVotedOptionIds' => array_map('intval', $actorVotes),
             'options'             => $options->map(fn ($o) => [
                 'id'        => (int) $o->id,
                 'text'      => $o->text,
-                'voteCount' => (int) ($voteCounts[$o->id] ?? 0),
+                'voteCount' => (int) ($o->votes_count ?? 0),
             ])->values()->all(),
         ];
     }
@@ -474,12 +566,12 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
 
         $groupId = (int) ($model->group_id ?? 0);
         if ($groupId <= 0) {
-            throw new BadRequestException('groupId é obrigatório');
+            throw new BadRequestException('groupId is required');
         }
 
         $group = SocialGroup::find($groupId);
         if ($group === null) {
-            throw new BadRequestException('Grupo não encontrado');
+            throw new BadRequestException('Group not found');
         }
 
         $isMember = $group->members()->where('user_id', $actor->id)->exists();

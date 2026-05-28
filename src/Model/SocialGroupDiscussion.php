@@ -49,10 +49,10 @@ class SocialGroupDiscussion extends AbstractModel
     }
 
     /**
-     * Relação para o "primeiro post" da discussão — o mais antigo por
-     * `created_at`. Usa `oneOfMany` do Laravel para que o
-     * SocialGroupDiscussionResource possa fazer eager loading via
-     * `include=firstPost` sem incorrer em N+1.
+     * Relation for the discussion's "first post" — the oldest by
+     * `created_at`. Uses Laravel's `oneOfMany` so that
+     * SocialGroupDiscussionResource can eager-load via
+     * `include=firstPost` without incurring N+1.
      */
     public function firstPost()
     {
@@ -71,8 +71,9 @@ class SocialGroupDiscussion extends AbstractModel
     }
 
     /**
-     * Enquete associada à discussão (1:1). Existe quando `sg_polls`
-     * estiver instalada; o SchemaCapabilities filtra os call sites.
+     * Poll associated with the discussion (1:1). Present when
+     * `sg_polls` is installed; SchemaCapabilities filters the call
+     * sites.
      */
     public function poll()
     {

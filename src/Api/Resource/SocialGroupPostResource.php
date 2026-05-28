@@ -27,29 +27,45 @@ use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
 /**
- * Recurso JSON:API para SocialGroupPost.
+ * JSON:API resource for SocialGroupPost.
  *
- * Originalmente este recurso existia apenas para satisfazer o
- * NotificationResource (polimorfismo de subject — sem ele, o
- * `?include=subject` em /api/notifications quebrava com TypeError —
- * ver vendor/flarum/json-api-server/src/Endpoint/Concerns/IncludesData.php:84).
+ * Originally this resource existed only to satisfy NotificationResource
+ * (subject polymorphism — without it, `?include=subject` on
+ * /api/notifications crashed with a TypeError; see
+ * vendor/flarum/json-api-server/src/Endpoint/Concerns/IncludesData.php:84).
  *
- * Agora também é o backing store para o include `firstPost` do
- * SocialGroupDiscussionResource e para a listagem de thread posts
- * (filter[discussion]=N). Endpoints CRUD (create/update/delete/pin/
- * react) seguem em controllers clássicos — são ações específicas que
- * não cabem no contrato puro CRUD do JSON:API.
+ * It is now also the backing store for SocialGroupDiscussionResource's
+ * `firstPost` include and for thread-post listings
+ * (filter[discussion]=N). CRUD endpoints (create/update/delete/pin/
+ * react) live in classic controllers — they are specific actions that
+ * don't fit JSON:API's pure CRUD contract.
  *
- * `reactions` e `actorReaction` são computados a partir da relação
- * `reactions()` que precisa ser pre-carregada via `with()` no scope()
- * do recurso que estiver listando — caso contrário, cada post emite
- * uma query extra (N+1) para resolver. O include `?include=firstPost`
- * já dispara isso através do `eagerLoad` configurado no
+ * `reactions` and `actorReaction` are computed from the `reactions()`
+ * relation, which must be pre-loaded via `with()` in the listing
+ * resource's scope() — otherwise each post fires an extra query (N+1)
+ * to resolve it. The `?include=firstPost` include already triggers
+ * this through the `eagerLoad` configured in
  * SocialGroupDiscussionResource.
  */
 class SocialGroupPostResource extends AbstractDatabaseResource
 {
     use SanitizesLinkPreview;
+
+    /**
+     * Per-request memo for the group-moderator gate. canDelete and
+     * canPin both call isInGroupModerator() for every Post in an Index
+     * listing; a 50-post thread on a regular member used to fire 100
+     * identical correlated subqueries against social_groups +
+     * social_group_members. Every post in a thread shares the same
+     * `group_id`, so caching by (actor_id, group_id) collapses the
+     * whole page to a single check.
+     *
+     * Reset on each scope() invocation as a belt-and-braces guard
+     * against the Resource being container-cached (see CLAUDE.md §44.2).
+     *
+     * @var array<string, bool>
+     */
+    protected array $moderatorCheckCache = [];
 
     public function __construct(
         protected Formatter $formatter,
@@ -72,25 +88,30 @@ class SocialGroupPostResource extends AbstractDatabaseResource
 
     public function scope(Builder $query, BaseContext $context): void
     {
+        $this->moderatorCheckCache = [];
+
         $actor = RequestUtil::getActor($context->request);
 
         // scope() runs for both Index and Show/include paths. Three
         // distinct branches:
-        //   1. Index + discussionId=N  → discussion-specific listing.
-        //   2. Index sem discussionId   → recusa (não queremos vazar
-        //      posts globalmente; o frontend sempre passa o param).
-        //   3. Show / include          → lookup por PK; aplica só o
-        //      filtro de visibilidade de grupo, sem exigir o param.
+        //   1. Index + discussionId=N → discussion-specific listing.
+        //   2. Index without discussionId → refuse (we don't want to
+        //      leak posts globally; the frontend always passes the
+        //      param).
+        //   3. Show / include → PK lookup; applies only the
+        //      group-visibility filter, without requiring the param.
         $isIndex = $context->endpoint instanceof Endpoint\Index;
         $params  = $context->request->getQueryParams();
         $discId  = isset($params['discussionId']) ? (int) $params['discussionId'] : 0;
 
         if ($isIndex) {
             if ($discId <= 0) {
-                // Index sem filtro de discussão: nunca devolve nada.
-                // Evita que `?include=posts` em outro endpoint vire
-                // listagem global de posts visíveis (vazaria via
-                // visibilidade-de-grupo, mas seria caro e inesperado).
+                // Index without a discussion filter: never returns
+                // anything. Prevents `?include=posts` on another
+                // endpoint from turning into a global listing of
+                // visible posts (it would leak only via group
+                // visibility, but the cost would be high and the
+                // behaviour unexpected).
                 $query->whereRaw('1 = 0');
                 return;
             }
@@ -105,8 +126,9 @@ class SocialGroupPostResource extends AbstractDatabaseResource
             }
             $query->where('social_group_posts.discussion_id', $discId);
 
-            // Pinned no topo, depois cronológico — espelha o controller
-            // legado e bate com o índice composto (discussion_id, is_pinned).
+            // Pinned at the top, then chronological — mirrors the legacy
+            // controller and matches the compound index
+            // (discussion_id, is_pinned).
             if ($this->capabilities->isPinned) {
                 $query->orderByDesc('social_group_posts.is_pinned');
             }
@@ -119,10 +141,10 @@ class SocialGroupPostResource extends AbstractDatabaseResource
             return;
         }
 
-        // Show / include path: lookup por PK ou hidratação polimórfica
-        // (ex.: notificação que aponta um post como subject). Admin /
-        // moderador veem qualquer post; resto fica restrito por
-        // visibilidade-de-grupo via subquery batch.
+        // Show / include path: PK lookup or polymorphic hydration
+        // (e.g. notification pointing at a post as its subject). Admins
+        // / moderators see any post; everyone else is restricted by
+        // group visibility via a batch subquery.
         if ($actor->isAdmin()
             || $actor->hasPermission('ernestdefoe-social-groups.moderate')
         ) {
@@ -538,17 +560,24 @@ class SocialGroupPostResource extends AbstractDatabaseResource
     }
 
     /**
-     * "Membro do grupo com papel creator/moderator?" — usado pelos
-     * gates canDelete e canPin. Esta checagem replicava 4 vezes no
-     * código antigo; centralizando aqui evita o drift que o helper
-     * GroupVisibility::canSee resolveu para visibility.
+     * "Is the actor a group creator/moderator?" — used by both the
+     * canDelete and canPin Schema gates. Memoized on
+     * $this->moderatorCheckCache so a paginated thread of N posts in
+     * the same group runs the underlying correlated subquery exactly
+     * once (was N × 2 before the cache).
      */
     protected function isInGroupModerator($actor, int $groupId): bool
     {
         if (! $actor->exists || $groupId <= 0) {
             return false;
         }
-        return \Ernestdefoe\SocialGroups\Model\SocialGroup::query()
+
+        $key = ((int) $actor->id) . ':' . $groupId;
+        if (isset($this->moderatorCheckCache[$key])) {
+            return $this->moderatorCheckCache[$key];
+        }
+
+        $result = \Ernestdefoe\SocialGroups\Model\SocialGroup::query()
             ->where('id', $groupId)
             ->whereExists(function ($sub) use ($actor) {
                 $sub->from('social_group_members')
@@ -557,13 +586,15 @@ class SocialGroupPostResource extends AbstractDatabaseResource
                     ->whereIn('role', ['creator', 'moderator']);
             })
             ->exists();
+
+        return $this->moderatorCheckCache[$key] = $result;
     }
 
     /**
-     * Renderiza o conteúdo via formatter. Em caso de falha (parseado
-     * inconsistente, source malformed após migração), cai para escape
-     * + nl2br como no antigo controller — nunca explode a renderização
-     * do feed inteiro por causa de UM post problemático.
+     * Renders the content via the formatter. On failure (inconsistent
+     * parsed value, malformed source after migration), falls back to
+     * escape + nl2br like the legacy controller — never blow up the
+     * entire feed render because of ONE problematic post.
      */
     protected function renderContent(SocialGroupPost $post): string
     {
@@ -578,10 +609,10 @@ class SocialGroupPostResource extends AbstractDatabaseResource
     }
 
     /**
-     * Agrupa as reactions pré-carregadas (via with('reactions') no
-     * scope do listador) em `{reaction: count}`. Cast para object para
-     * que o JSON:API sirva como `{}` em vez de `[]` quando não houver
-     * reactions — o frontend espera object.
+     * Groups the pre-loaded reactions (via with('reactions') in the
+     * listing scope) into `{reaction: count}`. Cast to object so that
+     * the JSON:API payload serialises as `{}` instead of `[]` when
+     * there are no reactions — the frontend expects an object.
      */
     protected function aggregateReactions(SocialGroupPost $post): object
     {

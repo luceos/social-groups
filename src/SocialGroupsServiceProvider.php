@@ -6,11 +6,11 @@ use Ernestdefoe\SocialGroups\Schema\SchemaCapabilities;
 use Flarum\Foundation\AbstractServiceProvider;
 
 /**
- * Bindings de container da extensão.
+ * Container bindings for the extension.
  *
- * `SchemaCapabilities` é resolvido como singleton: o objeto sonda o
- * banco apenas no primeiro `make()` do processo. Migrações novas exigem
- * `cache:clear` + restart de workers, prática-padrão de deploy Flarum.
+ * `SchemaCapabilities` is resolved as a singleton: the object probes the
+ * database only on the first `make()` of the process. New migrations
+ * require `cache:clear` + worker restart, standard Flarum deploy practice.
  */
 class SocialGroupsServiceProvider extends AbstractServiceProvider
 {

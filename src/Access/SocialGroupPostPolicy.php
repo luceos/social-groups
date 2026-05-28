@@ -7,19 +7,18 @@ use Flarum\User\Access\AbstractPolicy;
 use Flarum\User\User;
 
 /**
- * Política de SocialGroupPost — consultada pelos
- * `Endpoint\Update->can('edit')` e `Endpoint\Delete->can('delete')`
- * em SocialGroupPostResource.
+ * SocialGroupPost policy — consulted by
+ * `Endpoint\Update->can('edit')` and `Endpoint\Delete->can('delete')`
+ * on SocialGroupPostResource.
  *
- * Retornar `null` deixa o pipeline seguir e default-denies; use
- * `$this->allow()` para liberar explicitamente quando todas as
- * pré-condições passarem.
+ * Returning `null` lets the pipeline continue and default-denies; use
+ * `$this->allow()` to allow explicitly when all preconditions pass.
  */
 class SocialGroupPostPolicy extends AbstractPolicy
 {
     /**
-     * Edit: somente o autor, e apenas se ele ainda for membro ativo
-     * (não banido) do grupo. Admin global passa sempre.
+     * Edit: only the author, and only if they are still an active
+     * (non-banned) member of the group. Global admin always passes.
      */
     public function edit(User $actor, SocialGroupPost $post)
     {
@@ -41,8 +40,8 @@ class SocialGroupPostPolicy extends AbstractPolicy
     }
 
     /**
-     * Delete: autor, admin global, moderador global da extensão, ou
-     * creator/moderator do próprio grupo.
+     * Delete: author, global admin, extension's global moderator, or
+     * the group's own creator/moderator.
      */
     public function delete(User $actor, SocialGroupPost $post)
     {
@@ -64,9 +63,9 @@ class SocialGroupPostPolicy extends AbstractPolicy
     }
 
     /**
-     * Pin: ação de moderação. Autor sozinho NÃO pode pinnar o próprio
-     * post — só admin global, moderador global da extensão, ou
-     * creator/moderator do grupo onde o post mora.
+     * Pin: moderation action. The author alone CANNOT pin their own
+     * post — only global admin, extension's global moderator, or the
+     * creator/moderator of the group where the post lives.
      */
     public function pin(User $actor, SocialGroupPost $post)
     {
@@ -85,8 +84,8 @@ class SocialGroupPostPolicy extends AbstractPolicy
     }
 
     /**
-     * React: qualquer membro ativo do grupo (não banido) pode reagir.
-     * Bloqueia enumeração de IDs sequenciais por estranhos.
+     * React: any active (non-banned) group member can react. Blocks
+     * sequential-ID enumeration by outsiders.
      */
     public function react(User $actor, SocialGroupPost $post)
     {

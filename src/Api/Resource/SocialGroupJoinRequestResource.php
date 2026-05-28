@@ -15,16 +15,17 @@ use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
 /**
- * Recurso JSON:API para pedidos de membership pendentes em um grupo.
- * Substitui ListJoinRequestsController + ApproveJoinRequestController
+ * JSON:API resource for pending membership requests against a group.
+ * Replaces ListJoinRequestsController + ApproveJoinRequestController
  * + RejectJoinRequestController.
  *
- * Index requer `?filter[group]=<id>` e que o actor seja dono do grupo
- * ou admin (filtros adicionais como `status=pending` ficam no scope).
- * Approve é um Endpoint\Endpoint::make() action que muda status para
- * 'approved' e cria a linha de membership se ainda não existir.
- * Delete (rejeitar) marca o status como 'rejected' em vez de fazer
- * hard delete, preservando o histórico para anti-spam.
+ * Index requires `?filter[group]=<id>` and that the actor be the group
+ * owner or an admin (additional filters such as `status=pending` live
+ * in scope). Approve is an Endpoint\Endpoint::make() action that flips
+ * the status to 'approved' and creates the membership row if it
+ * doesn't already exist. Delete (reject) marks the status as
+ * 'rejected' instead of hard-deleting, preserving the history for
+ * anti-spam purposes.
  */
 class SocialGroupJoinRequestResource extends AbstractDatabaseResource
 {
@@ -68,8 +69,8 @@ class SocialGroupJoinRequestResource extends AbstractDatabaseResource
         }
 
         $actor->assertRegistered();
-        // Listing pedidos é privilégio só de dono do grupo ou admin —
-        // mesma regra que ListJoinRequestsController usava.
+        // Listing requests is privileged to the group owner or admins
+        // only — same rule ListJoinRequestsController used.
         if ((int) $actor->id !== (int) $group->user_id && ! $actor->isAdmin()) {
             throw new PermissionDeniedException();
         }
@@ -91,9 +92,10 @@ class SocialGroupJoinRequestResource extends AbstractDatabaseResource
                 ->can('approve')
                 ->action(fn (Context $context) => $this->doApprove($context)),
 
-            // Reject é soft (status='rejected') em vez de hard delete
-            // para que tentativas repetidas do mesmo usuário não criem
-            // floods de pedidos pendentes — o dono já decidiu.
+            // Reject is soft (status='rejected') instead of a hard
+            // delete so that repeated attempts by the same user don't
+            // create floods of pending requests — the owner already
+            // decided.
             Endpoint\Endpoint::make('social-group-join-requests.reject')
                 ->route('DELETE', '/{id}')
                 ->authenticated()
@@ -132,9 +134,9 @@ class SocialGroupJoinRequestResource extends AbstractDatabaseResource
     }
 
     /**
-     * Aprova o pedido + cria a linha de membership idempotente +
-     * incrementa member_count denormalizado. Mirror do
-     * ApproveJoinRequestController legado.
+     * Approves the request + creates the membership row idempotently +
+     * increments the denormalised member_count. Mirrors the legacy
+     * ApproveJoinRequestController.
      */
     protected function doApprove(Context $context): SocialGroupJoinRequest
     {

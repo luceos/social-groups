@@ -357,7 +357,12 @@ export default class GroupFeed extends Component {
     this.commentsLoading[d.id] = true;
     m.redraw();
 
-    listThreadPosts(d.id)
+    /*
+     * Inline-comments preview under a feed card — fetch the first page
+     * only (30 posts). Long discussions show the comment count as a
+     * "View thread" affordance instead of inflating the feed payload.
+     */
+    listThreadPosts(d.id, { offset: 0, limit: 30 })
       .then((data) => {
         // posts[0] is the first post (already shown as card body) — skip it.
         this.loadedComments[d.id]  = (data.data || []).slice(1);

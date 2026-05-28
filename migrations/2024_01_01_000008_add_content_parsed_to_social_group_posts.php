@@ -1,18 +1,7 @@
 <?php
 
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Flarum\Database\Migration;
 
-return [
-    'up' => function (Builder $schema) {
-        $schema->table('social_group_posts', function (Blueprint $table) {
-            $table->mediumText('content_parsed')->nullable()->after('content');
-        });
-    },
-
-    'down' => function (Builder $schema) {
-        $schema->table('social_group_posts', function (Blueprint $table) {
-            $table->dropColumn('content_parsed');
-        });
-    },
-];
+return Migration::addColumns('social_group_posts', [
+    'content_parsed' => ['mediumText', 'nullable' => true, 'after' => 'content'],
+]);

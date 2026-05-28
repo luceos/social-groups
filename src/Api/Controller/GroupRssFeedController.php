@@ -7,6 +7,7 @@ use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Flarum\Foundation\Config;
 use Flarum\Formatter\Formatter;
+use Flarum\Settings\SettingsRepositoryInterface;
 use Laminas\Diactoros\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -19,6 +20,7 @@ class GroupRssFeedController implements RequestHandlerInterface
         private Formatter $formatter,
         private LoggerInterface $log,
         private Config $config,
+        private SettingsRepositoryInterface $settings,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -96,7 +98,7 @@ class GroupRssFeedController implements RequestHandlerInterface
                 '  <title>'         . $this->esc($group->name)              . '</title>',
                 '  <link>'          . $this->esc($groupUrl)                 . '</link>',
                 '  <description>'   . $this->esc($group->description ?? '') . '</description>',
-                '  <language>en</language>',
+                '  <language>' . $this->esc($this->resolveLanguageTag()) . '</language>',
                 '  <lastBuildDate>' . $this->esc($lastBuildDate)            . '</lastBuildDate>',
                 '  <atom:link href="' . $this->esc($feedUrl) . '" rel="self" type="application/rss+xml" />',
                 $items,
@@ -118,6 +120,28 @@ class GroupRssFeedController implements RequestHandlerInterface
     private function esc(string $value): string
     {
         return htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+    }
+
+    /**
+     * Resolves the forum's default locale to an RFC 5646 language tag
+     * suitable for the RSS `<language>` element. Flarum stores locales as
+     * `en`, `pt-BR`, `de`, `fr-FR`, etc. — which are already RFC 5646
+     * conformant. Normalizes the region segment to upper-case if present
+     * so feed validators don't complain about `pt-br` vs `pt-BR`.
+     */
+    private function resolveLanguageTag(): string
+    {
+        $raw = (string) ($this->settings->get('default_locale') ?? 'en');
+        $raw = trim($raw);
+        if ($raw === '') {
+            return 'en';
+        }
+
+        if (str_contains($raw, '-')) {
+            [$lang, $region] = explode('-', $raw, 2);
+            return strtolower($lang) . '-' . strtoupper($region);
+        }
+        return strtolower($raw);
     }
 
     private function xmlError(string $message, int $status): ResponseInterface

@@ -2238,6 +2238,35 @@
 }
 
 // ============================================================
+// Load More — paginated thread tail
+// ============================================================
+//
+// Renders beneath .SGThread-posts when the thread has more replies past
+// the current PAGE_SIZE window. Centred, full-width button with a
+// modest neutral surface so it reads as "more content available" rather
+// than competing with reply actions.
+.SGThread-loadMore {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+
+.SGThread-loadMoreBtn {
+  align-self: center;
+  min-width: 200px;
+  height: 36px;
+  border-radius: 18px;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.SGThread-loadMoreError {
+  margin: 0;
+}
+
+// ============================================================
 // Nested replies in SGThread
 // ============================================================
 

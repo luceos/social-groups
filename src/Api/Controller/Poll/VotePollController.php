@@ -8,6 +8,7 @@ use Ernestdefoe\SocialGroups\Model\SgPoll;
 use Ernestdefoe\SocialGroups\Model\SgPollVote;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Flarum\Http\RequestUtil;
+use Illuminate\Database\ConnectionInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -21,6 +22,7 @@ class VotePollController implements RequestHandlerInterface
 
     public function __construct(
         private LoggerInterface $log,
+        private ConnectionInterface $db,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -71,16 +73,14 @@ class VotePollController implements RequestHandlerInterface
                 return new JsonResponse(['error' => 'This poll only allows one choice.'], 422);
             }
 
-            // Replace existing votes atomically. Without the transaction
-            // the delete+insert pair is observable mid-flight by a
-            // concurrent reader (they'd see zero votes for this actor)
-            // and a failure on insert leaves the actor with no votes at
-            // all even though they had votes before the request. We
-            // borrow the connection from the model itself instead of
-            // injecting ConnectionInterface — keeps the controller
-            // dependency-light and the transaction scoped to the
-            // connection SgPollVote actually writes against.
-            SgPollVote::query()->getConnection()->transaction(function () use ($pollId, $optionIds, $actor) {
+            /*
+             * Replace existing votes atomically. Without the transaction
+             * the delete+insert pair is observable mid-flight by a
+             * concurrent reader (they'd see zero votes for this actor)
+             * and a failure on insert leaves the actor with no votes at
+             * all even though they had votes before the request.
+             */
+            $this->db->transaction(function () use ($pollId, $optionIds, $actor) {
                 SgPollVote::where('poll_id', $pollId)
                     ->where('user_id', $actor->id)
                     ->delete();

@@ -16,16 +16,16 @@ use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
 /**
- * Recurso JSON:API para SocialGroupMember (linha de membership de um
- * grupo). Substituiu ListGroupMembersController + Promote/Demote/Kick
- * controllers — todos viraram Index/Delete/Endpoint actions aqui.
+ * JSON:API resource for SocialGroupMember (one group-membership row).
+ * Replaced ListGroupMembersController + Promote/Demote/Kick controllers
+ * — all of them became Index/Delete/Endpoint actions here.
  *
- * Index requer `?filter[group]=<id>` (sem ele responde vazio). A
- * checagem de privacidade do grupo roda em scope(); membros banidos
- * (banned_at != null) são excluídos por padrão.
+ * Index requires `?filter[group]=<id>` (without it responds empty). The
+ * group privacy check runs in scope(); banned members (banned_at != null)
+ * are excluded by default.
  *
- * Promote/demote são `Endpoint\Endpoint::make()` actions e exigem ser
- * o creator do próprio grupo (`->can('promote'|'demote')` consulta
+ * Promote/demote are `Endpoint\Endpoint::make()` actions and require
+ * being the creator of the group (`->can('promote'|'demote')` consults
  * SocialGroupMemberPolicy).
  */
 class SocialGroupMemberResource extends AbstractDatabaseResource
@@ -92,12 +92,12 @@ class SocialGroupMemberResource extends AbstractDatabaseResource
             Endpoint\Index::make()
                 ->defaultInclude(['user']),
 
-            // "Kick" é soft-delete (set banned_at) em vez de remoção
-            // física da row — preserva o histórico de membership e
-            // permite que outras features ("este usuário foi banido,
-            // não re-admita") consultem o motivo. Endpoint\Delete
-            // hard-deletaria, então usamos um Endpoint customizado
-            // com verb DELETE mas semântica soft.
+            // "Kick" is soft-delete (set banned_at) rather than a hard
+            // row removal — preserves the membership history and lets
+            // other features ("this user was banned, don't re-admit")
+            // consult the reason. Endpoint\Delete would hard-delete, so
+            // we use a custom Endpoint with verb DELETE but soft
+            // semantics.
             Endpoint\Endpoint::make('social-group-members.kick')
                 ->route('DELETE', '/{id}')
                 ->authenticated()
@@ -186,16 +186,16 @@ class SocialGroupMemberResource extends AbstractDatabaseResource
     }
 
     /**
-     * Soft-kick: set `banned_at` em vez de DELETE físico, espelhando
-     * o KickGroupMemberController legado. Decrementa o
-     * `member_count` denormalizado do grupo.
+     * Soft-kick: set `banned_at` instead of a physical DELETE,
+     * mirroring the legacy KickGroupMemberController. Decrements the
+     * group's denormalised `member_count`.
      */
     protected function doKick(Context $context): SocialGroupMember
     {
         /** @var SocialGroupMember $target */
         $target = $context->model;
 
-        // Idempotente: já banido, no-op (mas devolve 200, não 404).
+        // Idempotent: already banned, no-op (but returns 200, not 404).
         if ($target->banned_at !== null) {
             return $target;
         }

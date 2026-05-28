@@ -7,18 +7,20 @@ use Flarum\User\Access\AbstractPolicy;
 use Flarum\User\User;
 
 /**
- * Política do recurso `SocialGroupMember` — consultada pelos endpoints
- * Delete (kick), promote e demote em SocialGroupMemberResource.
+ * Policy for the `SocialGroupMember` resource — consulted by the
+ * Delete (kick), promote and demote endpoints on
+ * SocialGroupMemberResource.
  *
- * Retornar `$this->allow()` libera; `null` deixa o pipeline default-deny.
+ * Returning `$this->allow()` allows; `null` lets the pipeline
+ * default-deny.
  */
 class SocialGroupMemberPolicy extends AbstractPolicy
 {
     /**
-     * Promote/demote: somente o creator do próprio grupo (ou admin
-     * global). Moderadores in-group NÃO promovem outros membros — só o
-     * dono pode mexer no nível de role. Mirror exato do
-     * PromoteMemberController/DemoteMemberController legados.
+     * Promote/demote: only the group's own creator (or global admin).
+     * In-group moderators do NOT promote other members — only the
+     * owner can touch role levels. Exact mirror of the legacy
+     * PromoteMemberController/DemoteMemberController.
      */
     public function promote(User $actor, SocialGroupMember $member)
     {
@@ -37,10 +39,10 @@ class SocialGroupMemberPolicy extends AbstractPolicy
     }
 
     /**
-     * Delete (kick): admin, moderador global da extensão, creator do
-     * grupo, ou moderator in-group. Nunca permite remover o próprio
-     * creator do grupo nem o próprio actor (auto-kick é leave, não
-     * kick).
+     * Delete (kick): admin, extension's global moderator, group
+     * creator, or in-group moderator. Never allows removing the
+     * group's own creator nor the actor themselves (self-kick is
+     * leave, not kick).
      */
     public function delete(User $actor, SocialGroupMember $member)
     {

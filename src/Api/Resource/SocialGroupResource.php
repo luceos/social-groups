@@ -106,10 +106,10 @@ class SocialGroupResource extends AbstractDatabaseResource
     }
 
     /**
-     * Wrapper para o Show endpoint. A checagem real mora em
-     * `Access\GroupVisibility::canSee` para ficar idêntica entre todos
-     * os call sites (Resource Show, Resource Index, Policy, controllers
-     * legados).
+     * Wrapper for the Show endpoint. The real check lives in
+     * `Access\GroupVisibility::canSee` so it stays identical across all
+     * call sites (Resource Show, Resource Index, Policy, legacy
+     * controllers).
      */
     protected function canSeeGroup(SocialGroup $group, \Flarum\User\User $actor): bool
     {

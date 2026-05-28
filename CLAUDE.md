@@ -67,7 +67,7 @@ Base Github: https://github.com/ram0ng1/verified, https://github.com/ram0ng1/avo
 - §48 **Review report output contract** — when finishing a `/review` or `/security-review`, ask before emitting; required fields (timestamp, quality score, vibe-coded score, executive summary, findings table); scoring rubric; verdict thresholds (≥80 approved, ≥75 with concerns, <75 not for production)
 - §49 **Cryptographic key material persisted in the `settings` table** — never write a private key in plaintext base64; default to envelope-encryption with a per-install derived key; refuse to persist when the host lacks the required AEAD primitive
 - §50 **Synchronous heavy work in request handlers** — file post-processing, multi-step Stripe sync, archive extraction must dispatch to the queue with a `processing_status` column; the controller returns immediately
-- §51 **Estilo de comentário — Flarum core, em PT-BR** — só docblocks, em PT-BR, curtos, só onde o código não fala sozinho; NUNCA `//` inline (separadores, trailing, ou standalone)
+- §51 **Comment style — docblocks only, English, terse** — docblocks only, English, short, only where the code doesn't speak for itself; NEVER `//` inline (separator, trailing, or standalone)
 - §52 **No env vars in extensions** — gate features off `config.php`'s `'debug' => true/false` via `Flarum\Foundation\Config`; never read `.env` or `getenv()` directly
 - §53 **Handlers gordos** — `handle()` acima de ~100 linhas é refator obrigatório; extraia gates, validators, builders para `src/Service/<Domain>/`
 - §54 **Laravel Filesystem vs I/O nativo** — sempre `Illuminate\Contracts\Filesystem\Factory`; exceções (ZipArchive, php_strip_whitespace) ficam isoladas e usam `Flarum\Foundation\Paths` no construtor, jamais `sys_get_temp_dir`
@@ -5696,109 +5696,114 @@ A 6,000-record sync goes from ~60 seconds (per-row) to ~3 seconds (batched).
 
 ---
 
-## §51. Estilo de comentário — Flarum core, em PT-BR
+## §51. Comment style — docblocks only, English, terse
 
-Comentários neste codebase seguem **exatamente** a lógica de comentário usada
-no core do Flarum e nas extensões oficiais (`flarum/tags`, `flarum/likes`,
-`flarum/mentions`, `flarum/suspend`, `flarum/gdpr`). A regra é simples:
+Comments in this codebase follow the same logic Flarum core and the official
+first-party extensions (`flarum/tags`, `flarum/likes`, `flarum/mentions`,
+`flarum/suspend`, `flarum/gdpr`) use. The rule is simple:
 
-> **Só docblocks. Em PT-BR. Curtos. Só onde explica algo que o código não
-> consegue dizer sozinho.**
+> **Docblocks only. English. Short. Only where the code can't speak for itself.**
 
-### A diretriz absoluta — sem `//` inline
+(This section previously mandated PT-BR docblocks. It was changed to English
+during the May-2026 audit pass — see audit finding A9. The rest of the project,
+including README, commit history, and `js/`, has always been in English; the
+PT-BR docblocks created a contributor barrier for no compensating benefit.)
 
-Esta extensão **não usa** comentários de linha (`//`). Nem em separadores
-visuais (`// ── seção ──`), nem em pequenas notas (`// nota`), nem trailing
-(`$x = 1; // comentário`). Se algo precisa de explicação, é porque a *unidade*
-precisa de docblock — não um pedacinho dela.
+### The absolute rule — no inline `//`
 
-Por que esse rigor? O reviewer "vibe-coded" pontua alto qualquer arquivo com
-muitos `//` espalhados, e Flarum-core também usa `//` parcimoniosamente. Vetar
-totalmente é uma regra mais fácil de auditar e produz código quase
-indistinguível do estilo das extensões oficiais.
+This extension **does not use** line comments (`//`). Not for visual separators
+(`// ── section ──`), not for short notes (`// note`), not trailing
+(`$x = 1; // comment`). If something needs explaining, the *unit* needs a
+docblock — not a snippet of it.
 
-### Onde Flarum-core coloca docblock — e onde NÃO coloca
+Why this strict? The "vibe-coded" reviewer scores any file with many scattered
+`//` comments highly, and Flarum core itself uses `//` sparingly. A blanket
+prohibition is easier to audit and produces code nearly indistinguishable from
+the official-extension style.
 
-Olhando `vendor/flarum/core/src/User/User.php`, `vendor/flarum/tags/src/Tag.php`,
+### Where Flarum core places docblocks — and where it doesn't
+
+Looking at `vendor/flarum/core/src/User/User.php`, `vendor/flarum/tags/src/Tag.php`,
 `vendor/flarum/likes/src/Notification/PostLikedBlueprint.php`:
 
-| Local | Tem docblock? | Conteúdo típico |
+| Location | Has docblock? | Typical content |
 |---|---|---|
-| Modelos Eloquent (classe) | **Sim** | Bloco `@property` puro, sem prose |
-| Service / Handler (classe) | **Só se não-óbvio** | 1–4 linhas dizendo *o que* o serviço faz |
-| Resource / Endpoint (classe) | Não | O nome já diz tudo |
-| Listener (classe) | **Só se há side effect importante** | 1 linha |
-| Constantes (`public const`) | **Só se "por que esse valor"** | 1 linha |
-| Métodos `boot()`, `getRules()`, hooks framework | **Sim** | 1 linha (`Boot the model.`) |
-| Relations (`belongsTo`, `hasMany`) | Não | Self-explicativo |
-| Getters/setters triviais | Não | Self-explicativo |
-| `@param`/`@return` quando o tipo basta | **Não** | Redundante |
-| `@param`/`@return` com array de shape específico | **Sim** | `array{key: type}` |
-| Método de regra de negócio com invariante sutil | **Sim** | 1–3 linhas explicando *por quê* |
+| Eloquent models (class) | **Yes** | `@property` block, no prose |
+| Service / handler (class) | **Only if non-obvious** | 1–4 lines describing *what* the service does |
+| Resource / Endpoint (class) | No | The name says it all |
+| Listener (class) | **Only when a meaningful side effect exists** | 1 line |
+| Constants (`public const`) | **Only when "why this value"** | 1 line |
+| `boot()`, `getRules()`, framework hook methods | **Yes** | 1 line (`Boot the model.`) |
+| Relations (`belongsTo`, `hasMany`) | No | Self-explanatory |
+| Trivial getters/setters | No | Self-explanatory |
+| `@param`/`@return` when the type alone is enough | **No** | Redundant |
+| `@param`/`@return` with a specific array shape | **Yes** | `array{key: type}` |
+| Business-rule method with a subtle invariant | **Yes** | 1–3 lines explaining *why* |
 
-### A regra concreta
+### The concrete rule
 
-Adicione um docblock quando, e SOMENTE quando, ao menos uma destas for verdade:
+Add a docblock when, and ONLY when, at least one of these holds:
 
-1. **A classe é um modelo Eloquent** — coloque um `@property` block.
-2. **A classe ou método tem um contrato não-óbvio** — invariante, side-effect,
-   retorno em shape específico, ordem de operações importa.
-3. **O método é um override de framework** que precisa sinalizar intenção
-   (`boot()`, `getRules()`, etc.) — uma linha basta.
-4. **A constante tem um valor decidido por razões não-óbvias** — explique em
-   uma linha.
+1. **The class is an Eloquent model** — write an `@property` block.
+2. **The class or method has a non-obvious contract** — invariant, side
+   effect, specific return shape, ordering matters.
+3. **The method is a framework override** that needs to signal intent
+   (`boot()`, `getRules()`, etc.) — one line is enough.
+4. **The constant has a value chosen for non-obvious reasons** — explain
+   in one line.
 
-Em **todos os outros casos**, o código fica sem comentário. O nome da classe,
-o nome do método, a assinatura tipada e a estrutura do código dizem o resto.
+In **all other cases**, the code stays uncommented. The class name, method
+name, typed signature, and structure say the rest.
 
-### Formato exato
+### Exact format
 
-Docblock PT-BR no estilo Flarum:
+English docblock in the Flarum style:
 
-- Abre com `/**` em linha própria.
-- Cada linha de prose: `     * Texto.` (asterisco alinhado, ponto final).
-- Linhas em branco internas: `     *`.
-- Fecha com `     */` em linha própria.
-- 1 a 4 linhas de prose. **Nunca um parágrafo de prose.**
-- `@param`/`@return`/`@throws` só quando agregam informação além da signature.
-- Imperativo na primeira pessoa do plural ou descritivo na 3ª pessoa, ambos
-  aceitos. Sempre verbo de ação na primeira palavra: *"Devolve…"*, *"Cria…"*,
-  *"Atualiza…"*, *"Garante…"*, *"Recusa…"*.
+- Opens with `/**` on its own line.
+- Each prose line: `     * Text.` (asterisk aligned, full stop at end).
+- Empty lines inside: `     *`.
+- Closes with `     */` on its own line.
+- 1 to 4 lines of prose. **Never a multi-paragraph block.**
+- `@param`/`@return`/`@throws` only when they add information beyond the
+  signature.
+- Imperative or descriptive third person, both acceptable. Always an action
+  verb in the first word: *"Returns…"*, *"Creates…"*, *"Updates…"*,
+  *"Guarantees…"*, *"Refuses…"*.
 
-### Exemplos lado a lado
+### Side-by-side examples
 
-**RUIM** — comentários `//` espalhados:
+**BAD** — scattered `//` comments:
 
 ```php
 public function process(string $zipPath): array
 {
     if (! is_file($zipPath)) {
-        throw new \RuntimeException('ZIP não existe');
+        throw new \RuntimeException('ZIP missing');
     }
 
-    // Storage privado em vez de /tmp shared
+    // Private storage instead of shared /tmp
     $tmpDir = $this->resolveTmpBase() . '/mp_zip_' . bin2hex(random_bytes(8));
 
-    // Validação anti zip-slip
+    // Zip-slip validation
     $hasBackslash = $this->validateZipEntries($zip);
 
-    // Roda apenas após o stripping
+    // Runs only after stripping
     $integrityResult = $this->integrity->inject($extensionRoot);
 }
 ```
 
-**BOM** — sem `//`, docblock no método quando o WHY merece:
+**GOOD** — no `//`, docblock on the method when the WHY pays rent:
 
 ```php
 /**
- * Pós-processa um ZIP recém-enviado: valida entries, extrai, injeta o stub
- * de licença e re-empacota. Falha em qualquer violação de segurança aborta
- * com `RuntimeException` sem deixar resíduo em disco.
+ * Post-processes a freshly uploaded ZIP: validates entries, extracts,
+ * injects the license stub, and re-packs. Any security-violation
+ * abort raises `RuntimeException` and leaves no residue on disk.
  */
 public function process(string $zipPath): array
 {
     if (! is_file($zipPath)) {
-        throw new \RuntimeException('ZIP não existe');
+        throw new \RuntimeException('ZIP missing');
     }
 
     $tmpDir = $this->resolveTmpBase() . '/mp_zip_' . bin2hex(random_bytes(8));
@@ -5807,11 +5812,11 @@ public function process(string $zipPath): array
 }
 ```
 
-**RUIM** — docblock redundante:
+**BAD** — redundant docblock:
 
 ```php
 /**
- * Devolve o id do usuário.
+ * Returns the user id.
  *
  * @return int
  */
@@ -5821,7 +5826,7 @@ public function getId(): int
 }
 ```
 
-**BOM** — sem docblock; o nome + a signature dizem tudo:
+**GOOD** — no docblock; the name + signature say it all:
 
 ```php
 public function getId(): int
@@ -5830,7 +5835,7 @@ public function getId(): int
 }
 ```
 
-**BOM** — modelo Eloquent com `@property` block:
+**GOOD** — Eloquent model with an `@property` block:
 
 ```php
 /**
@@ -5842,16 +5847,16 @@ public function getId(): int
 class Subscription extends AbstractModel
 {
     protected $table = 'marketplace_subscriptions';
-    // ...
 }
 ```
 
-**BOM** — método com contrato não-óbvio:
+**GOOD** — method with a non-obvious contract:
 
 ```php
 /**
- * Cifra o par Ed25519 com envelope AEAD. Recusa persistir quando o host não
- * suporta a primitiva — fallback plaintext é exatamente o bug evitado.
+ * Encrypts the Ed25519 pair with an AEAD envelope. Refuses to persist
+ * when the host doesn't support the primitive — plaintext fallback is
+ * exactly the bug being prevented.
  */
 protected function encode(string $binary): string
 {
@@ -5859,55 +5864,39 @@ protected function encode(string $binary): string
 }
 ```
 
-### O que NUNCA fazer
+### What to NEVER do
 
-- Comentário `//` em qualquer forma (standalone, trailing, separador).
-- Docblock que só repete o que o nome ou a signature já diz.
-- Docblock multi-parágrafo (> 4 linhas de prose). Se precisar disso, vire no
-  README ou no PR.
-- Referência `CLAUDE.md §X` dentro do código — vira ruído quando a numeração
-  muda.
-- TODO / FIXME / XXX sem link para uma issue do GitHub.
-- `@param string $name` quando a signature já tem `string $name`.
+- A `//` comment in any form (standalone, trailing, separator).
+- A docblock that only restates what the name or signature already say.
+- A multi-paragraph docblock (> 4 lines of prose). If you need that, write
+  it in the README or the PR.
+- A `CLAUDE.md §X` reference inside the code — becomes noise when the
+  numbering changes.
+- `TODO` / `FIXME` / `XXX` without a linked GitHub issue.
+- `@param string $name` when the signature already has `string $name`.
 
-### Lint de disciplina (rode antes de commitar)
+### Discipline lint (run before commit)
 
 ```bash
-# Qualquer `//` é violação automática.
+# Any `//` is an automatic violation.
 rg -n '//' src/ extend.php migrations/ | grep -vE '\.com//|http:|https:|ftp:|://[a-z]' | head
 
-# Docblocks com > 5 linhas (potencialmente prose).
+# Docblocks with > 5 lines (potentially prose).
 rg -nU "^\\s*/\\*\\*\\s*\\n(\\s*\\*[^\\n]*\\n){5,}\\s*\\*/" src/
 
-# Referências CLAUDE.md no código (sempre suspeitas).
+# CLAUDE.md references in code (always suspicious).
 rg -n 'CLAUDE\.md' src/ extend.php migrations/
 ```
 
-Os três comandos devem retornar zero matches num codebase em compliance.
+All three commands should return zero matches in a compliant codebase.
 
-### Quando o nome do método é estrangeirismo
+### What this section is NOT
 
-Termos do domínio Stripe (`webhook`, `checkout`, `subscription`, `refund`),
-de pacotes (`composer`, `package`), de framework (`middleware`, `policy`,
-`extender`) **continuam em inglês** dentro da prose PT-BR. Não traduza
-"webhook" para "gancho", nem "refund" para "reembolso de pagamento". O leitor
-do código é um dev que conhece o vocabulário; forçar a tradução prejudica a
-leitura.
-
-```php
-/**
- * Constrói a Stripe Checkout Session em modo subscription.
- */
-public function createSubscriptionSession(Order $order): StripeSession
-```
-
-### O que esta seção NÃO é
-
-- Não é "delete todo comentário". Docblocks que pagam aluguel ficam.
-- Não é "reescreva CLAUDE.md no PHP". O playbook serve para o autor antes de
-  escrever, não para o runtime.
-- Não é retroativo em contratos de framework. Docblocks de override (`boot()`)
-  e PSR-3 ficam onde o framework espera.
+- It is NOT "delete every comment". Docblocks that earn their rent stay.
+- It is NOT "rewrite CLAUDE.md in PHP". The playbook serves the author
+  before writing, not the runtime.
+- It is NOT retroactive on framework contracts. Docblocks on overrides
+  (`boot()`) and PSR-3 stay where the framework expects them.
 
 ---
 

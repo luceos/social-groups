@@ -7,22 +7,23 @@ use Flarum\User\Access\AbstractPolicy;
 use Flarum\User\User;
 
 /**
- * Política do modelo `SocialGroupDiscussion`. Os verbs aqui são
- * consultados pelo `SocialGroupDiscussionResource` (Endpoint\*->can())
- * e pelos controllers de ação que sobreviveram à migração JSON:API
- * (Pin, Delete, Share). O check inline duplicado que existia no antigo
- * `ListGroupDiscussionsController` saiu junto com o controller.
+ * Policy for the `SocialGroupDiscussion` model. The verbs here are
+ * consulted by `SocialGroupDiscussionResource` (Endpoint\*->can()) and
+ * by the action controllers that survived the JSON:API migration (Pin,
+ * Delete, Share). The duplicated inline check that lived in the legacy
+ * `ListGroupDiscussionsController` left with the controller.
  *
- * Retornar `null` deixa o pipeline continuar — não use `deny()` aqui
- * sem motivo, senão um cenário onde outra extensão deveria liberar
- * (admin com permissão custom, etc.) é cortado preemptivamente.
+ * Returning `null` lets the pipeline continue — don't use `deny()`
+ * here without cause, otherwise a scenario where another extension
+ * should allow (admin with a custom permission, etc.) gets cut off
+ * preemptively.
  */
 class SocialGroupDiscussionPolicy extends AbstractPolicy
 {
     /**
-     * Pode ver a discussão se puder ver o grupo dela. Em grupos
-     * privados, exige ser dono, membro ativo, admin ou moderador
-     * global da extensão.
+     * Can view the discussion if able to view its group. On private
+     * groups, requires being the owner, an active member, an admin or
+     * the extension's global moderator.
      */
     public function view(User $actor, SocialGroupDiscussion $discussion)
     {
@@ -37,11 +38,11 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
     }
 
     /**
-     * Pode criar discussão no grupo se for membro, dono, admin ou
-     * moderador global. O Endpoint\Create passa o modelo sendo criado
-     * em `$arguments`, mas no momento do gate o `group_id` pode ainda
-     * não ter sido populado — preferimos checar via permission global +
-     * verificação inline no resource creating().
+     * Can create a discussion in the group if member, owner, admin or
+     * global moderator. Endpoint\Create passes the model being created
+     * via `$arguments`, but at gate time `group_id` may not be
+     * populated yet — we prefer to check via the global permission +
+     * inline verification in the resource's creating().
      */
     public function create(User $actor)
     {
@@ -52,7 +53,8 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
     }
 
     /**
-     * Apaga só se for o autor, admin ou moderador global.
+     * Deletes only if the actor is the author, an admin or the global
+     * moderator.
      */
     public function delete(User $actor, SocialGroupDiscussion $discussion)
     {
@@ -66,8 +68,8 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
     }
 
     /**
-     * Pin/unpin restrito a creator/moderator do próprio grupo, admin
-     * ou moderador global da extensão.
+     * Pin/unpin restricted to the group's own creator/moderator, an
+     * admin or the extension's global moderator.
      */
     public function pin(User $actor, SocialGroupDiscussion $discussion)
     {

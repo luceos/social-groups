@@ -7,12 +7,13 @@ use Flarum\User\Access\AbstractPolicy;
 use Flarum\User\User;
 
 /**
- * Política de SocialGroupJoinRequest — espelha a checagem `actor->id ===
- * group->user_id || isAdmin()` que ApproveJoinRequestController e
- * RejectJoinRequestController duplicavam.
+ * SocialGroupJoinRequest policy — mirrors the
+ * `actor->id === group->user_id || isAdmin()` check that
+ * ApproveJoinRequestController and RejectJoinRequestController used to
+ * duplicate.
  *
- * Approve e delete (rejeição) usam o mesmo gate: só o dono do grupo
- * ou admin global pode decidir.
+ * Approve and delete (rejection) use the same gate: only the group
+ * owner or a global admin can decide.
  */
 class SocialGroupJoinRequestPolicy extends AbstractPolicy
 {

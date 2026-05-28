@@ -43,6 +43,18 @@ export default class GroupDiscussionThread extends Page {
     this.inlineReplyText       = '';
     this.inlineReplySubmitting = false;
 
+    /*
+     * Pagination state. The thread now loads in pages of PAGE_SIZE
+     * (default 30) and the user can Load More until `hasMore` flips
+     * false. Was a hardcoded `page[size]=200` request that silently
+     * truncated long threads — see audit finding A4.
+     */
+    this.PAGE_SIZE     = 30;
+    this.nextOffset    = 0;
+    this.hasMore       = false;
+    this.loadingMore   = false;
+    this.loadMoreError = null;
+
     // ── Realtime state ────────────────────────────────────────────────────
     // Set of post IDs we have already rendered — prevents double-injection
     // when the same post arrives both from the POST response and the WebSocket.
@@ -154,16 +166,33 @@ export default class GroupDiscussionThread extends Page {
     }
   }
 
-  // Background refetch — no loading flicker, no scroll jump.  load() reseeds
-  // the seen-set and the diff is rendered transparently on the next redraw.
+  /*
+   * Background refetch — no loading flicker, no scroll jump. Refreshes
+   * ONLY the first page of posts (PAGE_SIZE rows) so a WebSocket event
+   * doesn't trigger a full re-fetch of an arbitrarily long thread. The
+   * user-loaded subsequent pages persist across the refresh (we only
+   * replace the first PAGE_SIZE slots and re-seed the seen-set from
+   * the union).
+   */
   _refreshSilently() {
     const discussionId = this.attrs.discussionId;
-    listThreadPosts(discussionId)
+    listThreadPosts(discussionId, { offset: 0, limit: this.PAGE_SIZE })
       .then((data) => {
         if (!data || !this._rtActive) return;
         if (String(discussionId) !== String(this.attrs.discussionId)) return;
         this.discussion   = data.discussion ?? this.discussion;
-        this.posts        = data.data || [];
+        const firstPage   = data.data || [];
+        /*
+         * Stitch: first PAGE_SIZE slots come from the refresh, anything
+         * past that keeps whatever Load More had appended. Dedup by id.
+         */
+        const carryOver = this.posts.slice(this.PAGE_SIZE);
+        const seen      = new Set();
+        this.posts = [...firstPage, ...carryOver].filter((p) => {
+          if (seen.has(p.id)) return false;
+          seen.add(p.id);
+          return true;
+        });
         this._seenPostIds = new Set(this.posts.map((p) => p.id));
         m.redraw();
       })
@@ -228,26 +257,78 @@ export default class GroupDiscussionThread extends Page {
 
   load() {
     const discussionId = this.attrs.discussionId;
-    this.loading = true;
-    this.error   = null;
+    this.loading       = true;
+    this.error         = null;
+    this.nextOffset    = 0;
+    this.hasMore       = false;
+    this.loadMoreError = null;
 
-    listThreadPosts(discussionId)
+    listThreadPosts(discussionId, { offset: 0, limit: this.PAGE_SIZE })
       .then((data) => {
         this.discussion = data.discussion;
         this.posts      = data.data || [];
-        // Seed the seen-set so WebSocket echoes of already-loaded posts are ignored.
+        this.nextOffset = this.posts.length;
+        this.hasMore    = !!data.meta?.hasMore;
+        /*
+         * Seed the seen-set so WebSocket echoes of already-loaded posts
+         * are ignored.
+         */
         this._seenPostIds = new Set(this.posts.map((p) => p.id));
-        this.loading    = false;
+        this.loading      = false;
         if (this.discussion) {
           document.title = `${this.discussion.title} — ${app.forum.attribute('title')}`;
         }
         m.redraw();
-        // Subscribe to the per-group private channel now that we know groupId.
+        /*
+         * Subscribe to the per-group private channel now that we know
+         * groupId.
+         */
         this._setupRealtime();
       })
       .catch((err) => {
         this.error   = err.response?.error || err.message || 'Error';
         this.loading = false;
+        m.redraw();
+      });
+  }
+
+  /*
+   * Fetches the next PAGE_SIZE posts at the current `nextOffset` and
+   * appends to `this.posts`. Dedup by id so a realtime refresh that
+   * raced with Load More can't double-render the same post.
+   */
+  loadMore() {
+    if (this.loadingMore || !this.hasMore) return;
+
+    const discussionId = this.attrs.discussionId;
+    const offset       = this.nextOffset;
+    this.loadingMore   = true;
+    this.loadMoreError = null;
+    m.redraw();
+
+    listThreadPosts(discussionId, { offset, limit: this.PAGE_SIZE })
+      .then((data) => {
+        if (String(discussionId) !== String(this.attrs.discussionId)) return;
+        const newPosts = data.data || [];
+        const seen     = this._seenPostIds;
+        for (const p of newPosts) {
+          if (seen.has(p.id)) continue;
+          this.posts.push(p);
+          seen.add(p.id);
+        }
+        this.nextOffset  = offset + newPosts.length;
+        this.hasMore     = !!data.meta?.hasMore;
+        this.loadingMore = false;
+        m.redraw();
+      })
+      .catch((err) => {
+        this.loadingMore   = false;
+        this.loadMoreError = err.response?.errors?.[0]?.detail
+          || err.message
+          || app.translator.trans('ernestdefoe-social-groups.forum.discussions.load_more_failed');
+        if (app.alerts?.show) {
+          app.alerts.show({ type: 'error' }, this.loadMoreError);
+        }
         m.redraw();
       });
   }
@@ -589,12 +670,45 @@ export default class GroupDiscussionThread extends Page {
               return topLevel.map((post) => this.viewPost(post, repliesByParent));
             })()),
 
+            this.viewLoadMore(),
+
             this.viewTypingBar(),
 
             actor && !this.discussion.isLocked
               ? this.viewReplyBox(actor)
               : null,
           ]),
+    ]);
+  }
+
+  /*
+   * Renders the "Load N more replies" control beneath the post list.
+   * Shows nothing when the thread fits in a single page (hasMore=false).
+   * Falls through to a generic label when total is unknown (Flarum
+   * versions that don't populate meta.page.total).
+   */
+  viewLoadMore() {
+    if (!this.hasMore) return null;
+
+    const label = (() => {
+      if (this.loadingMore) {
+        return m('i.fa-solid.fa-spinner.fa-spin');
+      }
+      // Best-effort count from the last meta we saw — graceful fallback
+      // if total wasn't returned.
+      return app.translator.trans(
+        'ernestdefoe-social-groups.forum.discussions.load_more_short'
+      );
+    })();
+
+    return m('.SGThread-loadMore', [
+      this.loadMoreError
+        ? m('.Alert.Alert--error.SGThread-loadMoreError', this.loadMoreError)
+        : null,
+      m('button.Button.SGThread-loadMoreBtn', {
+        disabled: this.loadingMore,
+        onclick:  () => this.loadMore(),
+      }, label),
     ]);
   }
 

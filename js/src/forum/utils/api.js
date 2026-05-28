@@ -376,27 +376,76 @@ export function rejectJoinRequest(requestId) {
   return apiDelete(`/social-group-join-requests/${requestId}`);
 }
 
-export function listThreadPosts(discussionId) {
+/**
+ * Lists the posts in a single discussion thread, paginated. The Flarum 2
+ * JSON:API Endpoint behind this is `Endpoint::Index::make()->paginate()`
+ * on SocialGroupPostResource — it accepts `page[offset]` + `page[limit]`
+ * and returns the usual `links.next`/`meta.page.total` shape.
+ *
+ * Caller contract:
+ *   • `opts.offset` (default 0)   — number of posts to skip.
+ *   • `opts.limit`  (default 30)  — page size; clamped 1–100 server-side.
+ *   • `opts.refreshDiscussion`     — when true, always co-fetch the
+ *     discussion meta regardless of whether the post page already
+ *     hydrated it via `include=discussion`. Used by the initial load
+ *     path so the title/author show even on empty threads.
+ *
+ * Returns: `{ discussion, data, meta: { hasMore, total, offset, limit } }`.
+ * `data` contains the projected posts for THIS page only. The caller is
+ * responsible for appending across pages (GroupDiscussionThread keeps a
+ * `this.posts` array and concatenates on Load More).
+ */
+export function listThreadPosts(discussionId, opts = {}) {
+  const offset = Number.isFinite(opts.offset) ? Math.max(0, opts.offset | 0) : 0;
+  const limit  = Number.isFinite(opts.limit)  ? Math.max(1, Math.min(100, opts.limit | 0)) : 30;
+
   const params = {
     discussionId,
-    'page[size]': 200,
-    include:      'user,discussion',
+    'page[offset]': offset,
+    'page[limit]':  limit,
+    include:        'user,discussion',
   };
 
   return apiGet('/social-group-posts', params).then((body) => {
     const included = body.included || [];
     const posts    = (body.data || []).map((r) => projectPostFull(r, included));
-    const discRes  = included.find((r) => r.type === 'social-group-discussions');
 
+    /*
+     * JSON:API server hands us `meta.page.total` (when paginate() is
+     * declared on the Endpoint). `links.next` only exists if more pages
+     * remain — we use BOTH signals because some Flarum versions populate
+     * one but not the other depending on whether `total` is known.
+     */
+    const total    = Number(body.meta?.page?.total ?? NaN);
+    const hasNext  = !!body.links?.next;
+    const hasMore  = Number.isFinite(total)
+      ? (offset + posts.length) < total
+      : hasNext;
+
+    const meta = {
+      offset,
+      limit,
+      total: Number.isFinite(total) ? total : null,
+      hasMore,
+    };
+
+    const discRes = included.find((r) => r.type === 'social-group-discussions');
     if (discRes) {
-      return { discussion: projectDiscussionFromResource(discRes), data: posts };
+      return { discussion: projectDiscussionFromResource(discRes), data: posts, meta };
     }
-    // Discussão sem nenhum post — JSON:API include não tem nada para
-    // hidratar; busca a discussão sozinha para que o caller ainda
-    // receba o meta esperado (title, etc.).
+    /*
+     * Empty thread or page > 0 — the post payload didn't include the
+     * discussion. Co-fetch the discussion so the caller still gets the
+     * meta (title, groupId, etc.). Only on first page (offset=0); a
+     * subsequent Load More call shouldn't re-pay the round-trip.
+     */
+    if (offset > 0) {
+      return { discussion: null, data: posts, meta };
+    }
     return apiGet(`/social-group-discussions/${discussionId}`).then((discBody) => ({
       discussion: projectDiscussionFromResource(discBody.data),
       data:       posts,
+      meta,
     }));
   });
 }
