@@ -68,6 +68,10 @@
 // ============================================================
 
 .SG-PrimaryGroupSelector {
+  // Direct child of the .UserCard-profile grid (104px 1fr); span both columns
+  // so it sits on its own full-width row instead of sharing a cell row with the
+  // group badges. (~"" escape stops LESS evaluating the slash as division.)
+  grid-column: ~"1 / -1";
   margin: 1rem 0;
 
   &-header {
@@ -3216,6 +3220,9 @@
 
 // ── User Group Badges (Feature 19) ──────────────────────────────────────────
 .UserGroupBadges {
+  // Span both columns of the .UserCard-profile grid so the badges occupy their
+  // own full-width row rather than the narrow 104px avatar column.
+  grid-column: ~"1 / -1";
   padding: 8px 16px 4px;
   border-top: 1px solid var(--control-bg, #f0f0f0);
   margin-top: 4px;
