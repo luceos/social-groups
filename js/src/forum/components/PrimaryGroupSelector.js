@@ -80,25 +80,27 @@ export default class PrimaryGroupSelector extends Component {
 
       groups.length === 0
         ? m('em.SG-PrimaryGroupSelector-empty', app.translator.trans('ernestdefoe-social-groups.forum.primary_group.empty'))
-        : m('.SG-PrimaryGroupSelector-list', [
-            // "None" option — key required so all siblings are consistently keyed
-            m('label.SG-PrimaryGroupSelector-row', { key: 'none', class: !this.selected ? 'active' : '' }, [
-              m('input[type=radio]', {
+        : m('.SG-PrimaryGroupSelector-grid', [
+            m('label.SG-PrimaryGroupSelector-tile', { key: 'none', class: !this.selected ? 'active' : '' }, [
+              m('input[type=radio].SG-PrimaryGroupSelector-radio', {
                 name:     'sg-primary-group',
                 value:    '',
                 checked:  !this.selected,
                 disabled: this.saving,
                 onchange: () => this.save(null),
               }),
-              m('span.SG-PrimaryGroupSelector-none', app.translator.trans('ernestdefoe-social-groups.forum.primary_group.none')),
+              m('span.SG-PrimaryGroupSelector-tileBadge.SG-PrimaryGroupSelector-tileBadge--none',
+                m('i.fa-solid.fa-ban')),
+              m('span.SG-PrimaryGroupSelector-tileName',
+                app.translator.trans('ernestdefoe-social-groups.forum.primary_group.none')),
             ]),
 
             ...groups.map((group) =>
-              m('label.SG-PrimaryGroupSelector-row', {
+              m('label.SG-PrimaryGroupSelector-tile', {
                 class: this.selected === String(group.id) ? 'active' : '',
                 key:   group.id,
               }, [
-                m('input[type=radio]', {
+                m('input[type=radio].SG-PrimaryGroupSelector-radio', {
                   name:     'sg-primary-group',
                   value:    String(group.id),
                   checked:  this.selected === String(group.id),
@@ -106,15 +108,11 @@ export default class PrimaryGroupSelector extends Component {
                   onchange: () => this.save(group.id),
                 }),
                 group.imageUrl
-                  ? m('img.SG-PrimaryGroupSelector-img', {
-                      src:   group.imageUrl,
-                      alt:   '',
-                      style: 'width:75px;height:75px;object-fit:cover;border-radius:6px;flex-shrink:0',
-                    })
-                  : m('span.SG-PrimaryGroupSelector-pill', {
+                  ? m('img.SG-PrimaryGroupSelector-tileImg', { src: group.imageUrl, alt: '' })
+                  : m('span.SG-PrimaryGroupSelector-tileBadge', {
                       style: `background:${group.color || '#4A90E2'}`,
-                    }),
-                m('span.SG-PrimaryGroupSelector-name', group.name),
+                    }, m('i.fa-solid.fa-users')),
+                m('span.SG-PrimaryGroupSelector-tileName', group.name),
               ])
             ),
           ]),
