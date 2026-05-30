@@ -20,7 +20,11 @@ return [
         }
 
         $schema->create('social_group_user_primary', function (Blueprint $table) {
-            $table->unsignedBigInteger('user_id')->primary();
+            // user_id matches core users.id (INT UNSIGNED — Flarum uses
+            // increments(), not bigIncrements). group_id matches
+            // social_groups.id (BIGINT UNSIGNED). Mismatched integer widths
+            // make MySQL reject the foreign key with errno 3780.
+            $table->unsignedInteger('user_id')->primary();
             $table->unsignedBigInteger('group_id')->nullable()->index();
 
             $table->foreign('user_id')

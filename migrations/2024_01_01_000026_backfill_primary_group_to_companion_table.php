@@ -1,24 +1,28 @@
 <?php
 
-use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Schema\Builder;
 
 // Copies every existing users.sg_primary_group_id into the companion table
 // (social_group_user_primary) created by migration 000025, BEFORE migration
 // 000027 drops the column. Runs as a single INSERT ... SELECT so it stays
 // constant-memory regardless of how many users have a primary group set.
 //
+// Flarum injects the schema builder into migration closures (not a
+// ConnectionInterface); the DB connection for the query builder comes from
+// $schema->getConnection().
+//
 // Guarded three ways so it is safe on fresh installs and re-runs:
 //   - skips if the legacy column was never present (new installs),
 //   - only copies rows whose target group still exists (FK safety),
 //   - skips users already in the companion table (idempotency).
 return [
-    'up' => function (ConnectionInterface $db) {
-        $schema = $db->getSchemaBuilder();
-
+    'up' => function (Builder $schema) {
         if (! $schema->hasColumn('users', 'sg_primary_group_id')
             || ! $schema->hasTable('social_group_user_primary')) {
             return;
         }
+
+        $db = $schema->getConnection();
 
         $source = $db->table('users')
             ->whereNotNull('users.sg_primary_group_id')
