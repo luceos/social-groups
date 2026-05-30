@@ -31,10 +31,11 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
         if ($group === null) {
             return null;
         }
-        if (! GroupVisibility::canSee($actor, $group)) {
-            return $this->deny();
-        }
-        return null;
+        // Allow (not abstain) when the group is visible: the Show endpoint
+        // gates on `->can('view')`, and an abstain there denies — so an empty
+        // thread (no posts to hydrate the include from) loaded by primary key
+        // 403'd for everyone, including guests on public groups.
+        return GroupVisibility::canSee($actor, $group) ? $this->allow() : $this->deny();
     }
 
     /**

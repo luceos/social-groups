@@ -86,13 +86,17 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         $actor = RequestUtil::getActor($context->request);
         $params = $context->request->getQueryParams();
 
-        // scope() runs for BOTH Index (?GET listing) and Show (find by
-        // id, plus include-driven hydration from sibling resources).
-        // The `?groupId=` requirement only makes sense for Index — Show
-        // looks up by primary key and would otherwise be blanket-killed
-        // here. The Show endpoint's `->can('view')` policy gate enforces
-        // per-row visibility for that path.
-        $isIndex = $context->endpoint instanceof Endpoint\Index;
+        // scope() runs for the primary Index/Show AND for include-driven
+        // hydration from sibling resources (e.g. posts?include=discussion).
+        // Use Context::listing(self::class) — NOT `endpoint instanceof Index`
+        // — because during an include the endpoint is still the PARENT's
+        // Index (so the naive check is wrongly true), but $context->collection
+        // stays the parent resource. listing(self::class) is therefore true
+        // only when discussions are the primary collection being listed.
+        // Without this, an included discussion hit the groupId-required guard
+        // below, got killed by whereRaw('1=0'), and serialized as null — so a
+        // cold-store thread load fell back to the Show endpoint and failed.
+        $isIndex = $context->listing(self::class);
         if (! $isIndex) {
             /*
              * Eager loads still help here for the include=firstPost.user
