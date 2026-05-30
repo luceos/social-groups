@@ -1798,11 +1798,16 @@ production rows): mirror `flarum/flags` —
 ### Removing persisted settings (cleanup migration pattern)
 
 ```php
-use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Schema\Builder;
 
 return [
-    'up' => function (ConnectionInterface $db) {
-        $db->table('settings')
+    // Flarum injects the schema BUILDER into migration closures, NOT a
+    // ConnectionInterface — a `function (ConnectionInterface $db)` hint throws
+    // `TypeError: Argument #1 ($db) must be of type ConnectionInterface,
+    // ...Schema\MySqlBuilder given`. Take `Builder $schema` and reach the
+    // query builder via `$schema->getConnection()`.
+    'up' => function (Builder $schema) {
+        $schema->getConnection()->table('settings')
             ->whereIn('key', [
                 'myext.legacy_a',
                 'myext.legacy_b',
