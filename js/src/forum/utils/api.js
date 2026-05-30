@@ -23,12 +23,12 @@ function buildQueryString(params) {
 }
 
 /**
- * Thin wrappers around `app.request()` so every social-groups call gets
- * the same CSRF injection, Authorization header, session-expiry
- * handling, and JSON-parse path. Replaces direct `fetch()` calls that
- * were duplicating that wiring (and missing pieces — session expiry was
- * never observed, CSRF was reread from `app.session.csrfToken` per call,
- * 401 responses surfaced as parse errors).
+ * Thin wrappers around `app.request()` for the custom ACTION endpoints
+ * (join/leave/react/promote/analytics/uploads/…) that aren't backed by an
+ * AbstractDatabaseResource. The four resource types
+ * (social-group-discussions/-posts/-members/-join-requests) go through
+ * app.store instead (see below) so they're cached, de-duplicated, and
+ * reactive — these helpers stay for everything else.
  *
  * On error, the rejected value is Mithril's standard error envelope:
  * `{ response: <parsed body>, status: <code> }`. Call sites destructure
@@ -78,337 +78,198 @@ export function apiUpload(path, formData) {
   });
 }
 
-// ── JSON:API → legacy-shape projection ────────────────────────────────────
+// ── Store-model → legacy-shape projection ─────────────────────────────────
 //
-// SocialGroupDiscussionResource (Phase 1 of audit #4) lives at
-// /api/social-group-discussions. Its response is standard JSON:API
-// — { data: [...], included: [...], meta: {...} } — while the rest of
-// the feed UI was written against the legacy /sg-discussions/{groupId}
-// shape (plain objects with denormalised user/firstPost). The helpers
-// below project the JSON:API response into the legacy shape so the
-// JS UI code doesn't change. Once every consumer is on this helper,
-// the legacy controller can go.
+// The four resources now flow through app.store, so the helpers below
+// project store MODELS (not raw JSON:API payloads) into the denormalised
+// legacy shapes the feed UI was written against. Keeping the projection
+// means the components don't change while the data still lands in the store
+// (cached, de-duplicated, visible to other extensions).
 
-function findIncluded(included, type, id) {
-  if (!included || id == null) return null;
-  const idStr = String(id);
-  for (const r of included) {
-    if (r.type === type && String(r.id) === idStr) return r;
-  }
-  return null;
-}
-
-function projectUser(included, ref) {
-  if (!ref) return null;
-  const r = findIncluded(included, 'users', ref.id);
-  if (!r) return null;
+function projectUser(user) {
+  if (!user || !user.id) return null;
   return {
-    id:          Number(r.id),
-    displayName: r.attributes.displayName || r.attributes.username || '',
-    avatarUrl:   r.attributes.avatarUrl || null,
+    id: Number(user.id()),
+    displayName: user.displayName?.() || user.username?.() || '',
+    avatarUrl: user.avatarUrl?.() || null,
   };
 }
 
-function projectFirstPost(included, ref) {
-  if (!ref) return null;
-  const r = findIncluded(included, 'social-group-posts', ref.id);
-  if (!r) return null;
-  const a = r.attributes || {};
+function projectFirstPost(post) {
+  if (!post || !post.id) return null;
   return {
-    id:            Number(r.id),
-    content:       a.content || '',
-    contentParsed: a.contentParsed || '',
-    reactions:     a.reactions || {},
-    actorReaction: a.actorReaction || null,
-    linkPreview:   a.linkPreview || null,
-    canEdit:       !!a.canEdit,
-    createdAt:     a.createdAt || null,
-    user:          projectUser(included, r.relationships?.user?.data),
+    id: Number(post.id()),
+    content: post.attribute('content') || '',
+    contentParsed: post.attribute('contentParsed') || '',
+    reactions: post.attribute('reactions') || {},
+    actorReaction: post.attribute('actorReaction') || null,
+    linkPreview: post.attribute('linkPreview') || null,
+    canEdit: !!post.attribute('canEdit'),
+    createdAt: post.attribute('createdAt') || null,
+    user: projectUser(post.user()),
   };
 }
 
-function mapDiscussion(d, included) {
-  const a   = d.attributes || {};
-  const rel = d.relationships || {};
+function mapDiscussion(d) {
+  if (!d || !d.id) return null;
   return {
-    id:             Number(d.id),
-    groupId:        Number(a.groupId),
-    title:          a.title || '',
-    commentCount:   Number(a.commentCount) || 0,
-    isLocked:       !!a.isLocked,
-    isPinned:       !!a.isPinned,
-    canPin:         !!a.canPin,
-    lastPostedAt:   a.lastPostedAt || null,
-    createdAt:      a.createdAt || null,
-    canDelete:      !!a.canDelete,
-    canShare:       !!a.canShare,
-    sharedFrom:     a.sharedFrom || null,
-    poll:           a.poll || null,
-    firstPost:      projectFirstPost(included, rel.firstPost?.data),
-    user:           projectUser(included, rel.user?.data),
-    lastPostedUser: projectUser(included, rel.lastPostedUser?.data),
+    id: Number(d.id()),
+    groupId: Number(d.attribute('groupId')),
+    title: d.attribute('title') || '',
+    commentCount: Number(d.attribute('commentCount')) || 0,
+    isLocked: !!d.attribute('isLocked'),
+    isPinned: !!d.attribute('isPinned'),
+    canPin: !!d.attribute('canPin'),
+    lastPostedAt: d.attribute('lastPostedAt') || null,
+    createdAt: d.attribute('createdAt') || null,
+    canDelete: !!d.attribute('canDelete'),
+    canShare: !!d.attribute('canShare'),
+    sharedFrom: d.attribute('sharedFrom') || null,
+    poll: d.attribute('poll') || null,
+    firstPost: projectFirstPost(d.firstPost()),
+    user: projectUser(d.user()),
+    lastPostedUser: projectUser(d.lastPostedUser()),
   };
 }
 
-function projectPostFull(r, included) {
-  const a = r.attributes || {};
+function projectPostFull(p) {
+  if (!p || !p.id) return null;
   return {
-    id:            Number(r.id),
-    discussionId:  Number(a.discussionId),
-    content:       a.content || '',
-    contentParsed: a.contentParsed || '',
-    createdAt:     a.createdAt || null,
-    updatedAt:     a.updatedAt || a.createdAt || null,
-    reactions:     a.reactions || {},
-    actorReaction: a.actorReaction || null,
-    parentPostId:  a.parentPostId ?? null,
-    linkPreview:   a.linkPreview || null,
-    isPinned:      !!a.isPinned,
-    canEdit:       !!a.canEdit,
-    canDelete:     !!a.canDelete,
-    canPin:        !!a.canPin,
-    user:          projectUser(included, r.relationships?.user?.data),
+    id: Number(p.id()),
+    discussionId: Number(p.attribute('discussionId')),
+    content: p.attribute('content') || '',
+    contentParsed: p.attribute('contentParsed') || '',
+    createdAt: p.attribute('createdAt') || null,
+    updatedAt: p.attribute('updatedAt') || p.attribute('createdAt') || null,
+    reactions: p.attribute('reactions') || {},
+    actorReaction: p.attribute('actorReaction') || null,
+    parentPostId: p.attribute('parentPostId') ?? null,
+    linkPreview: p.attribute('linkPreview') || null,
+    isPinned: !!p.attribute('isPinned'),
+    canEdit: !!p.attribute('canEdit'),
+    canDelete: !!p.attribute('canDelete'),
+    canPin: !!p.attribute('canPin'),
+    user: projectUser(p.user()),
   };
 }
 
-function projectDiscussionFromResource(r) {
-  if (!r) return null;
-  const a = r.attributes || {};
+function projectDiscussionFromResource(d) {
+  if (!d || !d.id) return null;
   return {
-    id:           Number(r.id),
-    groupId:      Number(a.groupId),
-    title:        a.title || '',
-    commentCount: Number(a.commentCount) || 0,
-    isLocked:     !!a.isLocked,
-    createdAt:    a.createdAt || a.lastPostedAt || null,
-    canDelete:    !!a.canDelete,
+    id: Number(d.id()),
+    groupId: Number(d.attribute('groupId')),
+    title: d.attribute('title') || '',
+    commentCount: Number(d.attribute('commentCount')) || 0,
+    isLocked: !!d.attribute('isLocked'),
+    createdAt: d.attribute('createdAt') || d.attribute('lastPostedAt') || null,
+    canDelete: !!d.attribute('canDelete'),
   };
 }
+
+// ── Discussions (social-group-discussions) ────────────────────────────────
 
 /**
- * Lists discussions in a group via the new JSON:API endpoint and
- * returns the legacy `{ data, total, pages }` shape so call sites
- * don't need to touch every property access. Page size is fixed at
- * 20 to match the legacy controller's hardcoded limit.
+ * Lists discussions in a group via app.store and projects them into the
+ * legacy `{ data, total, pages }` shape. The store hydrates the included
+ * firstPost/user relations so projection reads them without extra calls,
+ * and a repeat navigation to the same page is served from cache.
  *
  *   listDiscussions(groupId, { page: 1, q: 'foo' })
  *     -> { data: [...legacy discussion objects], total, pages }
  */
 export function listDiscussions(groupId, { page = 1, q = '' } = {}) {
+  const trimmed = (q || '').trim();
   const params = {
     groupId,
-    'page[number]': page,
-    'page[size]':   20,
-    include:        'firstPost,firstPost.user,user,lastPostedUser',
+    page: { number: page, size: 20 },
+    include: 'firstPost,firstPost.user,user,lastPostedUser',
   };
-  const trimmed = (q || '').trim();
   if (trimmed) params.q = trimmed;
 
-  return apiGet('/social-group-discussions', params).then((body) => ({
-    data:  (body.data || []).map((d) => mapDiscussion(d, body.included || [])),
-    total: body.meta?.page?.total ?? body.data?.length ?? 0,
-    pages: body.meta?.page?.lastPage ?? 1,
-    q:    trimmed || null,
-  }));
+  return app.store.find('social-group-discussions', params).then((results) => {
+    const meta = results.payload?.meta?.page || {};
+    return {
+      data: results.map(mapDiscussion).filter(Boolean),
+      total: meta.total ?? results.length ?? 0,
+      pages: meta.lastPage ?? 1,
+      q: trimmed || null,
+    };
+  });
 }
 
 /**
- * Lists all posts in a discussion. Returns the legacy thread-posts
- * shape `{ discussion: {...}, data: [...posts] }`. The discussion
- * meta comes through `?include=discussion` and is projected via
- * projectDiscussion(); each post via projectPostFull().
- *
- * Page size is high so the thread loads in one shot (matching the
- * legacy controller which paginated via Eloquent default 'get-all').
- * When threads grow past 200 we'll teach the parent to paginate
- * properly; for now the JS expects the full list.
- */
-/**
- * Wraps a flat attributes object into a JSON:API request body and POSTs
- * it to the discussion Resource. Returns the projected legacy-shape
- * discussion (same as listDiscussions items) so GroupFeed can splice
- * it into the list without special-casing.
+ * Creates a discussion through the store (POST + push), returning the
+ * projected legacy-shape discussion so GroupFeed can splice it into the
+ * list without special-casing.
  *
  *   createDiscussion({groupId, content, title, linkPreview, poll})
  *     -> legacy discussion object
  */
 export function createDiscussion(attrs) {
-  return apiPost('/social-group-discussions', {
-    data: { type: 'social-group-discussions', attributes: attrs },
-  }).then((body) => mapDiscussion(body.data, body.included || []));
+  return app.store
+    .createRecord('social-group-discussions')
+    .save(attrs)
+    .then((d) => mapDiscussion(d));
 }
 
 export function deleteDiscussion(id) {
+  const record = app.store.getById('social-group-discussions', id);
+  if (record) return record.delete();
   return apiDelete(`/social-group-discussions/${id}`);
 }
 
+// ── Posts (social-group-posts) ────────────────────────────────────────────
+
 /**
- * Same idea as createDiscussion but for posts. Returns the projected
- * legacy-shape post.
+ * Creates a post through the store. Returns the projected legacy-shape post.
  */
 export function createPost(attrs) {
-  return apiPost('/social-group-posts', {
-    data: { type: 'social-group-posts', attributes: attrs },
-  }).then((body) => projectPostFull(body.data, body.included || []));
+  return app.store
+    .createRecord('social-group-posts')
+    .save(attrs)
+    .then((p) => projectPostFull(p));
 }
 
 export function updatePost(id, attrs) {
-  return app.request({
-    method: 'PATCH',
-    url:    resolveUrl(`/social-group-posts/${id}`),
-    body:   { data: { type: 'social-group-posts', id: String(id), attributes: attrs } },
-  }).then((body) => projectPostFull(body.data, body.included || []));
+  let record = app.store.getById('social-group-posts', id);
+  if (!record) {
+    record = app.store.createRecord('social-group-posts', { id: String(id) });
+  }
+  return record.save(attrs).then((p) => projectPostFull(p));
 }
 
 export function deletePost(id) {
+  const record = app.store.getById('social-group-posts', id);
+  if (record) return record.delete();
   return apiDelete(`/social-group-posts/${id}`);
 }
 
-// ── Action endpoints on resources (pin/share/react/unreact) ───────────────
-//
-// These return JSON:API resources. Callers want the post-action attrs
-// (e.g. {isPinned: bool} or {reactions: {...}, actorReaction: ...}),
-// so the helpers project the response down to that shape.
-
-export function pinDiscussion(id) {
-  return app.request({
-    method: 'PATCH',
-    url:    resolveUrl(`/social-group-discussions/${id}/pin`),
-  }).then((body) => ({ isPinned: !!body.data?.attributes?.isPinned }));
-}
-
-export function shareDiscussion(id, payload) {
-  return apiPost(`/social-group-discussions/${id}/share`, payload)
-    .then((body) => mapDiscussion(body.data, body.included || []));
-}
-
-export function pinPost(id) {
-  return app.request({
-    method: 'PATCH',
-    url:    resolveUrl(`/social-group-posts/${id}/pin`),
-  }).then((body) => ({ isPinned: !!body.data?.attributes?.isPinned }));
-}
-
-export function reactToPost(id, reaction) {
-  return apiPost(`/social-group-posts/${id}/react`, { reaction })
-    .then((body) => ({
-      reactions:     body.data?.attributes?.reactions || {},
-      actorReaction: body.data?.attributes?.actorReaction || null,
-    }));
-}
-
-export function unreactToPost(id) {
-  return apiPost(`/social-group-posts/${id}/unreact`)
-    .then((body) => ({
-      reactions:     body.data?.attributes?.reactions || {},
-      actorReaction: body.data?.attributes?.actorReaction || null,
-    }));
-}
-
-// ── Members ──────────────────────────────────────────────────────────────
-
-function projectMember(r) {
-  const a = r.attributes || {};
-  return {
-    id:          Number(r.id),
-    userId:      Number(a.userId),
-    role:        a.role || 'member',
-    displayName: a.displayName || '',
-    avatarUrl:   a.avatarUrl || null,
-    slug:        a.slug || '',
-    joinedAt:    a.joinedAt || null,
-    canModerate: !!a.canModerate,
-    canRemove:   !!a.canRemove,
-  };
-}
-
-export function listMembers(groupId) {
-  return apiGet('/social-group-members', {
-    groupId,
-    include: 'user',
-  }).then((body) => ({
-    data: (body.data || []).map(projectMember),
-  }));
-}
-
-export function promoteMember(memberId) {
-  return apiPost(`/social-group-members/${memberId}/promote`)
-    .then((body) => ({ role: body.data?.attributes?.role || 'moderator' }));
-}
-
-export function demoteMember(memberId) {
-  return apiPost(`/social-group-members/${memberId}/demote`)
-    .then((body) => ({ role: body.data?.attributes?.role || 'member' }));
-}
-
-export function kickMember(memberId) {
-  return apiDelete(`/social-group-members/${memberId}`);
-}
-
-// ── Join requests ────────────────────────────────────────────────────────
-
-function projectJoinRequest(r) {
-  const a = r.attributes || {};
-  return {
-    id:          Number(r.id),
-    userId:      Number(a.userId),
-    user:        a.displayName
-      ? { id: Number(a.userId), displayName: a.displayName, avatarUrl: a.avatarUrl || null }
-      : null,
-    createdAt:   a.createdAt || null,
-  };
-}
-
-export function listJoinRequests(groupId) {
-  return apiGet('/social-group-join-requests', {
-    groupId,
-    include: 'user',
-  }).then((body) => ({
-    data: (body.data || []).map(projectJoinRequest),
-  }));
-}
-
-export function approveJoinRequest(requestId) {
-  return apiPost(`/social-group-join-requests/${requestId}/approve`);
-}
-
-export function rejectJoinRequest(requestId) {
-  return apiDelete(`/social-group-join-requests/${requestId}`);
-}
-
 /**
- * Lists the posts in a single discussion thread, paginated. The Flarum 2
- * JSON:API Endpoint behind this is `Endpoint::Index::make()->paginate()`
- * on SocialGroupPostResource — it accepts `page[offset]` + `page[limit]`
- * and returns the usual `links.next`/`meta.page.total` shape.
+ * Lists the posts in a single discussion thread, paginated through the
+ * store. The Flarum 2 JSON:API Endpoint behind this is
+ * `Endpoint::Index::make()->paginate()` on SocialGroupPostResource — it
+ * accepts `page[offset]` + `page[limit]`.
  *
  * Caller contract:
  *   • `opts.offset` (default 0)   — number of posts to skip.
  *   • `opts.limit`  (default 30)  — page size; clamped 1–100 server-side.
- *   • `opts.refreshDiscussion`     — when true, always co-fetch the
- *     discussion meta regardless of whether the post page already
- *     hydrated it via `include=discussion`. Used by the initial load
- *     path so the title/author show even on empty threads.
  *
  * Returns: `{ discussion, data, meta: { hasMore, total, offset, limit } }`.
  * `data` contains the projected posts for THIS page only. The caller is
- * responsible for appending across pages (GroupDiscussionThread keeps a
- * `this.posts` array and concatenates on Load More).
+ * responsible for appending across pages.
  */
 export function listThreadPosts(discussionId, opts = {}) {
   const offset = Number.isFinite(opts.offset) ? Math.max(0, opts.offset | 0) : 0;
-  const limit  = Number.isFinite(opts.limit)  ? Math.max(1, Math.min(100, opts.limit | 0)) : 30;
+  const limit = Number.isFinite(opts.limit) ? Math.max(1, Math.min(100, opts.limit | 0)) : 30;
 
   const params = {
     discussionId,
-    'page[offset]': offset,
-    'page[limit]':  limit,
-    include:        'user,discussion',
+    page: { offset, limit },
+    include: 'user,discussion',
   };
 
-  return apiGet('/social-group-posts', params).then((body) => {
-    const included = body.included || [];
-    const posts    = (body.data || []).map((r) => projectPostFull(r, included));
+  return app.store.find('social-group-posts', params).then((results) => {
+    const posts = results.map(projectPostFull).filter(Boolean);
 
     /*
      * JSON:API server hands us `meta.page.total` (when paginate() is
@@ -416,11 +277,10 @@ export function listThreadPosts(discussionId, opts = {}) {
      * remain — we use BOTH signals because some Flarum versions populate
      * one but not the other depending on whether `total` is known.
      */
-    const total    = Number(body.meta?.page?.total ?? NaN);
-    const hasNext  = !!body.links?.next;
-    const hasMore  = Number.isFinite(total)
-      ? (offset + posts.length) < total
-      : hasNext;
+    const payload = results.payload || {};
+    const total = Number(payload.meta?.page?.total ?? NaN);
+    const hasNext = !!payload.links?.next;
+    const hasMore = Number.isFinite(total) ? offset + posts.length < total : hasNext;
 
     const meta = {
       offset,
@@ -429,23 +289,139 @@ export function listThreadPosts(discussionId, opts = {}) {
       hasMore,
     };
 
-    const discRes = included.find((r) => r.type === 'social-group-discussions');
-    if (discRes) {
-      return { discussion: projectDiscussionFromResource(discRes), data: posts, meta };
-    }
     /*
-     * Empty thread or page > 0 — the post payload didn't include the
-     * discussion. Co-fetch the discussion so the caller still gets the
-     * meta (title, groupId, etc.). Only on first page (offset=0); a
-     * subsequent Load More call shouldn't re-pay the round-trip.
+     * The `include=discussion` hydrated the discussion into the store, so
+     * read it back without a second round-trip. Only co-fetch when it's
+     * absent (empty thread / page > 0) and we're on the first page.
      */
+    const cached = app.store.getById('social-group-discussions', discussionId);
+    if (cached) {
+      return { discussion: projectDiscussionFromResource(cached), data: posts, meta };
+    }
     if (offset > 0) {
       return { discussion: null, data: posts, meta };
     }
-    return apiGet(`/social-group-discussions/${discussionId}`).then((discBody) => ({
-      discussion: projectDiscussionFromResource(discBody.data),
-      data:       posts,
+    return app.store.find('social-group-discussions', discussionId).then((d) => ({
+      discussion: projectDiscussionFromResource(d),
+      data: posts,
       meta,
     }));
   });
+}
+
+// ── Action endpoints on resources (pin/share/react/unreact) ───────────────
+//
+// These are custom (non-CRUD) endpoints, so they stay on app.request and
+// project the JSON:API response down to the post-action attrs the caller
+// wants. shareDiscussion pushes its created discussion into the store so
+// the freshly-shared row is cached alongside the rest of the feed.
+
+export function pinDiscussion(id) {
+  return app
+    .request({
+      method: 'PATCH',
+      url: resolveUrl(`/social-group-discussions/${id}/pin`),
+    })
+    .then((body) => ({ isPinned: !!body.data?.attributes?.isPinned }));
+}
+
+export function shareDiscussion(id, payload) {
+  return apiPost(`/social-group-discussions/${id}/share`, payload).then((body) => {
+    const d = app.store.pushPayload(body);
+    return mapDiscussion(d);
+  });
+}
+
+export function pinPost(id) {
+  return app
+    .request({
+      method: 'PATCH',
+      url: resolveUrl(`/social-group-posts/${id}/pin`),
+    })
+    .then((body) => ({ isPinned: !!body.data?.attributes?.isPinned }));
+}
+
+export function reactToPost(id, reaction) {
+  return apiPost(`/social-group-posts/${id}/react`, { reaction }).then((body) => ({
+    reactions: body.data?.attributes?.reactions || {},
+    actorReaction: body.data?.attributes?.actorReaction || null,
+  }));
+}
+
+export function unreactToPost(id) {
+  return apiPost(`/social-group-posts/${id}/unreact`).then((body) => ({
+    reactions: body.data?.attributes?.reactions || {},
+    actorReaction: body.data?.attributes?.actorReaction || null,
+  }));
+}
+
+// ── Members (social-group-members) ────────────────────────────────────────
+
+function projectMember(r) {
+  return {
+    id: Number(r.id()),
+    userId: Number(r.attribute('userId')),
+    role: r.attribute('role') || 'member',
+    displayName: r.attribute('displayName') || '',
+    avatarUrl: r.attribute('avatarUrl') || null,
+    slug: r.attribute('slug') || '',
+    joinedAt: r.attribute('joinedAt') || null,
+    canModerate: !!r.attribute('canModerate'),
+    canRemove: !!r.attribute('canRemove'),
+  };
+}
+
+export function listMembers(groupId) {
+  return app.store
+    .find('social-group-members', { groupId, include: 'user' })
+    .then((results) => ({ data: results.map(projectMember) }));
+}
+
+export function promoteMember(memberId) {
+  return apiPost(`/social-group-members/${memberId}/promote`).then((body) => ({
+    role: body.data?.attributes?.role || 'moderator',
+  }));
+}
+
+export function demoteMember(memberId) {
+  return apiPost(`/social-group-members/${memberId}/demote`).then((body) => ({
+    role: body.data?.attributes?.role || 'member',
+  }));
+}
+
+export function kickMember(memberId) {
+  const record = app.store.getById('social-group-members', memberId);
+  if (record) return record.delete();
+  return apiDelete(`/social-group-members/${memberId}`);
+}
+
+// ── Join requests (social-group-join-requests) ────────────────────────────
+
+function projectJoinRequest(r) {
+  const userId = Number(r.attribute('userId'));
+  const displayName = r.attribute('displayName');
+  return {
+    id: Number(r.id()),
+    userId,
+    user: displayName
+      ? { id: userId, displayName, avatarUrl: r.attribute('avatarUrl') || null }
+      : null,
+    createdAt: r.attribute('createdAt') || null,
+  };
+}
+
+export function listJoinRequests(groupId) {
+  return app.store
+    .find('social-group-join-requests', { groupId, include: 'user' })
+    .then((results) => ({ data: results.map(projectJoinRequest) }));
+}
+
+export function approveJoinRequest(requestId) {
+  return apiPost(`/social-group-join-requests/${requestId}/approve`);
+}
+
+export function rejectJoinRequest(requestId) {
+  const record = app.store.getById('social-group-join-requests', requestId);
+  if (record) return record.delete();
+  return apiDelete(`/social-group-join-requests/${requestId}`);
 }

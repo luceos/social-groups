@@ -26,6 +26,18 @@ class SocialGroupDiscussion extends AbstractModel
 
     public $timestamps = true;
 
+    /**
+     * Transient payload carried from SocialGroupDiscussionResource::creating()
+     * to created() so the first post + poll are spawned atomically with the
+     * discussion. Declared as REAL (non-attribute) properties so assigning
+     * them never routes through Eloquent's setAttribute() — an undeclared
+     * dynamic property would land in $attributes and break the INSERT with
+     * "Unknown column '_sgPendingContent'".
+     */
+    public ?string $_sgPendingContent = null;
+    public ?array $_sgPendingLinkPreview = null;
+    public ?array $_sgPendingPoll = null;
+
     protected $casts = [
         'is_locked'      => 'boolean',
         'is_pinned'      => 'boolean',

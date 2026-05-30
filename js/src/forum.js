@@ -4,6 +4,10 @@ import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import UserCard from 'flarum/forum/components/UserCard';
 import LinkButton from 'flarum/common/components/LinkButton';
 import SocialGroup from './forum/models/SocialGroup';
+import SocialGroupDiscussion from './forum/models/SocialGroupDiscussion';
+import SocialGroupPost from './forum/models/SocialGroupPost';
+import SocialGroupMember from './forum/models/SocialGroupMember';
+import SocialGroupJoinRequest from './forum/models/SocialGroupJoinRequest';
 import GroupsPage from './forum/components/GroupsPage';
 import GroupPage from './forum/components/GroupPage';
 import GroupDiscussionThread from './forum/components/GroupDiscussionThread';
@@ -19,6 +23,10 @@ app.initializers.add('ernestdefoe-social-groups', (app) => {
   // does.  No global public-channel handlers — events delivered there would
   // be visible to every connected client, including non-members.
   app.store.models['social-groups'] = SocialGroup;
+  app.store.models['social-group-discussions'] = SocialGroupDiscussion;
+  app.store.models['social-group-posts'] = SocialGroupPost;
+  app.store.models['social-group-members'] = SocialGroupMember;
+  app.store.models['social-group-join-requests'] = SocialGroupJoinRequest;
 
   // Notification components
   app.notificationComponents.socialGroupNewPost  = SocialGroupNewPostNotification;

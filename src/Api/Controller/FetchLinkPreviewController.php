@@ -3,7 +3,6 @@
 namespace Ernestdefoe\SocialGroups\Api\Controller;
 
 use Flarum\Http\RequestUtil;
-use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
@@ -19,17 +18,11 @@ class FetchLinkPreviewController implements RequestHandlerInterface
     private const MAX_BYTES   = 524288; // 512 KB — enough to find <head> OG tags
     private const USER_AGENT  = 'flarum-social-groups/1.0 (+https://github.com/ernestdefoe/social-groups)';
 
-    private ClientInterface $http;
-
     public function __construct(
         private CacheRepository $cache,
         private LoggerInterface $log,
-        ?ClientInterface $http = null,
+        private ClientInterface $http,
     ) {
-        $this->http = $http ?? new Client([
-            'timeout'         => 8,
-            'connect_timeout' => 5,
-        ]);
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface

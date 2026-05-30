@@ -2,7 +2,7 @@
 
 namespace Ernestdefoe\SocialGroups\Schema;
 
-use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Schema\Builder as SchemaBuilder;
 
 /**
  * Snapshot of schema-capability flags. Probes the database exactly once
@@ -29,17 +29,15 @@ class SchemaCapabilities
     public readonly bool $linkPreview;
 
     /**
-     * One of the rare legitimate exceptions to "prefer Eloquent over
-     * `ConnectionInterface`" (CLAUDE.md §10 / §39.3). `getSchemaBuilder()`
-     * + `hasTable()` / `hasColumn()` have no Eloquent-model equivalent
-     * — schema introspection is precisely what `ConnectionInterface`
-     * exists to expose. No query over user data runs here; just
-     * DDL state.
+     * Schema introspection is the one job `hasTable()`/`hasColumn()` exist
+     * for and has no Eloquent-model equivalent. Inject the narrow
+     * `Schema\Builder` (bound in SocialGroupsServiceProvider) rather than a
+     * whole `ConnectionInterface`, keeping the connection abstraction out of
+     * application code (CLAUDE.md §10 / §39.3). No query over user data runs
+     * here; just DDL state.
      */
-    public function __construct(ConnectionInterface $db)
+    public function __construct(SchemaBuilder $sb)
     {
-        $sb = $db->getSchemaBuilder();
-
         $this->isGallery   = $sb->hasColumn('social_group_discussions', 'is_gallery');
         $this->isPinned    = $sb->hasColumn('social_group_discussions', 'is_pinned');
         $this->sharedFrom  = $sb->hasColumn('social_group_discussions', 'shared_from_discussion_id');

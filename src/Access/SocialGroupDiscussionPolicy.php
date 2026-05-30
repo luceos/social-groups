@@ -53,8 +53,12 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
     }
 
     /**
-     * Deletes only if the actor is the author, an admin or the global
-     * moderator.
+     * Deletes if the actor is the author, an admin, the global moderator,
+     * or a creator/moderator of the discussion's own group. The last
+     * branch mirrors the `isGroupModerator()` check in
+     * SocialGroupDiscussionResource::canDelete so the rendered delete
+     * button and the endpoint agree — without it, group moderators saw
+     * the control but got a 403 on click.
      */
     public function delete(User $actor, SocialGroupDiscussion $discussion)
     {
@@ -64,7 +68,18 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
         if ($actor->isAdmin() || $actor->hasPermission('ernestdefoe-social-groups.moderate')) {
             return $this->allow();
         }
-        return null;
+        $group = $discussion->group;
+        if ($group === null) {
+            return null;
+        }
+        if ((int) $actor->id === (int) $group->user_id) {
+            return $this->allow();
+        }
+        $isModInGroup = $group->members()
+            ->where('user_id', $actor->id)
+            ->whereIn('role', ['creator', 'moderator'])
+            ->exists();
+        return $isModInGroup ? $this->allow() : null;
     }
 
     /**

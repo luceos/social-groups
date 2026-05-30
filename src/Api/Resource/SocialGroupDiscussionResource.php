@@ -239,6 +239,7 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
                 ->can('create'),
 
             Endpoint\Delete::make()
+                ->authenticated()
                 ->can('delete'),
 
             // ── Action endpoints ─────────────────────────────────────────

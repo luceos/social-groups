@@ -10,8 +10,11 @@ use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Flarum\Http\RequestUtil;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Psr\Log\LoggerInterface;
 use Tobyz\JsonApiServer\Context as BaseContext;
+use Tobyz\JsonApiServer\Exception\BadRequestException;
 
 class SocialGroupResource extends AbstractDatabaseResource
 {
@@ -338,6 +341,34 @@ class SocialGroupResource extends AbstractDatabaseResource
             $model->slug = SocialGroup::createSlug($newName);
         }
         return null;
+    }
+
+    /**
+     * createSlug() guarantees uniqueness at check time, but two concurrent
+     * creates with the same name can both observe the base slug as free and
+     * race to INSERT — the second hits the `slug` unique index and Eloquent
+     * raises a QueryException (SQLSTATE 23000) that would otherwise surface
+     * as a bare 500. Catch the integrity violation, regenerate the slug
+     * (which now sees the committed conflicting row and appends a numeric
+     * suffix), and retry a bounded number of times before degrading to a
+     * user-facing BadRequestException.
+     */
+    protected function saveModel(Model $model, BaseContext $context): void
+    {
+        for ($attempt = 0; ; $attempt++) {
+            try {
+                $model->save();
+                return;
+            } catch (QueryException $e) {
+                if ((string) $e->getCode() !== '23000') {
+                    throw $e;
+                }
+                if ($attempt >= 3) {
+                    throw new BadRequestException('Could not generate a unique slug for this group name. Please try a different name.');
+                }
+                $model->slug = SocialGroup::createSlug((string) $model->name);
+            }
+        }
     }
 
 }

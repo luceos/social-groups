@@ -39,24 +39,21 @@ class GroupAnalyticsController implements RequestHandlerInterface
                 return new JsonResponse(['error' => 'Only group moderators and admins can view analytics.'], 403);
             }
 
-            // ── Member growth: last 30 days ───────────────────────────────
-            // Day-bucketing happens in PHP so the query stays portable
-            // across MySQL, PostgreSQL, and SQLite — PostgreSQL has no
-            // scalar DATE() function, and SQLite's behaviour with
-            // datetime columns differs.
-            $joinedAtList = $group->members()
-                ->whereNull('banned_at')
-                ->where('joined_at', '>=', Carbon::now()->subDays(29)->startOfDay())
-                ->pluck('joined_at');
+            // Day-bucketing is pushed into the database via a single GROUP BY
+            // per metric instead of pulling every row into PHP. The day
+            // expression is driver-gated (CLAUDE.md §39.2) so it stays
+            // portable across the databases Flarum 2.x supports — MySQL/MariaDB
+            // have DATE(), SQLite uses strftime(), PostgreSQL uses to_char().
+            $driver = $group->getConnection()->getDriverName();
 
-            $joinsByDay = [];
-            foreach ($joinedAtList as $joinedAt) {
-                if ($joinedAt === null) continue;
-                $day = $joinedAt instanceof Carbon
-                    ? $joinedAt->format('Y-m-d')
-                    : Carbon::parse($joinedAt)->format('Y-m-d');
-                $joinsByDay[$day] = ($joinsByDay[$day] ?? 0) + 1;
-            }
+            // ── Member growth: last 30 days ───────────────────────────────
+            $joinsByDay = $this->dailyCounts(
+                $group->members()
+                    ->whereNull('banned_at')
+                    ->where('joined_at', '>=', Carbon::now()->subDays(29)->startOfDay()),
+                'joined_at',
+                $driver,
+            );
 
             $memberGrowth = [];
             for ($i = 29; $i >= 0; $i--) {
@@ -65,25 +62,15 @@ class GroupAnalyticsController implements RequestHandlerInterface
             }
 
             // ── Post volume: last 8 weeks ─────────────────────────────────
-            // Pull raw timestamps and bucket by day in PHP, then by week.
-            // Avoids both the N+1 (8 separate COUNTs) and the MySQL-only
-            // DATE()/YEARWEEK() functions, so analytics stays portable
-            // across the three databases Flarum 2.x supports.
+            // Grouped by day in SQL (≤56 rows), then summed into weeks in PHP.
             $earliestWeekStart = Carbon::now()->subWeeks(7)->startOfWeek();
 
-            $postCreatedAtList = SocialGroupPost::where('group_id', $groupId)
-                ->where('created_at', '>=', $earliestWeekStart)
-                ->take(10000)
-                ->pluck('created_at');
-
-            $postsByDay = [];
-            foreach ($postCreatedAtList as $createdAt) {
-                if ($createdAt === null) continue;
-                $day = $createdAt instanceof Carbon
-                    ? $createdAt->format('Y-m-d')
-                    : Carbon::parse($createdAt)->format('Y-m-d');
-                $postsByDay[$day] = ($postsByDay[$day] ?? 0) + 1;
-            }
+            $postsByDay = $this->dailyCounts(
+                SocialGroupPost::where('group_id', $groupId)
+                    ->where('created_at', '>=', $earliestWeekStart),
+                'created_at',
+                $driver,
+            );
 
             $postVolume = [];
             for ($i = 7; $i >= 0; $i--) {
@@ -139,5 +126,39 @@ class GroupAnalyticsController implements RequestHandlerInterface
             $this->log->error('[social-groups] GroupAnalyticsController: ' . $e->getMessage(), ['exception' => $e]);
             return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
         }
+    }
+
+    /**
+     * Counts rows grouped by calendar day, computed entirely in SQL. Returns
+     * a map of `Y-m-d` → count so the caller fills missing days with zero.
+     * Replaces pulling every timestamp into a PHP Collection.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation $query
+     * @return array<string, int>
+     */
+    private function dailyCounts($query, string $column, string $driver): array
+    {
+        $dayExpr = $this->dayExpr($column, $driver);
+
+        return $query
+            ->selectRaw("$dayExpr as bucket_day, count(*) as bucket_count")
+            ->groupByRaw($dayExpr)
+            ->pluck('bucket_count', 'bucket_day')
+            ->map(fn ($count) => (int) $count)
+            ->all();
+    }
+
+    /**
+     * Portable SQL expression that truncates a datetime column to `Y-m-d`.
+     * Column name is a fixed internal literal — never request input — so raw
+     * interpolation carries no injection risk.
+     */
+    private function dayExpr(string $column, string $driver): string
+    {
+        return match ($driver) {
+            'pgsql'  => "to_char($column, 'YYYY-MM-DD')",
+            'sqlite' => "strftime('%Y-%m-%d', $column)",
+            default  => "DATE($column)",
+        };
     }
 }
