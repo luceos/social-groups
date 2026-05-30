@@ -33,7 +33,7 @@ class SetPrimaryGroupController implements RequestHandlerInterface
             return new JsonResponse(['error' => 'Group not found'], 404);
         }
 
-        $isMember = $group->members()->where('user_id', $actor->id)->exists();
+        $isMember = $group->activeMembership($actor->id)->exists();
 
         if (! $isMember) {
             return new JsonResponse(['error' => 'You are not a member of this group'], 403);

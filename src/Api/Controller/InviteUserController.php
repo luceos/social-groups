@@ -40,7 +40,7 @@ class InviteUserController implements RequestHandlerInterface
             // sets role='moderator', but this check used the obsolete
             // 'admin' role, silently denying invite rights to every
             // user promoted through the normal flow.
-            $actorMember = $group->members()->where('user_id', $actor->id)->first();
+            $actorMember = $group->activeMembership($actor->id)->first();
             $canInvite   = $actor->isAdmin()
                 || ($actorMember && in_array($actorMember->role, ['creator', 'moderator'], true));
 

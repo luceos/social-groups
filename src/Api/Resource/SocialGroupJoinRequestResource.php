@@ -69,9 +69,11 @@ class SocialGroupJoinRequestResource extends AbstractDatabaseResource
         }
 
         $actor->assertRegistered();
-        // Listing requests is privileged to the group owner or admins
-        // only — same rule ListJoinRequestsController used.
-        if ((int) $actor->id !== (int) $group->user_id && ! $actor->isAdmin()) {
+        // Gate on the same `edit` ability that drives the frontend's `canEdit`
+        // (owner, global admin, or the `moderate` permission). Restricting this
+        // to owner+admin while the JoinRequestsPanel renders for every canEdit
+        // actor meant group moderators saw the panel but got a 403 on load.
+        if (! $actor->can('edit', $group)) {
             throw new PermissionDeniedException();
         }
 

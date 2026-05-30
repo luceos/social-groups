@@ -9,6 +9,7 @@ use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Flarum\Http\RequestUtil;
+use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
@@ -18,7 +19,26 @@ use Tobyz\JsonApiServer\Exception\BadRequestException;
 
 class SocialGroupResource extends AbstractDatabaseResource
 {
-    public function __construct(protected LoggerInterface $log) {}
+    public function __construct(
+        protected LoggerInterface $log,
+        protected FilesystemFactory $filesystem
+    ) {}
+
+    /**
+     * Rebuild a stored asset reference into a public URL. New rows hold the
+     * relative disk key (run through $disk->url()); pre-existing rows may hold
+     * a full URL, which is returned unchanged.
+     */
+    protected function assetUrl(?string $stored): ?string
+    {
+        if ($stored === null || $stored === '') {
+            return $stored;
+        }
+        if (preg_match('#^https?://#i', $stored)) {
+            return $stored;
+        }
+        return $this->filesystem->disk('flarum-assets')->url(ltrim($stored, '/'));
+    }
 
     public function type(): string
     {
@@ -86,7 +106,7 @@ class SocialGroupResource extends AbstractDatabaseResource
                 // pendingRequestCount schema fields read from pre-loaded
                 // attributes instead of issuing a fresh per-field query.
                 $group->loadCount([
-                    'members as actor_is_member'       => fn ($q) => $q->where('user_id', $actor->id),
+                    'members as actor_is_member'       => fn ($q) => $q->where('user_id', $actor->id)->whereNull('banned_at'),
                     'joinRequests as actor_is_pending'  => fn ($q) => $q->where('user_id', $actor->id)->where('status', 'pending'),
                     'joinRequests as pending_req_count' => fn ($q) => $q->where('status', 'pending'),
                 ]);
@@ -128,7 +148,7 @@ class SocialGroupResource extends AbstractDatabaseResource
             // Batch all three per-actor lookups as correlated subqueries on the
             // main SELECT so the Index endpoint never issues O(n) extra queries.
             $query->withCount([
-                'members as actor_is_member'       => fn ($q) => $q->where('user_id', $actorId),
+                'members as actor_is_member'       => fn ($q) => $q->where('user_id', $actorId)->whereNull('banned_at'),
                 'joinRequests as actor_is_pending'  => fn ($q) => $q->where('user_id', $actorId)->where('status', 'pending'),
                 'joinRequests as pending_req_count' => fn ($q) => $q->where('status', 'pending'),
             ]);
@@ -225,11 +245,11 @@ class SocialGroupResource extends AbstractDatabaseResource
 
             Schema\Str::make('imageUrl')
                 ->nullable()
-                ->get(fn ($group) => $group->image_url),
+                ->get(fn ($group) => $this->assetUrl($group->image_url)),
 
             Schema\Str::make('bannerUrl')
                 ->nullable()
-                ->get(fn ($group) => $group->banner_url),
+                ->get(fn ($group) => $this->assetUrl($group->banner_url)),
 
             Schema\Boolean::make('isPrivate')
                 ->writable()
@@ -255,7 +275,7 @@ class SocialGroupResource extends AbstractDatabaseResource
                     $actor = $context->getActor();
                     if (! $actor->exists) return false;
                     $pre = $group->actor_is_member;
-                    return $pre !== null ? (bool) $pre : $group->members()->where('user_id', $actor->id)->exists();
+                    return $pre !== null ? (bool) $pre : $group->activeMembership($actor->id)->exists();
                 }),
 
             Schema\Boolean::make('isCreator')

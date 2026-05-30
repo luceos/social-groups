@@ -29,7 +29,7 @@ class GroupAnalyticsController implements RequestHandlerInterface
             $groupId = $this->routeParam($request, 'groupId', '/sg-analytics/{groupId}');
             $group   = SocialGroup::findOrFail($groupId);
 
-            $actorMember = $group->members()->where('user_id', $actor->id)->first();
+            $actorMember = $group->activeMembership($actor->id)->first();
             $actorRole   = $actorMember?->role;
 
             $canView = $actor->isAdmin()

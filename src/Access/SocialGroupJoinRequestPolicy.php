@@ -7,13 +7,12 @@ use Flarum\User\Access\AbstractPolicy;
 use Flarum\User\User;
 
 /**
- * SocialGroupJoinRequest policy — mirrors the
- * `actor->id === group->user_id || isAdmin()` check that
- * ApproveJoinRequestController and RejectJoinRequestController used to
- * duplicate.
- *
- * Approve and delete (rejection) use the same gate: only the group
- * owner or a global admin can decide.
+ * SocialGroupJoinRequest policy — approve and delete (rejection) share
+ * one gate: anyone who can `edit` the parent group (owner, global admin,
+ * or holder of the `moderate` permission). Delegating to the `edit`
+ * ability keeps this in lockstep with the `canEdit` attribute that the
+ * JoinRequestsPanel renders against, so the panel is never shown to an
+ * actor the backend would then reject.
  */
 class SocialGroupJoinRequestPolicy extends AbstractPolicy
 {
@@ -29,10 +28,7 @@ class SocialGroupJoinRequestPolicy extends AbstractPolicy
 
     protected function canDecide(User $actor, SocialGroupJoinRequest $request): bool
     {
-        if ($actor->isAdmin()) {
-            return true;
-        }
         $group = $request->group;
-        return $group !== null && (int) $actor->id === (int) $group->user_id;
+        return $group !== null && $actor->can('edit', $group);
     }
 }

@@ -289,7 +289,7 @@ class SocialGroupPostResource extends AbstractDatabaseResource
         }
 
         $group = $discussion->group;
-        $isMember = $group->members()->where('user_id', $actor->id)->exists();
+        $isMember = $group->activeMembership($actor->id)->exists();
         if (! $isMember) {
             throw new PermissionDeniedException();
         }

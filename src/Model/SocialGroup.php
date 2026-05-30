@@ -45,6 +45,19 @@ class SocialGroup extends AbstractModel
         return $this->hasMany(SocialGroupMember::class, 'group_id');
     }
 
+    /**
+     * Membership query scoped to one actor, excluding kicked users.
+     * Kick is a soft action that sets `banned_at` without deleting the row,
+     * so every write-gating check must filter it out — route them through
+     * here rather than re-deriving the `whereNull('banned_at')` filter.
+     */
+    public function activeMembership(int $userId)
+    {
+        return $this->members()
+            ->where('user_id', $userId)
+            ->whereNull('banned_at');
+    }
+
     public function users()
     {
         return $this->belongsToMany(User::class, 'social_group_members', 'group_id', 'user_id')

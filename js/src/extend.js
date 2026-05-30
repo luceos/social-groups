@@ -3,6 +3,14 @@ import { Admin } from 'flarum/common/extenders';
 
 export default [
   new Admin()
+    .setting(() => ({
+      setting: 'ernestdefoe-social-groups.max_image_bytes',
+      type: 'number',
+      min: 0,
+      placeholder: 5242880,
+      label: app.translator.trans('ernestdefoe-social-groups.admin.settings.max_image_bytes_label'),
+      help: app.translator.trans('ernestdefoe-social-groups.admin.settings.max_image_bytes_help'),
+    }))
     .permission(
       () => ({
         icon: 'fa-solid fa-users',

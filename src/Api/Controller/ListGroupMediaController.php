@@ -37,7 +37,7 @@ class ListGroupMediaController implements RequestHandlerInterface
 
             if ($group->is_private) {
                 $actor->assertRegistered();
-                $isMember = $group->members()->where('user_id', $actor->id)->exists();
+                $isMember = $group->activeMembership($actor->id)->exists();
                 if (! $isMember && ! $actor->isAdmin()) {
                     return new JsonResponse(['error' => 'This group is private.'], 403);
                 }

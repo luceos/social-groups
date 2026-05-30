@@ -467,7 +467,7 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
             throw new BadRequestException('Group not found');
         }
 
-        $isMember = $group->members()->where('user_id', $actor->id)->exists();
+        $isMember = $group->activeMembership($actor->id)->exists();
         $isOwner  = (int) $actor->id === (int) $group->user_id;
         $isMod    = $actor->isAdmin()
                   || $actor->hasPermission('ernestdefoe-social-groups.moderate');

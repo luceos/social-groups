@@ -5,6 +5,7 @@ namespace Ernestdefoe\SocialGroups\Api\Controller;
 use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Flarum\Http\RequestUtil;
+use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\Exception\PermissionDeniedException;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -16,8 +17,11 @@ class UploadGroupImageController implements RequestHandlerInterface
 {
     use ReadsRouteParam;
 
+    protected const DEFAULT_MAX_BYTES = 5 * 1024 * 1024;
+
     public function __construct(
-        protected FilesystemFactory $filesystem
+        protected FilesystemFactory $filesystem,
+        protected SettingsRepositoryInterface $settings
     ) {
     }
 
@@ -54,10 +58,14 @@ class UploadGroupImageController implements RequestHandlerInterface
             return new JsonResponse(['error' => 'Invalid file type. Allowed: jpg, jpeg, png, gif, webp'], 422);
         }
 
-        // Validate file size (max 5MB)
-        $maxSize = 5 * 1024 * 1024;
-        if ($file->getSize() > $maxSize) {
-            return new JsonResponse(['error' => 'File too large. Maximum size is 5MB'], 422);
+        $maxSize = (int) $this->settings->get('ernestdefoe-social-groups.max_image_bytes', self::DEFAULT_MAX_BYTES);
+        if ($maxSize <= 0) {
+            $maxSize = self::DEFAULT_MAX_BYTES;
+        }
+        $size = $file->getSize();
+        if ($size === null || $size <= 0 || $size > $maxSize) {
+            $maxMb = round($maxSize / (1024 * 1024), 1);
+            return new JsonResponse(['error' => "File too large. Maximum size is {$maxMb}MB"], 422);
         }
 
         // Read the stream once so we can both sniff and upload without rewinding
@@ -86,32 +94,56 @@ class UploadGroupImageController implements RequestHandlerInterface
         $filename = 'social-groups/' . $group->id . '-' . $type . '-' . time() . '.' . $ext;
 
         $disk->put($filename, $streamContents, 'public');
-        $url = $disk->url($filename);
 
+        // Persist the relative disk key, not the full URL. The public URL is
+        // rebuilt on serialization (SocialGroupResource) via $disk->url(), so a
+        // CDN / base-URL change never strands old rows, and deletion becomes a
+        // direct $disk->delete($key) instead of fragile URL-to-path parsing.
         if ($type === 'banner') {
-            $group->banner_url = $url;
+            $group->banner_url = $filename;
         } else {
-            $group->image_url = $url;
+            $group->image_url = $filename;
         }
         $group->save();
 
-        return new JsonResponse(['url' => $url]);
+        return new JsonResponse(['url' => $disk->url($filename)]);
     }
 
-    protected function deleteOldFile($disk, string $url): void
+    protected function deleteOldFile($disk, string $stored): void
     {
         try {
-            // Extract path from URL
-            $parsed = parse_url($url);
-            if ($parsed && isset($parsed['path'])) {
-                $path = ltrim($parsed['path'], '/');
-                // Remove any base path prefix like 'assets/'
-                if ($disk->exists($path)) {
-                    $disk->delete($path);
-                }
+            $key = $this->resolveDiskKey($disk, $stored);
+            if ($key !== '' && $disk->exists($key)) {
+                $disk->delete($key);
             }
-        } catch (\Exception $e) {
-            // Silently fail — old file deletion is best-effort
+        } catch (\Throwable $e) {
+            // Old-file deletion is best-effort — never block a re-upload on it.
         }
+    }
+
+    /**
+     * Resolve a stored reference to the disk key it was written under. New rows
+     * store the relative key directly; legacy rows stored the full URL, whose
+     * key is recovered by stripping the disk's own base URL — not parse_url(),
+     * whose path can carry an 'assets/' prefix that never matches the key and
+     * silently orphaned the old file on every re-upload.
+     */
+    protected function resolveDiskKey($disk, string $stored): string
+    {
+        if (! preg_match('#^https?://#i', $stored)) {
+            return ltrim($stored, '/');
+        }
+
+        $probe  = $disk->url('__sgkey__');
+        $marker = strrpos($probe, '__sgkey__');
+        if ($marker !== false) {
+            $base = substr($probe, 0, $marker);
+            if (str_starts_with($stored, $base)) {
+                return ltrim(substr($stored, strlen($base)), '/');
+            }
+        }
+
+        $path = parse_url($stored, PHP_URL_PATH);
+        return is_string($path) ? ltrim($path, '/') : '';
     }
 }
