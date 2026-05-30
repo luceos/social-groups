@@ -55,8 +55,7 @@ class SocialGroupPostPolicy extends AbstractPolicy
         if ($group === null) {
             return null;
         }
-        $isMod = $group->members()
-            ->where('user_id', $actor->id)
+        $isMod = $group->activeMembership($actor->id)
             ->whereIn('role', ['creator', 'moderator'])
             ->exists();
         return $isMod ? $this->allow() : null;
@@ -76,8 +75,7 @@ class SocialGroupPostPolicy extends AbstractPolicy
         if ($group === null) {
             return null;
         }
-        $isMod = $group->members()
-            ->where('user_id', $actor->id)
+        $isMod = $group->activeMembership($actor->id)
             ->whereIn('role', ['creator', 'moderator'])
             ->exists();
         return $isMod ? $this->allow() : null;

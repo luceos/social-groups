@@ -50,9 +50,8 @@ class TypingStatusController implements RequestHandlerInterface
             return new EmptyResponse(404);
         }
 
-        $isMember = $discussion->group
-            ->members()
-            ->where('user_id', $actor->id)
+        $isMember = (bool) $discussion->group
+            ?->activeMembership($actor->id)
             ->exists();
 
         if (! $isMember) {

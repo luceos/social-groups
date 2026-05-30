@@ -8,8 +8,8 @@ use Flarum\Api\Context;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
+use Ernestdefoe\SocialGroups\Support\GroupAssetUrl;
 use Flarum\Http\RequestUtil;
-use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
@@ -21,24 +21,8 @@ class SocialGroupResource extends AbstractDatabaseResource
 {
     public function __construct(
         protected LoggerInterface $log,
-        protected FilesystemFactory $filesystem
+        protected GroupAssetUrl $assetUrl
     ) {}
-
-    /**
-     * Rebuild a stored asset reference into a public URL. New rows hold the
-     * relative disk key (run through $disk->url()); pre-existing rows may hold
-     * a full URL, which is returned unchanged.
-     */
-    protected function assetUrl(?string $stored): ?string
-    {
-        if ($stored === null || $stored === '') {
-            return $stored;
-        }
-        if (preg_match('#^https?://#i', $stored)) {
-            return $stored;
-        }
-        return $this->filesystem->disk('flarum-assets')->url(ltrim($stored, '/'));
-    }
 
     public function type(): string
     {
@@ -245,11 +229,11 @@ class SocialGroupResource extends AbstractDatabaseResource
 
             Schema\Str::make('imageUrl')
                 ->nullable()
-                ->get(fn ($group) => $this->assetUrl($group->image_url)),
+                ->get(fn ($group) => $this->assetUrl->resolve($group->image_url)),
 
             Schema\Str::make('bannerUrl')
                 ->nullable()
-                ->get(fn ($group) => $this->assetUrl($group->banner_url)),
+                ->get(fn ($group) => $this->assetUrl->resolve($group->banner_url)),
 
             Schema\Boolean::make('isPrivate')
                 ->writable()

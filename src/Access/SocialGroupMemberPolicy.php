@@ -59,13 +59,10 @@ class SocialGroupMemberPolicy extends AbstractPolicy
         if ($group === null) {
             return null;
         }
-        $actorMember = $group->members()
-            ->where('user_id', $actor->id)
-            ->first();
-        if ($actorMember && in_array($actorMember->role, ['creator', 'moderator'], true)) {
-            return $this->allow();
-        }
-        return null;
+        $isMod = $group->activeMembership($actor->id)
+            ->whereIn('role', ['creator', 'moderator'])
+            ->exists();
+        return $isMod ? $this->allow() : null;
     }
 
     protected function isGroupCreator(User $actor, SocialGroupMember $member): bool
@@ -74,9 +71,8 @@ class SocialGroupMemberPolicy extends AbstractPolicy
         if ($group === null) {
             return false;
         }
-        $actorMember = $group->members()
-            ->where('user_id', $actor->id)
-            ->first();
-        return $actorMember !== null && $actorMember->role === 'creator';
+        return $group->activeMembership($actor->id)
+            ->where('role', 'creator')
+            ->exists();
     }
 }

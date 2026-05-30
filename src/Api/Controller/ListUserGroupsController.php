@@ -4,6 +4,7 @@ namespace Ernestdefoe\SocialGroups\Api\Controller;
 
 use Ernestdefoe\SocialGroups\Api\Concern\ReadsRouteParam;
 use Ernestdefoe\SocialGroups\Model\SocialGroupMember;
+use Ernestdefoe\SocialGroups\Support\GroupAssetUrl;
 use Flarum\Http\RequestUtil;
 use Flarum\User\User;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -16,7 +17,7 @@ class ListUserGroupsController implements RequestHandlerInterface
 {
     use ReadsRouteParam;
 
-    public function __construct(private LoggerInterface $log) {}
+    public function __construct(private LoggerInterface $log, private GroupAssetUrl $assetUrl) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -36,16 +37,24 @@ class ListUserGroupsController implements RequestHandlerInterface
                 ->with('group')
                 ->get();
 
-            $groups = $memberships->map(function ($membership) use ($actor, $primaryGroupId) {
+            // Preload the viewing actor's own active memberships once, so the
+            // private-group gate below is an in-memory check instead of one
+            // query per private group in the list.
+            $actorGroupIds = $actor->exists
+                ? SocialGroupMember::where('user_id', $actor->id)
+                    ->whereNull('banned_at')
+                    ->pluck('group_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all()
+                : [];
+
+            $groups = $memberships->map(function ($membership) use ($actor, $primaryGroupId, $actorGroupIds) {
                 $group = $membership->group;
                 if (! $group) return null;
 
                 if ($group->is_private) {
                     if (! $actor->exists) return null;
-                    $isMember = $group->members()
-                        ->where('user_id', $actor->id)
-                        ->whereNull('banned_at')
-                        ->exists();
+                    $isMember = in_array((int) $group->id, $actorGroupIds, true);
                     if (! $isMember && ! $actor->isAdmin()) return null;
                 }
 
@@ -53,7 +62,7 @@ class ListUserGroupsController implements RequestHandlerInterface
                     'id'          => $group->id,
                     'name'        => $group->name,
                     'slug'        => $group->slug,
-                    'imageUrl'    => $group->image_url,
+                    'imageUrl'    => $this->assetUrl->resolve($group->image_url),
                     'color'       => $group->color,
                     'memberCount' => (int) $group->member_count,
                     'role'        => $membership->role,

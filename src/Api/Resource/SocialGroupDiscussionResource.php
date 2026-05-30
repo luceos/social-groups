@@ -12,6 +12,7 @@ use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
 use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Ernestdefoe\SocialGroups\Schema\SchemaCapabilities;
 use Ernestdefoe\SocialGroups\Service\Discussion\ShareDiscussionService;
+use Ernestdefoe\SocialGroups\Support\PendingDiscussionPayload;
 use Flarum\Api\Context;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
@@ -511,14 +512,9 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         $model->last_posted_user_id = $actor->id;
         $model->is_locked           = false;
 
-        // Stash payload bits the created() hook needs to spawn the
-        // first post + poll atomically with the discussion. Dynamic
-        // properties on AbstractModel work without strict-property
-        // declarations; the values never persist because there are no
-        // matching columns.
-        $model->_sgPendingContent     = $content;
-        $model->_sgPendingLinkPreview = $linkPreview;
-        $model->_sgPendingPoll        = $pollData;
+        // Hand the first-post + poll payload to created() as one typed value
+        // object on a declared model property (see SocialGroupDiscussion).
+        $model->_sgPending = new PendingDiscussionPayload($content, $linkPreview, $pollData);
 
         return null;
     }
@@ -526,9 +522,10 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
     public function created(object $model, BaseContext $context): ?object
     {
         /** @var SocialGroupDiscussion $model */
-        $content     = (string) ($model->_sgPendingContent ?? '');
-        $linkPreview = $model->_sgPendingLinkPreview ?? null;
-        $pollData    = $model->_sgPendingPoll ?? null;
+        $payload     = $model->_sgPending;
+        $content     = $payload?->content ?? '';
+        $linkPreview = $payload?->linkPreview;
+        $pollData    = $payload?->poll;
 
         SocialGroupPost::create([
             'discussion_id'  => $model->id,

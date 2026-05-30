@@ -16,11 +16,6 @@ class SocialGroupNewReplyBlueprint implements BlueprintInterface
         private SocialGroupDiscussion $discussion
     ) {}
 
-    public function getFromUser(): User
-    {
-        return $this->actor;
-    }
-
     public function getSender(): User
     {
         return $this->actor;

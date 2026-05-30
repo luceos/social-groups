@@ -75,8 +75,7 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
         if ((int) $actor->id === (int) $group->user_id) {
             return $this->allow();
         }
-        $isModInGroup = $group->members()
-            ->where('user_id', $actor->id)
+        $isModInGroup = $group->activeMembership($actor->id)
             ->whereIn('role', ['creator', 'moderator'])
             ->exists();
         return $isModInGroup ? $this->allow() : null;
@@ -98,8 +97,7 @@ class SocialGroupDiscussionPolicy extends AbstractPolicy
         if ((int) $actor->id === (int) $group->user_id) {
             return $this->allow();
         }
-        $isModInGroup = $group->members()
-            ->where('user_id', $actor->id)
+        $isModInGroup = $group->activeMembership($actor->id)
             ->whereIn('role', ['creator', 'moderator'])
             ->exists();
         return $isModInGroup ? $this->allow() : null;

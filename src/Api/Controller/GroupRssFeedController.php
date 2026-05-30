@@ -4,7 +4,6 @@ namespace Ernestdefoe\SocialGroups\Api\Controller;
 
 use Ernestdefoe\SocialGroups\Model\SocialGroup;
 use Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion;
-use Ernestdefoe\SocialGroups\Model\SocialGroupPost;
 use Flarum\Foundation\Config;
 use Flarum\Formatter\Formatter;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -41,23 +40,18 @@ class GroupRssFeedController implements RequestHandlerInterface
             $groupUrl = $baseUrl . '/groups/' . rawurlencode($slug);
             $feedUrl  = $groupUrl . '/feed.rss';
 
+            // Eager-load each discussion's oldest post via the firstPost
+            // relation (oldestOfMany). This fetches at most one post row per
+            // discussion instead of hydrating every post across all 20
+            // discussions just to keep the first of each.
             $discussions = SocialGroupDiscussion::where('group_id', $group->id)
-                ->with('user')
+                ->with(['user', 'firstPost.user'])
                 ->orderByDesc('last_posted_at')
                 ->take(20)
                 ->get();
 
-            $discussionIds = $discussions->pluck('id')->all();
-
-            $firstPostsByDiscussion = SocialGroupPost::with('user')
-                ->whereIn('discussion_id', $discussionIds)
-                ->orderBy('created_at')
-                ->get()
-                ->groupBy('discussion_id')
-                ->map(fn ($posts) => $posts->first());
-
-            $items = $discussions->map(function ($d) use ($firstPostsByDiscussion, $baseUrl, $slug) {
-                $post       = $firstPostsByDiscussion[$d->id] ?? null;
+            $items = $discussions->map(function ($d) use ($baseUrl, $slug) {
+                $post       = $d->firstPost;
                 $threadUrl  = $baseUrl . '/groups/' . rawurlencode($slug) . '/d/' . $d->id;
                 $pubDate    = ($d->created_at ?? $d->last_posted_at)?->format(\DateTime::RSS) ?? date(\DateTime::RSS);
                 $authorName = $post?->user?->display_name ?? $d->user?->display_name ?? '';

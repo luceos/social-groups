@@ -5,6 +5,7 @@ namespace Ernestdefoe\SocialGroups\Model;
 use Flarum\Database\AbstractModel;
 use Flarum\User\User;
 use Ernestdefoe\SocialGroups\Model\SgPoll;
+use Ernestdefoe\SocialGroups\Support\PendingDiscussionPayload;
 
 /**
  * @property int         $id
@@ -29,14 +30,11 @@ class SocialGroupDiscussion extends AbstractModel
     /**
      * Transient payload carried from SocialGroupDiscussionResource::creating()
      * to created() so the first post + poll are spawned atomically with the
-     * discussion. Declared as REAL (non-attribute) properties so assigning
-     * them never routes through Eloquent's setAttribute() — an undeclared
-     * dynamic property would land in $attributes and break the INSERT with
-     * "Unknown column '_sgPendingContent'".
+     * discussion. Declared as a REAL (non-attribute) typed property so
+     * assigning it never routes through Eloquent's setAttribute() — an
+     * undeclared property would land in $attributes and break the INSERT.
      */
-    public ?string $_sgPendingContent = null;
-    public ?array $_sgPendingLinkPreview = null;
-    public ?array $_sgPendingPoll = null;
+    public ?PendingDiscussionPayload $_sgPending = null;
 
     protected $casts = [
         'is_locked'      => 'boolean',
