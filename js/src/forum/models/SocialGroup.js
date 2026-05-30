@@ -70,6 +70,6 @@ export default class SocialGroup extends Model {
   }
 
   user() {
-    return Model.hasOne('user')(this);
+    return Model.hasOne('user').call(this);
   }
 }

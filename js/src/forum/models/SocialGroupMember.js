@@ -44,6 +44,6 @@ export default class SocialGroupMember extends Model {
   }
 
   user() {
-    return Model.hasOne('user')(this);
+    return Model.hasOne('user').call(this);
   }
 }

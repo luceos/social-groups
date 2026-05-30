@@ -28,6 +28,6 @@ export default class SocialGroupJoinRequest extends Model {
   }
 
   user() {
-    return Model.hasOne('user')(this);
+    return Model.hasOne('user').call(this);
   }
 }

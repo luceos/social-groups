@@ -163,7 +163,8 @@ export default class GroupFeed extends Component {
 
         m.redraw();
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[social-groups] Failed to load group feed', err);
         this.discussions = [];
         this.loadError   = true;
         this.loading     = false;

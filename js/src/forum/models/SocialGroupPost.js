@@ -63,10 +63,10 @@ export default class SocialGroupPost extends Model {
   }
 
   user() {
-    return Model.hasOne('user')(this);
+    return Model.hasOne('user').call(this);
   }
 
   discussion() {
-    return Model.hasOne('discussion')(this);
+    return Model.hasOne('discussion').call(this);
   }
 }

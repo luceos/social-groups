@@ -56,14 +56,14 @@ export default class SocialGroupDiscussion extends Model {
   }
 
   user() {
-    return Model.hasOne('user')(this);
+    return Model.hasOne('user').call(this);
   }
 
   lastPostedUser() {
-    return Model.hasOne('lastPostedUser')(this);
+    return Model.hasOne('lastPostedUser').call(this);
   }
 
   firstPost() {
-    return Model.hasOne('firstPost')(this);
+    return Model.hasOne('firstPost').call(this);
   }
 }
