@@ -108,7 +108,12 @@ class GroupAnalyticsController implements RequestHandlerInterface
 
             // ── Summary stats ─────────────────────────────────────────────
             $totalPosts     = SocialGroupPost::where('group_id', $groupId)->count();
-            $totalReactions = SocialGroupPostReaction::whereHas('post', fn ($q) => $q->where('group_id', $groupId))->count();
+            // Join instead of a correlated whereHas subquery (planner can hash-join
+            // on the indexed FK rather than re-run a subquery per reaction row).
+            $totalReactions = SocialGroupPostReaction::query()
+                ->join('social_group_posts', 'social_group_post_reactions.post_id', '=', 'social_group_posts.id')
+                ->where('social_group_posts.group_id', $groupId)
+                ->count();
 
             return new JsonResponse([
                 'summary' => [

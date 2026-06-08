@@ -117,12 +117,27 @@ class SocialGroup extends AbstractModel
         }
 
         $base = $slug;
-        $i    = 1;
 
-        while (static::where('slug', $slug)->exists()) {
-            $slug = $base . '-' . $i++;
+        // Fetch every colliding slug in ONE query (base + "base-N" variants) and
+        // pick the first free suffix in PHP, instead of a SELECT per iteration
+        // (an unbounded query loop on a popular base name). The base charset is
+        // slug-safe (letters/digits/hyphens), so the LIKE pattern needs no extra
+        // wildcard escaping.
+        $taken = static::where('slug', $base)
+            ->orWhere('slug', 'like', $base . '-%')
+            ->pluck('slug')
+            ->all();
+
+        if (! in_array($base, $taken, true)) {
+            return $base;
         }
 
-        return $slug;
+        $taken = array_flip($taken);
+        $i = 2;
+        while (isset($taken[$base . '-' . $i])) {
+            $i++;
+        }
+
+        return $base . '-' . $i;
     }
 }

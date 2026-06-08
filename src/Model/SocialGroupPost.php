@@ -21,6 +21,14 @@ class SocialGroupPost extends AbstractModel
     protected $table = 'social_group_posts';
 
     /**
+     * Transient discussion handle carried from SocialGroupPostResource::creating()
+     * to created(). Declared as a REAL (non-attribute) typed property so assigning
+     * it never routes through Eloquent's setAttribute() — an undeclared property
+     * would land in $attributes and break the INSERT.
+     */
+    public ?SocialGroupDiscussion $_sgDiscussionRef = null;
+
+    /**
      * Explicit mass-assignment allowlist. Blocks a future caller passing
      * `$request->getParsedBody()` straight into `create()/fill()` from
      * being able to overwrite `is_pinned`, `group_id`, `parent_post_id`
