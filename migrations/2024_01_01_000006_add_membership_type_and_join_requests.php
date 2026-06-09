@@ -3,6 +3,12 @@
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 
+/**
+ * Raw (not a Migration helper): this migration does two things in one step —
+ * adds a column to social_groups AND creates the join_requests table with an
+ * FK — which the single-purpose helpers (addColumns / createTable) can't
+ * express in a single return.
+ */
 return [
     'up' => function (Builder $schema) {
         $schema->table('social_groups', function (Blueprint $table) {
