@@ -17,7 +17,12 @@ use Flarum\User\User;
  * Centralised here:
  *  - global admin passes,
  *  - anyone with `ernestdefoe-social-groups.moderate` passes,
- *  - public groups pass for everyone,
+ *  - actors without core `viewForum` are denied (mirrors how core's
+ *    ScopeDiscussionVisibility gates the main forum) — on a stock forum
+ *    guests have viewForum so public groups stay visible, but a
+ *    login-restricted forum that revokes guest viewForum hides group
+ *    content too instead of leaking it,
+ *  - public groups pass for everyone who has viewForum,
  *  - private groups: owner OR active member (banned_at IS NULL).
  *
  * Guests on private groups are always denied — call sites that need
@@ -30,6 +35,10 @@ class GroupVisibility
     {
         if ($actor->isAdmin() || $actor->hasPermission('ernestdefoe-social-groups.moderate')) {
             return true;
+        }
+
+        if (! $actor->hasPermission('viewForum')) {
+            return false;
         }
 
         if (! $group->is_private) {
