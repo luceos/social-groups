@@ -2,7 +2,7 @@ import {
   apiPost,
   listDiscussions, listThreadPosts,
   createDiscussion, deleteDiscussion as apiDeleteDiscussion,
-  createPost, deletePost as apiDeletePost,
+  createPost, updatePost, deletePost as apiDeletePost,
   pinDiscussion as apiPinDiscussion,
   reactToPost, unreactToPost,
 } from '../utils/api';
@@ -42,6 +42,12 @@ export default class GroupFeed extends Component {
     this.previewUrl     = null;
     this._previewTimer  = null;
     this._dismissedUrls = new Set();
+
+    // Inline edit state for a feed card's first post (the card body).
+    this.editingId = null;   // discussion id whose post is being edited
+    this.editText  = '';
+    this.editBusy  = false;
+    this.editError = null;
 
     // Per-post comment reply state: { [discussionId]: text }
     this.replyTexts     = {};
@@ -277,6 +283,51 @@ export default class GroupFeed extends Component {
       .catch((err) => {
         this.postError      = err.response?.error || err.message || 'Error';
         this.postSubmitting = false;
+        m.redraw();
+      });
+  }
+
+  // ── Edit a feed card's first post (the card body) ────────────────────────
+
+  startEditPost(d) {
+    if (!d.firstPost) return;
+    this.openMenuId = null;
+    this.editingId  = d.id;
+    this.editText   = d.firstPost.content || '';
+    this.editError  = null;
+    this.editBusy   = false;
+    m.redraw();
+  }
+
+  cancelEditPost() {
+    this.editingId = null;
+    this.editText  = '';
+    this.editError = null;
+    m.redraw();
+  }
+
+  saveEditPost(d) {
+    const content = this.editText.trim();
+    if (!content || this.editBusy || !d.firstPost) return;
+    this.editBusy  = true;
+    this.editError = null;
+    m.redraw();
+
+    updatePost(d.firstPost.id, { content })
+      .then((post) => {
+        d.firstPost.content       = post.content;
+        d.firstPost.contentParsed = post.contentParsed;
+        this.editingId = null;
+        this.editText  = '';
+        this.editBusy  = false;
+        m.redraw();
+      })
+      .catch((err) => {
+        this.editBusy  = false;
+        this.editError = err.response?.errors?.[0]?.detail
+          || err.response?.error
+          || err.message
+          || app.translator.trans('ernestdefoe-social-groups.forum.discussions.edit_failed');
         m.redraw();
       });
   }
@@ -603,6 +654,11 @@ export default class GroupFeed extends Component {
       replyText:       this.replyTexts[d.id] || '',
       replyBusy:       !!this.replySubmitting[d.id],
 
+      editing:         this.editingId === d.id,
+      editText:        this.editText,
+      editBusy:        this.editBusy,
+      editError:       this.editError,
+
       onMenuToggle:     () => { this.openMenuId = this.openMenuId === d.id ? null : d.id; m.redraw(); },
       onTogglePicker:   () => this.togglePicker(d.id),
       onReact:          (key) => { this.pickerDiscId = null; this.toggleReaction(d, key); },
@@ -610,6 +666,10 @@ export default class GroupFeed extends Component {
       onToggleComments: () => this.toggleComments(d),
       onPin:            () => this.pinDiscussion(d),
       onDelete:         () => this.deleteDiscussion(d),
+      onStartEdit:      () => this.startEditPost(d),
+      onEditChange:     (text) => { this.editText = text; },
+      onEditSave:       () => this.saveEditPost(d),
+      onEditCancel:     () => this.cancelEditPost(),
       onVotePoll:       (optionId) => this.votePoll(d, optionId),
       onReplyChange:    (text) => { this.replyTexts[d.id] = text; },
       onReplyInput:     (e) => this.mentionTracker.onInput(d.id, e),

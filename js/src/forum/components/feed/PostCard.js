@@ -1,6 +1,7 @@
 import app from 'flarum/forum/app';
 import humanTime from 'flarum/common/utils/humanTime';
 import { viewPostLinkPreview } from '../../utils/linkPreview';
+import { MarkdownToolbar } from '../../utils/markdownToolbar';
 import { ReactionPicker, ReactionButton, ReactionStat } from './reactions';
 import ShareDiscussionModal from '../ShareDiscussionModal';
 
@@ -53,8 +54,8 @@ export default {
       class: attrs.deleting ? 'is-deleting' : '',
     }, [
       renderHeader(d, fp, attrs, t),
-      renderContent(d, fp),
-      fp ? viewPostLinkPreview(fp) : null,
+      attrs.editing ? renderEditForm(d, fp, attrs, t) : renderContent(d, fp),
+      !attrs.editing && fp ? viewPostLinkPreview(fp) : null,
       renderSharedFrom(d),
       d.poll ? renderPoll(d, attrs, t) : null,
       renderStatBar(d, fp, attrs, t),
@@ -83,7 +84,7 @@ function renderHeader(d, fp, attrs, t) {
         ? m('span.SGFeed-pinnedBadge', [m('i.fa-solid.fa-thumbtack'), ' ', t('pinned')])
         : null,
     ]),
-    d.canDelete || d.canPin || (actor && d.canShare)
+    d.canDelete || d.canPin || (fp && fp.canEdit) || (actor && d.canShare)
       ? renderMenu(d, attrs, t)
       : null,
   ]);
@@ -91,6 +92,7 @@ function renderHeader(d, fp, attrs, t) {
 
 function renderMenu(d, attrs, t) {
   const actor = app.session.user;
+  const fp    = d.firstPost;
 
   return m('.SGFeed-postMenu', [
     m('button.SGFeed-postMenuBtn', {
@@ -98,6 +100,11 @@ function renderMenu(d, attrs, t) {
     }, m('i.fa-solid.fa-ellipsis')),
     attrs.menuOpen
       ? m('.SGFeed-postDropdown', [
+          fp && fp.canEdit
+            ? m('button.SGFeed-dropdownItem', {
+                onclick: () => { attrs.onMenuToggle(); attrs.onStartEdit(); },
+              }, [m('i.fa-solid.fa-pen'), ' ', t('edit')])
+            : null,
           actor && d.canShare
             ? m('button.SGFeed-dropdownItem', {
                 onclick: () => {
@@ -130,6 +137,41 @@ function renderContent(d, fp) {
   return fp
     ? m('.SGFeed-postContent', m.trust(fp.contentParsed))
     : m('.SGFeed-postContent', m('.SGFeed-noContent', d.title));
+}
+
+function renderEditForm(d, fp, attrs, t) {
+  return m('.SGFeed-postEdit', [
+    attrs.editError
+      ? m('.Alert.Alert--error', { style: 'margin-bottom:8px;font-size:.85em' }, attrs.editError)
+      : null,
+    m('.SGMd-field', [
+      MarkdownToolbar({
+        onChange: (next) => attrs.onEditChange(next),
+        disabled: attrs.editBusy,
+      }),
+      m('textarea.FormControl.SGFeed-editTextarea', {
+        value:    attrs.editText,
+        rows:     4,
+        disabled: attrs.editBusy,
+        oninput:  (e) => attrs.onEditChange(e.target.value),
+        onkeydown: (e) => {
+          if (e.key === 'Escape') { e.preventDefault(); attrs.onEditCancel(); }
+        },
+      }),
+    ]),
+    m('.SGFeed-editActions', [
+      m('button.Button.Button--primary.SGFeed-postBtn', {
+        disabled: attrs.editBusy || !attrs.editText.trim(),
+        onclick:  () => attrs.onEditSave(),
+      }, attrs.editBusy
+          ? m('i.fa-solid.fa-spinner.fa-spin')
+          : t('save_edit')),
+      m('button.Button.SGFeed-cancelBtn', {
+        disabled: attrs.editBusy,
+        onclick:  () => attrs.onEditCancel(),
+      }, t('cancel_edit')),
+    ]),
+  ]);
 }
 
 function renderSharedFrom(d) {

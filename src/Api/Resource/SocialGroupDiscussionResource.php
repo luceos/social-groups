@@ -241,7 +241,12 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
 
             Endpoint\Create::make()
                 ->authenticated()
-                ->can('create'),
+                ->can('create')
+                // Without firstPost in the create response the freshly-posted
+                // card has no parsed content to render, so it shows the bare
+                // title (and no embeds/formatting) until a reload pulls the
+                // post — see the feed's mapDiscussion()/projectFirstPost().
+                ->defaultInclude(['firstPost', 'firstPost.user']),
 
             Endpoint\Delete::make()
                 ->authenticated()

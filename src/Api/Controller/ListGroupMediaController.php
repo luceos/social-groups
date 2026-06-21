@@ -43,17 +43,35 @@ class ListGroupMediaController implements RequestHandlerInterface
                 }
             }
 
-            // Only surface images that were uploaded into gallery archive discussions
+            // Two sources feed the gallery:
+            //   1. Posts in the hidden "__gallery__" archive discussion — the
+            //      Media tab's own upload button stores raw image URLs there.
+            //   2. Ordinary feed posts that embed an uploaded image — so a
+            //      photo shared in the feed also shows up under Media (was the
+            //      reported "fof/upload images don't appear in the Media tab").
             $galleryDiscussionIds = \Ernestdefoe\SocialGroups\Model\SocialGroupDiscussion
                 ::where('group_id', $groupId)
                 ->where('is_gallery', true)
                 ->pluck('id')
                 ->all();
+            $gallerySet = array_flip($galleryDiscussionIds);
 
-            // All posts in gallery discussions are image posts — no content filter needed.
-            // If no gallery discussion exists yet the result set is intentionally empty.
             $mediaQuery = fn () => SocialGroupPost::where('group_id', $groupId)
-                ->whereIn('discussion_id', $galleryDiscussionIds);
+                ->where(function ($q) use ($galleryDiscussionIds) {
+                    if (! empty($galleryDiscussionIds)) {
+                        $q->whereIn('discussion_id', $galleryDiscussionIds);
+                    }
+                    // Feed posts that contain an uploaded/embedded image. The
+                    // markers cover fof/upload previews, markdown/bbcode image
+                    // syntax, and raw <img> — narrowing the scan so we don't
+                    // render every post in the group through the formatter.
+                    $q->orWhere(function ($w) {
+                        $w->where('content', 'like', '%upl-image%')
+                          ->orWhere('content', 'like', '%![%')
+                          ->orWhere('content', 'like', '%[img%')
+                          ->orWhere('content', 'like', '%<img%');
+                    });
+                });
 
             $total = $mediaQuery()->count();
 
@@ -84,6 +102,11 @@ class ListGroupMediaController implements RequestHandlerInterface
                         'url'          => $url,
                         'postId'       => $post->id,
                         'discussionId' => $post->discussion_id,
+                        // Gallery-archive items live in the hidden "__gallery__"
+                        // discussion, which isn't a navigable thread — the
+                        // lightbox uses this to suppress its "View post" link
+                        // (was the reported broken edit/reply on that thread).
+                        'isGallery'    => isset($gallerySet[$post->discussion_id]),
                         'createdAt'    => $post->created_at?->toIso8601String(),
                         'user'         => $post->user ? [
                             'id'          => $post->user->id,
@@ -131,12 +154,20 @@ class ListGroupMediaController implements RequestHandlerInterface
         $urls = [];
         foreach ($doc->getElementsByTagName('img') as $img) {
             /** @var \DOMElement $img */
-            $src = $img->getAttribute('src');
-            if ($src !== '' && ! str_starts_with($src, 'data:')) {
-                $urls[] = $src;
+            $src   = $img->getAttribute('src');
+            $class = $img->getAttribute('class');
+            // Skip inline emoji (Flarum renders them as <img class="emoji">),
+            // data: URIs, and any other non-photo glyph — they aren't gallery
+            // media and would otherwise flood the grid with tiny icons.
+            if ($src === '' || str_starts_with($src, 'data:')) {
+                continue;
             }
+            if (str_contains($class, 'emoji') || str_contains($src, '/emoji/') || str_contains($src, 'twemoji')) {
+                continue;
+            }
+            $urls[] = $src;
         }
 
-        return $urls;
+        return array_values(array_unique($urls));
     }
 }

@@ -1,6 +1,7 @@
 import app from 'flarum/forum/app';
 import { viewUploadChips } from '../../utils/uploads';
 import { viewComposerLinkPreview } from '../../utils/linkPreview';
+import { MarkdownToolbar } from '../../utils/markdownToolbar';
 import { PollComposer } from './PollComposer';
 
 /**
@@ -46,23 +47,31 @@ export default {
         attrs.postError
           ? m('.Alert.Alert--error', { style: 'margin-bottom:8px' }, attrs.postError)
           : null,
-        m('textarea.SGFeed-composerTextarea', {
-          placeholder: t('feed_placeholder'),
-          value:       attrs.postText,
-          rows:        expanded ? 3 : 1,
-          onfocus:     () => attrs.onFocus(),
-          oninput:     (e) => {
-            attrs.onTextChange(e);
-            // Grow to fit, but cap at the CSS max-height (40vh); past that the
-            // textarea scrolls (overflow-y:auto) so a big paste stays editable.
-            e.target.style.height = 'auto';
-            const cap = Math.round(window.innerHeight * 0.4);
-            e.target.style.height = Math.min(e.target.scrollHeight, cap) + 'px';
-          },
-          onkeydown: (e) => attrs.onKeydown(e),
-          onpaste:   (e) => attrs.onPaste(e),
-          disabled:  attrs.postSubmitting,
-        }),
+        m('.SGMd-field', [
+          expanded
+            ? MarkdownToolbar({
+                onChange: (_next, el) => attrs.onTextChange({ target: el }),
+                disabled: attrs.postSubmitting,
+              })
+            : null,
+          m('textarea.SGFeed-composerTextarea', {
+            placeholder: t('feed_placeholder'),
+            value:       attrs.postText,
+            rows:        expanded ? 3 : 1,
+            onfocus:     () => attrs.onFocus(),
+            oninput:     (e) => {
+              attrs.onTextChange(e);
+              // Grow to fit, but cap at the CSS max-height (40vh); past that the
+              // textarea scrolls (overflow-y:auto) so a big paste stays editable.
+              e.target.style.height = 'auto';
+              const cap = Math.round(window.innerHeight * 0.4);
+              e.target.style.height = Math.min(e.target.scrollHeight, cap) + 'px';
+            },
+            onkeydown: (e) => attrs.onKeydown(e),
+            onpaste:   (e) => attrs.onPaste(e),
+            disabled:  attrs.postSubmitting,
+          }),
+        ]),
         viewUploadChips(attrs.postUploads, (id) => attrs.onRemoveUpload(id)),
         attrs.linkPreviewVnode,
         attrs.poll ? PollComposer({ poll: attrs.poll, onChange: () => attrs.onPollChange() }) : null,

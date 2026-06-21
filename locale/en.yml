@@ -47,6 +47,15 @@ ernestdefoe-social-groups:
       title: Edit Group
       submit: Save Changes
 
+    composer:
+      md_bold: Bold
+      md_italic: Italic
+      md_strike: Strikethrough
+      md_link: Insert link
+      md_quote: Quote
+      md_list: Bulleted list
+      md_code: Inline code
+
     discussions:
       title: Discussions
       new_button: New Discussion
@@ -76,6 +85,7 @@ ernestdefoe-social-groups:
       edit: Edit
       save_edit: Save
       cancel_edit: Cancel
+      edit_failed: Failed to save edit.
       delete_post: Delete
       delete_post_confirm: Delete this post?
       like: Like

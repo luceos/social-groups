@@ -512,7 +512,13 @@ class SocialGroupPostResource extends AbstractDatabaseResource
             Schema\Boolean::make('canEdit')
                 ->get(function (SocialGroupPost $post, Context $context) {
                     $actor = $context->getActor();
-                    return $actor->exists && (int) $actor->id === (int) $post->user_id;
+                    if (! $actor->exists) {
+                        return false;
+                    }
+                    // Mirror SocialGroupPostPolicy::edit — global admins may
+                    // edit any post. Without this the feed/thread UI hid the
+                    // Edit action from admins even though the PATCH would pass.
+                    return $actor->isAdmin() || (int) $actor->id === (int) $post->user_id;
                 }),
 
             Schema\Boolean::make('canDelete')

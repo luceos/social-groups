@@ -261,20 +261,25 @@ export default class GroupMediaGallery extends Component {
                 ? m('img.SGMedia-lightboxAvatar', { src: item.user.avatarUrl, alt: '' })
                 : m('span.SGMedia-lightboxInitial', (item.user.displayName || '?')[0].toUpperCase()),
               m('span.SGMedia-lightboxAuthor', item.user.displayName),
-              m('a.SGMedia-lightboxThread', {
-                href:    app.route('ernestdefoe-social-groups.discussion', {
-                  slug:         this.attrs.groupSlug,
-                  discussionId: item.discussionId,
-                }),
-                onclick: (e) => {
-                  e.preventDefault();
-                  this.lightboxClose();
-                  m.route.set(app.route('ernestdefoe-social-groups.discussion', {
-                    slug:         this.attrs.groupSlug,
-                    discussionId: item.discussionId,
-                  }));
-                },
-              }, [m('i.fa-solid.fa-arrow-up-right-from-square'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.media.view_post')]),
+              // Gallery-archive uploads live in a hidden container discussion
+              // that isn't a real thread (edit/reply there 403). Only offer the
+              // "View post" jump for images that came from an actual feed post.
+              !item.isGallery
+                ? m('a.SGMedia-lightboxThread', {
+                    href:    app.route('ernestdefoe-social-groups.discussion', {
+                      slug:         this.attrs.groupSlug,
+                      discussionId: item.discussionId,
+                    }),
+                    onclick: (e) => {
+                      e.preventDefault();
+                      this.lightboxClose();
+                      m.route.set(app.route('ernestdefoe-social-groups.discussion', {
+                        slug:         this.attrs.groupSlug,
+                        discussionId: item.discussionId,
+                      }));
+                    },
+                  }, [m('i.fa-solid.fa-arrow-up-right-from-square'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.media.view_post')])
+                : null,
             ])
           : null,
         m('.SGMedia-lightboxCounter', (() => {

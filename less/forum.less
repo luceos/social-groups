@@ -3753,3 +3753,57 @@
   color: var(--primary-color, @sg-primary-hex);
   font-weight: 600;
 }
+
+// ── Markdown formatting toolbar (feed + thread composers) ──────────────────
+// Shared button row rendered above the plain-textarea composers via
+// utils/markdownToolbar.js. Kept visually quiet so it reads as an affordance,
+// not chrome.
+.SGMd-field { position: relative; }
+
+.SGMd-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.SGMd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--muted-color);
+  font-size: 0.85rem;
+  transition: background @sg-transition, color @sg-transition;
+
+  &:hover:not(:disabled) {
+    background: var(--control-bg);
+    color: var(--primary-color, @sg-primary-hex);
+  }
+  &:disabled { opacity: 0.45; cursor: default; }
+}
+
+// ── Inline edit form for a feed card's first post (PostCard) ───────────────
+.SGFeed-postEdit {
+  padding: 4px 0 8px;
+
+  .SGFeed-editTextarea {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+    font-size: 0.92rem;
+  }
+}
+
+.SGFeed-editActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}

@@ -6,6 +6,7 @@ import {
 } from '../utils/api';
 import { pastedImages } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview, viewPostLinkPreview } from '../utils/linkPreview';
+import { MarkdownToolbar } from '../utils/markdownToolbar';
 import app from 'flarum/forum/app';
 import Page from 'flarum/common/components/Page';
 import Button from 'flarum/common/components/Button';
@@ -721,24 +722,30 @@ export default class GroupDiscussionThread extends Page {
       ]),
       m('.SGThread-replyBoxRight', [
         this.replyError ? m('.Alert.Alert--error', this.replyError) : null,
-        m('textarea.SGThread-replyTextarea', {
-          placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_placeholder'),
-          value:       this.replyText,
-          oninput:     (e) => {
-            this.replyText = e.target.value;
-            e.target.style.height = 'auto';
-            e.target.style.height = e.target.scrollHeight + 'px';
-            scheduleLinkPreview(this, e.target.value);
-            if (e.target.value.trim()) this._sendTyping(true);
-          },
-          onblur: () => this._sendTyping(false),
-          onpaste: (e) => {
-            const imgs = pastedImages(e);
-            if (imgs.length) { e.preventDefault(); this.handleFiles(imgs, 'uploads', 'replyText'); }
-          },
-          rows:     1,
-          disabled: this.submitting,
-        }),
+        m('.SGMd-field', [
+          MarkdownToolbar({
+            onChange: (next) => { this.replyText = next; scheduleLinkPreview(this, next); },
+            disabled: this.submitting,
+          }),
+          m('textarea.SGThread-replyTextarea', {
+            placeholder: app.translator.trans('ernestdefoe-social-groups.forum.discussions.reply_placeholder'),
+            value:       this.replyText,
+            oninput:     (e) => {
+              this.replyText = e.target.value;
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+              scheduleLinkPreview(this, e.target.value);
+              if (e.target.value.trim()) this._sendTyping(true);
+            },
+            onblur: () => this._sendTyping(false),
+            onpaste: (e) => {
+              const imgs = pastedImages(e);
+              if (imgs.length) { e.preventDefault(); this.handleFiles(imgs, 'uploads', 'replyText'); }
+            },
+            rows:     1,
+            disabled: this.submitting,
+          }),
+        ]),
         this.uploads.length
           ? m('.SGThread-uploads', this.uploads.map((u) => this.viewUpload(u, 'uploads', 'replyText')))
           : null,
@@ -1001,15 +1008,21 @@ export default class GroupDiscussionThread extends Page {
       isEditing
         ? m('.SGThread-postEdit', [
             this.editError ? m('.Alert.Alert--error', { style: 'margin-bottom:8px;font-size:.85em' }, this.editError) : null,
-            m('textarea.FormControl.SGThread-editTextarea', {
-              value:   this.editText,
-              oninput: (e) => { this.editText = e.target.value; },
-              onpaste: (e) => {
-                const imgs = pastedImages(e);
-                if (imgs.length) { e.preventDefault(); this.handleFiles(imgs, 'editUploads', 'editText'); }
-              },
-              rows:    4,
-            }),
+            m('.SGMd-field', [
+              MarkdownToolbar({
+                onChange: (next) => { this.editText = next; },
+                disabled: false,
+              }),
+              m('textarea.FormControl.SGThread-editTextarea', {
+                value:   this.editText,
+                oninput: (e) => { this.editText = e.target.value; },
+                onpaste: (e) => {
+                  const imgs = pastedImages(e);
+                  if (imgs.length) { e.preventDefault(); this.handleFiles(imgs, 'editUploads', 'editText'); }
+                },
+                rows:    4,
+              }),
+            ]),
             this.editUploads.length
               ? m('.SGThread-uploads', this.editUploads.map((u) => this.viewUpload(u, 'editUploads', 'editText')))
               : null,
