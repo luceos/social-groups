@@ -288,9 +288,15 @@ class SocialGroupPostResource extends AbstractDatabaseResource
             throw new PermissionDeniedException();
         }
 
+        // Active members can reply; global admins and the extension's global
+        // moderators may also reply in any group without joining it first, to
+        // match the React/Delete/Pin policies (which grant the same bypass).
+        // Without this, an admin who isn't a member could react to a post but
+        // got a 403 trying to reply to it.
         $group = $discussion->group;
-        $isMember = $group->activeMembership($actor->id)->exists();
-        if (! $isMember) {
+        $privileged = $actor->isAdmin()
+            || $actor->hasPermission('ernestdefoe-social-groups.moderate');
+        if (! $privileged && ! $group->activeMembership($actor->id)->exists()) {
             throw new PermissionDeniedException();
         }
 
