@@ -53,8 +53,11 @@ export default {
           onfocus:     () => attrs.onFocus(),
           oninput:     (e) => {
             attrs.onTextChange(e);
+            // Grow to fit, but cap at the CSS max-height (40vh); past that the
+            // textarea scrolls (overflow-y:auto) so a big paste stays editable.
             e.target.style.height = 'auto';
-            e.target.style.height = e.target.scrollHeight + 'px';
+            const cap = Math.round(window.innerHeight * 0.4);
+            e.target.style.height = Math.min(e.target.scrollHeight, cap) + 'px';
           },
           onkeydown: (e) => attrs.onKeydown(e),
           onpaste:   (e) => attrs.onPaste(e),

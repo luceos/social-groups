@@ -1898,6 +1898,10 @@
 
   &-composerTextarea {
     width: 100%;
+    // border-box so the JS auto-resize (height = scrollHeight) accounts for the
+    // padding and doesn't undershoot — without it, long/pasted content grew past
+    // the box and, with overflow:hidden, became unreachable to edit.
+    box-sizing: border-box;
     background: var(--control-bg);
     border: none; outline: none;
     border-radius: 20px;
@@ -1906,8 +1910,10 @@
     font-family: inherit;
     color: var(--text-color);
     resize: none;
-    overflow: hidden;
-    transition: min-height 0.15s;
+    // Grow with content up to a cap (the JS clamps height to match), then
+    // scroll — so a big paste is always editable instead of being clipped.
+    max-height: 40vh;
+    overflow-y: auto;
 
     &::placeholder { color: var(--muted-color); }
   }

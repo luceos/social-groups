@@ -33,18 +33,33 @@ export default class GroupPage extends Page {
   }
 
   loadGroup(slug) {
-    // Use the Show endpoint (GET /api/social-groups/{slug}) so we avoid the
-    // JSON:API server rejecting non-standard query parameters.  The resource's
-    // find() override treats non-numeric IDs as slug lookups.
-    app.store
-      .find('social-groups', slug, {
-        include: 'user',
+    // GET /api/social-groups/{slug} (the resource's find() override treats a
+    // non-numeric id as a slug lookup). Use app.request directly — rather than
+    // app.store.find — so we can pass an errorHandler and render our own inline
+    // "not found" message instead of Flarum's global error modal. An unknown or
+    // now-private group is an expected state on this page, not a crash.
+    // (Reported: a spurious "The requested resource was not found." modal.)
+    app
+      .request({
+        method: 'GET',
+        url: `${app.forum.attribute('apiUrl')}/social-groups/${encodeURIComponent(slug)}`,
+        params: { include: 'user' },
+        errorHandler: () => {},
       })
-      .then((group) => {
+      .then((payload) => {
+        let group = null;
+        try {
+          group = app.store.pushPayload(payload);
+        } catch (e) {
+          group = null;
+        }
+        if (!group && payload && payload.data && payload.data.id) {
+          group = app.store.getById('social-groups', payload.data.id);
+        }
         this.group   = group || null;
         this.loading = false;
-        if (group) {
-          document.title = `${group.name()} — ${app.forum.attribute('title')}`;
+        if (this.group) {
+          document.title = `${this.group.name()} — ${app.forum.attribute('title')}`;
         }
         m.redraw();
       })
