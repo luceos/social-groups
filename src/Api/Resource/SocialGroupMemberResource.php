@@ -70,7 +70,6 @@ class SocialGroupMemberResource extends AbstractDatabaseResource
             return;
         }
 
-        $actor->assertRegistered();
         if (! GroupVisibility::canSee($actor, $group)) {
             throw new PermissionDeniedException();
         }
