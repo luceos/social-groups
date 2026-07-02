@@ -76,6 +76,7 @@ ernestdefoe-social-groups:
       locked: Locked
       reply_placeholder: Write a reply…
       reply_button: Reply
+      join_to_reply: Join this group to reply.
       post_reply: Post reply
       post_comment: Post comment
       more_options: More options

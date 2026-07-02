@@ -62,6 +62,15 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
      */
     protected array $moderatorCheckCache = [];
 
+    /**
+     * Companion to $moderatorCheckCache for the "is the actor an active
+     * (non-kicked) member?" gate that backs the `canReply` field. Same
+     * per-request lifetime and reset discipline.
+     *
+     * @var array<string, bool>
+     */
+    protected array $memberCheckCache = [];
+
     public function __construct(
         protected SchemaCapabilities $capabilities,
         protected Formatter $formatter,
@@ -82,6 +91,7 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
     public function scope(Builder $query, BaseContext $context): void
     {
         $this->moderatorCheckCache = [];
+        $this->memberCheckCache = [];
 
         $actor = RequestUtil::getActor($context->request);
         $params = $context->request->getQueryParams();
@@ -350,6 +360,30 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
             Schema\Boolean::make('canShare')
                 ->get(fn ($d, Context $context) => $context->getActor()->exists),
 
+            // Mirrors the gate in SocialGroupPostResource::creating(): a
+            // reply is only accepted from a privileged actor (admin /
+            // global moderator) or an active group member. The thread UI
+            // reads this to decide whether to render the reply composer,
+            // so a viewer who can SEE a public group but hasn't joined no
+            // longer gets a composer that 403s on submit.
+            Schema\Boolean::make('canReply')
+                ->get(function ($d, Context $context) {
+                    $actor = $context->getActor();
+                    if (! $actor->exists) {
+                        return false;
+                    }
+                    if ($actor->isAdmin()
+                        || $actor->hasPermission('ernestdefoe-social-groups.moderate')
+                    ) {
+                        return true;
+                    }
+                    return $this->isActiveMember(
+                        (int) $actor->id,
+                        (int) $d->group_id,
+                        $d->group,
+                    );
+                }),
+
             Schema\Boolean::make('canPin')
                 ->get(function ($d, Context $context) {
                     if (! $this->capabilities->isPinned) {
@@ -439,6 +473,40 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         }
 
         return $this->moderatorCheckCache[$key] = $result;
+    }
+
+    /**
+     * Memoized "is the actor an active (non-kicked) member of the group?"
+     * check backing the `canReply` field. Mirrors isGroupModerator's
+     * eager-relation-or-fallback shape; kicked members (banned_at set) are
+     * excluded so they match the write-gate in the Post resource.
+     */
+    protected function isActiveMember(int $actorId, int $groupId, ?SocialGroup $group): bool
+    {
+        if ($actorId <= 0 || $groupId <= 0) {
+            return false;
+        }
+        $key = $actorId . ':' . $groupId;
+        if (isset($this->memberCheckCache[$key])) {
+            return $this->memberCheckCache[$key];
+        }
+
+        if ($group !== null) {
+            $result = $group->members()
+                ->where('user_id', $actorId)
+                ->whereNull('banned_at')
+                ->exists();
+        } else {
+            $result = SocialGroup::query()
+                ->where('id', $groupId)
+                ->whereHas('members', fn ($q) =>
+                    $q->where('user_id', $actorId)
+                      ->whereNull('banned_at')
+                )
+                ->exists();
+        }
+
+        return $this->memberCheckCache[$key] = $result;
     }
 
     protected function buildSharedFrom(SocialGroupDiscussion $d): ?array

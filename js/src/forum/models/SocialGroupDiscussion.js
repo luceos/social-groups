@@ -39,6 +39,10 @@ export default class SocialGroupDiscussion extends Model {
     return this.attribute('canShare');
   }
 
+  canReply() {
+    return this.attribute('canReply');
+  }
+
   sharedFrom() {
     return this.attribute('sharedFrom');
   }
