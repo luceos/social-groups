@@ -1,5 +1,6 @@
 import { apiGet, apiPost, apiUpload } from '../utils/api';
 import app from 'flarum/forum/app';
+import extractText from 'flarum/common/utils/extractText';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Button from 'flarum/common/components/Button';
@@ -84,7 +85,7 @@ export default class GroupMediaGallery extends Component {
           const url = fileData?.attributes?.url
             || fileData?.attributes?.downloadUrl
             || '';
-          if (!url) throw new Error('Upload succeeded but no file URL was returned.');
+          if (!url) throw new Error(extractText(app.translator.trans('ernestdefoe-social-groups.forum.upload.no_url')));
           return url;
         });
     });
@@ -101,7 +102,7 @@ export default class GroupMediaGallery extends Component {
         this.uploadError = err.response?.errors?.[0]?.detail
           || err.response?.error
           || err.message
-          || 'Upload failed.';
+          || extractText(app.translator.trans('ernestdefoe-social-groups.forum.upload.failed'));
         m.redraw();
       });
   }

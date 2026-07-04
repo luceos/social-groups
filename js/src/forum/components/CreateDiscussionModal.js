@@ -1,5 +1,6 @@
 import { createDiscussion } from '../utils/api';
 import app from 'flarum/forum/app';
+import extractText from 'flarum/common/utils/extractText';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import Stream from 'flarum/common/utils/Stream';
@@ -76,7 +77,7 @@ export default class CreateDiscussionModal extends Modal {
         app.modal.close();
       })
       .catch((err) => {
-        this.error   = err.response?.error || err.message || 'Error';
+        this.error   = err.response?.error || err.message || extractText(app.translator.trans('ernestdefoe-social-groups.forum.groups.generic_error'));
         this.loading = false;
         m.redraw();
       });

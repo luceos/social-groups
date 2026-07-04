@@ -7,7 +7,9 @@ import {
 import { pastedImages } from '../utils/uploads';
 import { scheduleLinkPreview, clearLinkPreview, viewComposerLinkPreview, viewPostLinkPreview } from '../utils/linkPreview';
 import { MarkdownToolbar } from '../utils/markdownToolbar';
+import { REACTIONS } from './feed/reactions';
 import app from 'flarum/forum/app';
+import extractText from 'flarum/common/utils/extractText';
 import Page from 'flarum/common/components/Page';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -287,7 +289,7 @@ export default class GroupDiscussionThread extends Page {
         this._setupRealtime();
       })
       .catch((err) => {
-        this.error   = err.response?.error || err.message || 'Error';
+        this.error   = err.response?.error || err.message || extractText(app.translator.trans('ernestdefoe-social-groups.forum.groups.generic_error'));
         this.loading = false;
         m.redraw();
       });
@@ -364,7 +366,7 @@ export default class GroupDiscussionThread extends Page {
           const upload = this[uploadsKey].find((u) => u.id === id);
           if (upload) {
             upload.uploading = false;
-            upload.error     = err.response?.errors?.[0]?.detail || err.response?.error || err.message || 'Upload failed';
+            upload.error     = err.response?.errors?.[0]?.detail || err.response?.error || err.message || extractText(app.translator.trans('ernestdefoe-social-groups.forum.upload.failed'));
           }
           m.redraw();
         });
@@ -452,7 +454,7 @@ export default class GroupDiscussionThread extends Page {
         });
       })
       .catch((err) => {
-        this.replyError = err.response?.error || err.message || 'Error';
+        this.replyError = err.response?.error || err.message || extractText(app.translator.trans('ernestdefoe-social-groups.forum.groups.generic_error'));
         this.submitting = false;
         m.redraw();
       });
@@ -488,7 +490,7 @@ export default class GroupDiscussionThread extends Page {
         m.redraw();
       })
       .catch((err) => {
-        this.editError = err.response?.error || err.message || 'Failed to save edit.';
+        this.editError = err.response?.error || err.message || extractText(app.translator.trans('ernestdefoe-social-groups.forum.discussions.edit_failed'));
         m.redraw();
       });
   }
@@ -813,15 +815,6 @@ export default class GroupDiscussionThread extends Page {
     ]);
   }
 
-  static REACTIONS = [
-    { key: 'like',  emoji: '👍', label: 'Like' },
-    { key: 'heart', emoji: '❤️', label: 'Love' },
-    { key: 'haha',  emoji: '😂', label: 'Haha' },
-    { key: 'wow',   emoji: '😮', label: 'Wow' },
-    { key: 'sad',   emoji: '😢', label: 'Sad' },
-    { key: 'angry', emoji: '😡', label: 'Angry' },
-  ];
-
   viewReactionStatBar(post) {
     const reactions = post.reactions || {};
     const total     = Object.values(reactions).reduce((s, c) => s + Number(c), 0);
@@ -831,7 +824,7 @@ export default class GroupDiscussionThread extends Page {
       .filter(([, c]) => Number(c) > 0)
       .sort(([, a], [, b]) => Number(b) - Number(a))
       .slice(0, 3)
-      .map(([key]) => GroupDiscussionThread.REACTIONS.find((r) => r.key === key)?.emoji || '👍');
+      .map(([key]) => REACTIONS.find((r) => r.key === key)?.emoji || '👍');
 
     return m('.SGThread-postStatBar', [
       m('span.SGThread-statLikes', [
@@ -847,7 +840,7 @@ export default class GroupDiscussionThread extends Page {
     const pickerOpen    = this.pickerPostId === post.id;
     const actorReaction = post.actorReaction || null;
     const active        = actorReaction
-      ? GroupDiscussionThread.REACTIONS.find((r) => r.key === actorReaction)
+      ? REACTIONS.find((r) => r.key === actorReaction)
       : null;
 
     return m('.SGThread-postActionBar', [
@@ -855,7 +848,7 @@ export default class GroupDiscussionThread extends Page {
         ? m('.SGThread-reactWrap', [
             pickerOpen
               ? m('.SGThread-reactionPicker',
-                  GroupDiscussionThread.REACTIONS.map((r) =>
+                  REACTIONS.map((r) =>
                     m('button.SGThread-pickerBtn', {
                       key:     r.key,
                       title:   r.label,

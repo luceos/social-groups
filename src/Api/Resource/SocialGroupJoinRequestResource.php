@@ -11,6 +11,7 @@ use Flarum\Api\Schema;
 use Flarum\Http\RequestUtil;
 use Flarum\User\Exception\PermissionDeniedException;
 use Illuminate\Database\Eloquent\Builder;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
@@ -29,6 +30,10 @@ use Tobyz\JsonApiServer\Exception\BadRequestException;
  */
 class SocialGroupJoinRequestResource extends AbstractDatabaseResource
 {
+    public function __construct(protected TranslatorInterface $translator)
+    {
+    }
+
     public function type(): string
     {
         return 'social-group-join-requests';
@@ -146,7 +151,7 @@ class SocialGroupJoinRequestResource extends AbstractDatabaseResource
         $req = $context->model;
 
         if ($req->status !== 'pending') {
-            throw new BadRequestException('Request is not pending');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.request_not_pending'));
         }
 
         $req->status = 'approved';

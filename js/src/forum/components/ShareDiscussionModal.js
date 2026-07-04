@@ -1,5 +1,6 @@
 import { shareDiscussion } from '../utils/api';
 import app from 'flarum/forum/app';
+import extractText from 'flarum/common/utils/extractText';
 import Modal from 'flarum/common/components/Modal';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Button from 'flarum/common/components/Button';
@@ -39,18 +40,18 @@ export default class ShareDiscussionModal extends Modal {
 
   className() { return 'ShareDiscussionModal Modal--small'; }
 
-  title() { return 'Share Post'; }
+  title() { return app.translator.trans('ernestdefoe-social-groups.forum.share_modal.title'); }
 
   content() {
     return m('.Modal-body', [
       this.error ? m('.Alert.Alert--error', { style: 'margin-bottom:12px' }, this.error) : null,
 
-      m('p.ShareDiscussionModal-label', 'Share to which group?'),
+      m('p.ShareDiscussionModal-label', app.translator.trans('ernestdefoe-social-groups.forum.share_modal.group_label')),
 
       this.loadingGroups
         ? m('.ShareDiscussionModal-loading', m(LoadingIndicator, { display: 'block' }))
         : !this.groups || this.groups.length === 0
-        ? m('p.ShareDiscussionModal-empty', 'You are not a member of any other groups.')
+        ? m('p.ShareDiscussionModal-empty', app.translator.trans('ernestdefoe-social-groups.forum.share_modal.empty'))
         : m('.ShareDiscussionModal-groups',
             this.groups.map((g) =>
               m('button.ShareDiscussionModal-group', {
@@ -69,7 +70,7 @@ export default class ShareDiscussionModal extends Modal {
           ),
 
       m('textarea.FormControl.ShareDiscussionModal-comment', {
-        placeholder: 'Add a comment… (optional)',
+        placeholder: extractText(app.translator.trans('ernestdefoe-social-groups.forum.share_modal.comment_placeholder')),
         value:       this.comment,
         rows:        3,
         disabled:    this.submitting,
@@ -82,11 +83,11 @@ export default class ShareDiscussionModal extends Modal {
           loading:  this.submitting,
           disabled: !this.selectedGroupId || this.submitting,
           onclick:  () => this.submit(),
-        }, 'Share'),
+        }, app.translator.trans('ernestdefoe-social-groups.forum.share_modal.submit')),
         m(Button, {
           class:   'Button',
           onclick: () => app.modal.close(),
-        }, 'Cancel'),
+        }, app.translator.trans('ernestdefoe-social-groups.forum.share_modal.cancel')),
       ]),
     ]);
   }
@@ -109,7 +110,7 @@ export default class ShareDiscussionModal extends Modal {
         m.redraw();
       })
       .catch((err) => {
-        this.error      = err.response?.error || err.message || 'Error';
+        this.error      = err.response?.error || err.message || extractText(app.translator.trans('ernestdefoe-social-groups.forum.groups.generic_error'));
         this.submitting = false;
         m.redraw();
       });

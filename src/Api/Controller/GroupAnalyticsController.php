@@ -13,12 +13,13 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class GroupAnalyticsController implements RequestHandlerInterface
 {
     use ReadsRouteParam;
 
-    public function __construct(private LoggerInterface $log) {}
+    public function __construct(private LoggerInterface $log, private TranslatorInterface $translator) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -36,7 +37,7 @@ class GroupAnalyticsController implements RequestHandlerInterface
                 || in_array($actorRole, ['creator', 'moderator'], true);
 
             if (! $canView) {
-                return new JsonResponse(['error' => 'Only group moderators and admins can view analytics.'], 403);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.analytics_forbidden')], 403);
             }
 
             // Day-bucketing is pushed into the database via a single GROUP BY
@@ -126,10 +127,10 @@ class GroupAnalyticsController implements RequestHandlerInterface
                 'topPosts'     => $topPosts->values(),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return new JsonResponse(['error' => 'Group not found.'], 404);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.group_not_found')], 404);
         } catch (\Throwable $e) {
             $this->log->error('[social-groups] GroupAnalyticsController: ' . $e->getMessage(), ['exception' => $e]);
-            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.unexpected')], 500);
         }
     }
 

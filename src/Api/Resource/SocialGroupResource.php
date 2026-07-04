@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
@@ -21,7 +22,8 @@ class SocialGroupResource extends AbstractDatabaseResource
 {
     public function __construct(
         protected LoggerInterface $log,
-        protected GroupAssetUrl $assetUrl
+        protected GroupAssetUrl $assetUrl,
+        protected TranslatorInterface $translator
     ) {}
 
     public function type(): string
@@ -368,7 +370,7 @@ class SocialGroupResource extends AbstractDatabaseResource
                     throw $e;
                 }
                 if ($attempt >= 3) {
-                    throw new BadRequestException('Could not generate a unique slug for this group name. Please try a different name.');
+                    throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.slug_conflict'));
                 }
                 $model->slug = SocialGroup::createSlug((string) $model->name);
             }

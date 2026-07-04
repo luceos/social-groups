@@ -11,6 +11,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class FetchLinkPreviewController implements RequestHandlerInterface
 {
@@ -22,6 +23,7 @@ class FetchLinkPreviewController implements RequestHandlerInterface
         private CacheRepository $cache,
         private LoggerInterface $log,
         private ClientInterface $http,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -34,7 +36,7 @@ class FetchLinkPreviewController implements RequestHandlerInterface
 
         $url = filter_var($url, FILTER_VALIDATE_URL);
         if (! $url || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
-            return new JsonResponse(['error' => 'Invalid URL.'], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.invalid_url')], 422);
         }
 
         // SSRF guard: every host the request would touch (canonical +
@@ -53,7 +55,7 @@ class FetchLinkPreviewController implements RequestHandlerInterface
         $host = (string) ($hostParts['host'] ?? '');
         $publicIps = $this->resolvePublicIps($host);
         if ($publicIps === null) {
-            return new JsonResponse(['error' => 'URL host is not allowed.'], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.url_host_not_allowed')], 422);
         }
 
         $cacheKey = 'sg-link-preview:' . md5($url);
@@ -90,9 +92,9 @@ class FetchLinkPreviewController implements RequestHandlerInterface
 
             $html = $response->getBody()->read(self::MAX_BYTES);
         } catch (RequestException $e) {
-            return new JsonResponse(['error' => 'Could not fetch URL.'], 502);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.fetch_failed')], 502);
         } catch (\Throwable $e) {
-            return new JsonResponse(['error' => 'Unexpected error.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.unexpected')], 500);
         }
 
         $preview = $this->parseOgData($html, $url);

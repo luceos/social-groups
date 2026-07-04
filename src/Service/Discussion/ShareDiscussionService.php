@@ -10,6 +10,7 @@ use Ernestdefoe\SocialGroups\Schema\SchemaCapabilities;
 use Flarum\Api\Context;
 use Flarum\Formatter\Formatter;
 use Flarum\User\Exception\PermissionDeniedException;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
 class ShareDiscussionService
@@ -17,6 +18,7 @@ class ShareDiscussionService
     public function __construct(
         protected SchemaCapabilities $capabilities,
         protected Formatter $formatter,
+        protected TranslatorInterface $translator,
     ) {
     }
 
@@ -43,15 +45,15 @@ class ShareDiscussionService
         $content       = trim((string) ($body['content'] ?? ''));
 
         if ($targetGroupId <= 0) {
-            throw new BadRequestException('targetGroupId is required.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.target_group_required'));
         }
         if (! $this->capabilities->sharedFrom) {
-            throw new BadRequestException('Sharing not available on this install.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.sharing_unavailable'));
         }
 
         $target = SocialGroup::find($targetGroupId);
         if ($target === null) {
-            throw new BadRequestException('Target group not found.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.target_group_not_found'));
         }
 
         $isMember = $target->members()
@@ -63,10 +65,13 @@ class ShareDiscussionService
         }
 
         if ($content === '') {
-            $content = 'Shared from ' . ($source->group?->name ?? 'another group');
+            $content = $this->translator->trans('ernestdefoe-social-groups.lib.shared_from', [
+                '{name}' => $source->group?->name
+                    ?? $this->translator->trans('ernestdefoe-social-groups.lib.another_group'),
+            ]);
         }
         if (mb_strlen($content) > 20000) {
-            throw new BadRequestException('Content may not exceed 20 000 characters.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.content_too_long'));
         }
 
         $now           = Carbon::now();

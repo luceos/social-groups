@@ -14,6 +14,7 @@ import { InlineCommentList } from './feed/InlineCommentList';
 import PostCard from './feed/PostCard';
 import PostComposer from './feed/PostComposer';
 import app from 'flarum/forum/app';
+import extractText from 'flarum/common/utils/extractText';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Button from 'flarum/common/components/Button';
@@ -281,7 +282,7 @@ export default class GroupFeed extends Component {
         m.redraw();
       })
       .catch((err) => {
-        this.postError      = err.response?.error || err.message || 'Error';
+        this.postError      = err.response?.error || err.message || extractText(app.translator.trans('ernestdefoe-social-groups.forum.groups.generic_error'));
         this.postSubmitting = false;
         m.redraw();
       });
@@ -489,7 +490,7 @@ export default class GroupFeed extends Component {
         m('i.fa-solid.fa-magnifying-glass.SGFeed-searchIcon'),
         m('input.SGFeed-searchInput', {
           type:        'text',
-          placeholder: 'Search posts…',
+          placeholder: extractText(app.translator.trans('ernestdefoe-social-groups.forum.discussions.search_placeholder')),
           value:       this.searchQuery,
           oninput:     (e) => {
             this.searchQuery = e.target.value;

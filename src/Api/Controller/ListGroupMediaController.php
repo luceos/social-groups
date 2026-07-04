@@ -12,6 +12,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ListGroupMediaController implements RequestHandlerInterface
 {
@@ -22,6 +23,7 @@ class ListGroupMediaController implements RequestHandlerInterface
     public function __construct(
         private Formatter $formatter,
         private LoggerInterface $log,
+        private TranslatorInterface $translator,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -39,7 +41,7 @@ class ListGroupMediaController implements RequestHandlerInterface
                 $actor->assertRegistered();
                 $isMember = $group->activeMembership($actor->id)->exists();
                 if (! $isMember && ! $actor->isAdmin()) {
-                    return new JsonResponse(['error' => 'This group is private.'], 403);
+                    return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.group_private')], 403);
                 }
             }
 
@@ -124,10 +126,10 @@ class ListGroupMediaController implements RequestHandlerInterface
                 'pages' => (int) ceil($total / self::PER_PAGE),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return new JsonResponse(['error' => 'Group not found.'], 404);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.group_not_found')], 404);
         } catch (\Throwable $e) {
             $this->log->error('[social-groups] ListGroupMediaController: ' . $e->getMessage(), ['exception' => $e]);
-            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.unexpected')], 500);
         }
     }
 

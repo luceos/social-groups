@@ -1,17 +1,26 @@
 import app from 'flarum/forum/app';
+import extractText from 'flarum/common/utils/extractText';
+
+/**
+ * Translated reaction label, resolved lazily so the translator's locale
+ * data is guaranteed to be loaded by the time a label is rendered.
+ */
+function reactionLabel(localeKey) {
+  return extractText(app.translator.trans(`ernestdefoe-social-groups.forum.reactions.${localeKey}`));
+}
 
 /**
  * Canonical reaction set shared by the discussion-level picker and the
  * inline-comment picker. Keys are persisted on the server; emoji + label
- * are render-time only.
+ * are render-time only. The `heart` key maps to the `love` locale key.
  */
 export const REACTIONS = [
-  { key: 'like',  emoji: '👍', label: 'Like' },
-  { key: 'heart', emoji: '❤️', label: 'Love' },
-  { key: 'haha',  emoji: '😂', label: 'Haha' },
-  { key: 'wow',   emoji: '😮', label: 'Wow' },
-  { key: 'sad',   emoji: '😢', label: 'Sad' },
-  { key: 'angry', emoji: '😡', label: 'Angry' },
+  { key: 'like',  emoji: '👍', get label() { return reactionLabel('like'); } },
+  { key: 'heart', emoji: '❤️', get label() { return reactionLabel('love'); } },
+  { key: 'haha',  emoji: '😂', get label() { return reactionLabel('haha'); } },
+  { key: 'wow',   emoji: '😮', get label() { return reactionLabel('wow'); } },
+  { key: 'sad',   emoji: '😢', get label() { return reactionLabel('sad'); } },
+  { key: 'angry', emoji: '😡', get label() { return reactionLabel('angry'); } },
 ];
 
 /**

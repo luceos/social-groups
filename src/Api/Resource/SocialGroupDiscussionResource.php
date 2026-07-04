@@ -21,6 +21,7 @@ use Flarum\Formatter\Formatter;
 use Flarum\Http\RequestUtil;
 use Flarum\User\Exception\PermissionDeniedException;
 use Illuminate\Database\Eloquent\Builder;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
@@ -75,6 +76,7 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         protected SchemaCapabilities $capabilities,
         protected Formatter $formatter,
         protected ShareDiscussionService $shareService,
+        protected TranslatorInterface $translator,
     ) {
     }
 
@@ -291,7 +293,7 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         /** @var SocialGroupDiscussion $d */
         $d = $context->model;
         if (! $this->capabilities->isPinned) {
-            throw new BadRequestException('Pinning not available on this install.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.pinning_unavailable'));
         }
         $d->is_pinned = ! $d->is_pinned;
         $d->save();
@@ -537,12 +539,12 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
 
         $groupId = (int) ($model->group_id ?? 0);
         if ($groupId <= 0) {
-            throw new BadRequestException('groupId is required');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.group_id_required'));
         }
 
         $group = SocialGroup::find($groupId);
         if ($group === null) {
-            throw new BadRequestException('Group not found');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.group_not_found'));
         }
 
         $isMember = $group->activeMembership($actor->id)->exists();
@@ -564,10 +566,10 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
         $pollData    = $this->normalisePollInput($attrs['poll'] ?? null);
 
         if ($content === '' && $pollData === null) {
-            throw new BadRequestException('content or poll required');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.content_or_poll_required'));
         }
         if (mb_strlen($content) > 20000) {
-            throw new BadRequestException('Post content may not exceed 20 000 characters.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.post_content_too_long'));
         }
 
         if (empty($model->title)) {
@@ -580,7 +582,7 @@ class SocialGroupDiscussionResource extends AbstractDatabaseResource
             $model->title = $derived;
         }
         if (mb_strlen($model->title) > 255) {
-            throw new BadRequestException('Title may not exceed 255 characters.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.title_too_long'));
         }
 
         $model->user_id             = $actor->id;

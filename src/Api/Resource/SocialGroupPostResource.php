@@ -23,6 +23,7 @@ use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Eloquent\Builder;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
@@ -73,6 +74,7 @@ class SocialGroupPostResource extends AbstractDatabaseResource
         protected NotificationSyncer $notifications,
         protected Dispatcher $events,
         protected LoggerInterface $log,
+        protected TranslatorInterface $translator,
     ) {
     }
 
@@ -215,7 +217,7 @@ class SocialGroupPostResource extends AbstractDatabaseResource
     protected function doPin(Context $context): SocialGroupPost
     {
         if (! $this->capabilities->isPinned) {
-            throw new BadRequestException('Pinning not available on this install.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.pinning_unavailable'));
         }
         /** @var SocialGroupPost $p */
         $p = $context->model;
@@ -244,7 +246,7 @@ class SocialGroupPostResource extends AbstractDatabaseResource
             $body     = (array) ($context->request->getParsedBody() ?? []);
             $reaction = trim((string) ($body['reaction'] ?? 'like'));
             if (! in_array($reaction, self::REACTIONS, true)) {
-                throw new BadRequestException('Invalid reaction type.');
+                throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.invalid_reaction'));
             }
             SocialGroupPostReaction::updateOrInsert(
                 ['post_id' => $p->id, 'user_id' => $actor->id],
@@ -274,15 +276,15 @@ class SocialGroupPostResource extends AbstractDatabaseResource
         $parentPostId = isset($attrs['parentPostId']) ? (int) $attrs['parentPostId'] : null;
 
         if ($discussionId <= 0 || $content === '') {
-            throw new BadRequestException('discussionId and content are required.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.post_required_fields'));
         }
         if (mb_strlen($content) > 20000) {
-            throw new BadRequestException('Post content may not exceed 20 000 characters.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.post_content_too_long'));
         }
 
         $discussion = SocialGroupDiscussion::with('group')->find($discussionId);
         if ($discussion === null || $discussion->group === null) {
-            throw new BadRequestException('Discussion not found.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.discussion_not_found'));
         }
         if ($discussion->is_locked) {
             throw new PermissionDeniedException();
@@ -306,7 +308,7 @@ class SocialGroupPostResource extends AbstractDatabaseResource
                 ->where('discussion_id', $discussion->id)
                 ->first();
             if ($parent === null) {
-                throw new BadRequestException('Parent post not found.');
+                throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.parent_post_not_found'));
             }
             $parentPostId = $parent->parent_post_id ?? $parent->id;
         } else {
@@ -392,10 +394,10 @@ class SocialGroupPostResource extends AbstractDatabaseResource
         }
         $content = trim((string) $attrs['content']);
         if ($content === '') {
-            throw new BadRequestException('Content cannot be empty.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.content_empty'));
         }
         if (mb_strlen($content) > 20000) {
-            throw new BadRequestException('Post content may not exceed 20 000 characters.');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.post_content_too_long'));
         }
 
         $model->content        = $content;

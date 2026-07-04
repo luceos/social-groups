@@ -12,6 +12,7 @@ use Flarum\Api\Schema;
 use Flarum\Http\RequestUtil;
 use Flarum\User\Exception\PermissionDeniedException;
 use Illuminate\Database\Eloquent\Builder;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Tobyz\JsonApiServer\Context as BaseContext;
 use Tobyz\JsonApiServer\Exception\BadRequestException;
 
@@ -30,6 +31,10 @@ use Tobyz\JsonApiServer\Exception\BadRequestException;
  */
 class SocialGroupMemberResource extends AbstractDatabaseResource
 {
+    public function __construct(protected TranslatorInterface $translator)
+    {
+    }
+
     public function type(): string
     {
         return 'social-group-members';
@@ -170,13 +175,13 @@ class SocialGroupMemberResource extends AbstractDatabaseResource
         /** @var SocialGroupMember $target */
         $target = $context->model;
         if ($target->banned_at !== null) {
-            throw new BadRequestException('User is not an active member of this group');
+            throw new BadRequestException($this->translator->trans('ernestdefoe-social-groups.lib.errors.not_active_member'));
         }
         if ($target->role === 'creator') {
             throw new BadRequestException(
                 $role === 'moderator'
-                    ? 'Cannot promote another creator'
-                    : 'Cannot demote the group creator'
+                    ? $this->translator->trans('ernestdefoe-social-groups.lib.errors.cannot_promote_creator')
+                    : $this->translator->trans('ernestdefoe-social-groups.lib.errors.cannot_demote_creator')
             );
         }
         $target->role = $role;

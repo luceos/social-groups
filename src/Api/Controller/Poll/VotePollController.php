@@ -13,6 +13,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class VotePollController implements RequestHandlerInterface
 {
@@ -21,6 +22,7 @@ class VotePollController implements RequestHandlerInterface
 
     public function __construct(
         private LoggerInterface $log,
+        private TranslatorInterface $translator,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -35,13 +37,13 @@ class VotePollController implements RequestHandlerInterface
 
             $poll = SgPoll::with('options')->find($pollId);
             if (! $poll) {
-                return new JsonResponse(['error' => 'Poll not found.'], 404);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.poll_not_found')], 404);
             }
 
             // Actor must be a member of the group that owns the discussion
             $discussion = SocialGroupDiscussion::find($poll->discussion_id);
             if (! $discussion) {
-                return new JsonResponse(['error' => 'Discussion not found.'], 404);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.discussion_not_found')], 404);
             }
             $isMember = $discussion->group
                 ? $discussion->group->members()
@@ -50,25 +52,25 @@ class VotePollController implements RequestHandlerInterface
                     ->exists()
                 : false;
             if (! $isMember && ! $actor->isAdmin()) {
-                return new JsonResponse(['error' => 'You must be a member of this group to vote.'], 403);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.poll_member_required')], 403);
             }
 
             // Poll closed?
             if ($poll->ends_at && $poll->ends_at->isPast()) {
-                return new JsonResponse(['error' => 'This poll has ended.'], 422);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.poll_ended')], 422);
             }
 
             // Validate option IDs all belong to this poll
             $validOptionIds = $poll->options->pluck('id')->all();
             foreach ($optionIds as $id) {
                 if (! in_array($id, $validOptionIds, true)) {
-                    return new JsonResponse(['error' => 'Invalid option.'], 422);
+                    return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.poll_invalid_option')], 422);
                 }
             }
 
             // Single-select: exactly one option
             if (! $poll->is_multi_select && count($optionIds) > 1) {
-                return new JsonResponse(['error' => 'This poll only allows one choice.'], 422);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.poll_single_choice')], 422);
             }
 
             /*
@@ -95,7 +97,7 @@ class VotePollController implements RequestHandlerInterface
             return new JsonResponse($this->serializePoll($poll, $actor->id));
         } catch (\Throwable $e) {
             $this->log->error('[social-groups] VotePollController: ' . $e->getMessage(), ['exception' => $e]);
-            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.unexpected')], 500);
         }
     }
 }

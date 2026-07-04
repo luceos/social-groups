@@ -11,12 +11,13 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class InviteUserController implements RequestHandlerInterface
 {
     use ReadsRouteParam;
 
-    public function __construct(private LoggerInterface $log) {}
+    public function __construct(private LoggerInterface $log, private TranslatorInterface $translator) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -30,7 +31,7 @@ class InviteUserController implements RequestHandlerInterface
             $username = trim((string) ($body['username'] ?? ''));
 
             if (! $groupId || ! $username) {
-                return new JsonResponse(['error' => 'Group ID and username are required.'], 422);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.invite_required_fields')], 422);
             }
 
             $group = SocialGroup::findOrFail($groupId);
@@ -45,13 +46,13 @@ class InviteUserController implements RequestHandlerInterface
                 || ($actorMember && in_array($actorMember->role, ['creator', 'moderator'], true));
 
             if (! $canInvite) {
-                return new JsonResponse(['error' => 'Only group moderators can invite users.'], 403);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.invite_forbidden')], 403);
             }
 
             // Find target user by username
             $targetUser = User::where('username', $username)->first();
             if (! $targetUser) {
-                return new JsonResponse(['error' => 'User not found.'], 404);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.user_not_found')], 404);
             }
 
             // An existing row may be an active member or a kicked one whose
@@ -62,7 +63,7 @@ class InviteUserController implements RequestHandlerInterface
             $existing = $group->members()->where('user_id', $targetUser->id)->first();
 
             if ($existing && $existing->banned_at === null) {
-                return new JsonResponse(['error' => 'That user is already a member of this group.'], 422);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.already_member')], 422);
             }
 
             if ($existing) {
@@ -88,12 +89,12 @@ class InviteUserController implements RequestHandlerInterface
                 'memberCount' => $group->fresh()->member_count,
             ], 201);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return new JsonResponse(['error' => 'Group not found.'], 404);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.group_not_found')], 404);
         } catch (\Throwable $e) {
             // Internal exception details (raw message, SQL fragments,
             // file paths) go to the server log only.
             $this->log->error('[social-groups] InviteUserController: ' . $e->getMessage(), ['exception' => $e]);
-            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.unexpected')], 500);
         }
     }
 }

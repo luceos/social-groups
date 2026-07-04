@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from '../utils/api';
 import app from 'flarum/forum/app';
+import extractText from 'flarum/common/utils/extractText';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 
@@ -57,7 +58,7 @@ export default class PrimaryGroupSelector extends Component {
         m.redraw();
       })
       .catch((err) => {
-        this.error  = err.response?.error || err.message || 'Failed to save.';
+        this.error  = err.response?.error || err.message || extractText(app.translator.trans('ernestdefoe-social-groups.forum.primary_group.save_failed'));
         this.saving = false;
         m.redraw();
       });

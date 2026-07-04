@@ -11,6 +11,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Creates a post inside a hidden per-group gallery discussion.
@@ -23,7 +24,7 @@ class StoreGroupMediaPostController implements RequestHandlerInterface
 {
     use ReadsRouteParam;
 
-    public function __construct(private LoggerInterface $log, private GalleryPostService $gallery) {}
+    public function __construct(private LoggerInterface $log, private GalleryPostService $gallery, private TranslatorInterface $translator) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -37,24 +38,24 @@ class StoreGroupMediaPostController implements RequestHandlerInterface
             $content = trim((string) ($body['content'] ?? ''));
 
             if (! $groupId || ! $content) {
-                return new JsonResponse(['error' => 'groupId and content are required.'], 422);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.media_required_fields')], 422);
             }
 
             $group = SocialGroup::findOrFail($groupId);
 
             $isMember = $group->activeMembership($actor->id)->exists();
             if (! $isMember && ! $actor->isAdmin()) {
-                return new JsonResponse(['error' => 'You must be a member to upload media.'], 403);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.media_member_required')], 403);
             }
 
             $post = $this->gallery->createPost($group, $actor, $content);
 
             return new JsonResponse(['success' => true, 'postId' => $post->id], 201);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
-            return new JsonResponse(['error' => 'Group not found.'], 404);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.group_not_found')], 404);
         } catch (\Throwable $e) {
             $this->log->error('[social-groups] StoreGroupMediaPostController: ' . $e->getMessage());
-            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.unexpected')], 500);
         }
     }
 }

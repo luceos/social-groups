@@ -9,10 +9,15 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class JoinGroupController implements RequestHandlerInterface
 {
     use ReadsRouteParam;
+
+    public function __construct(private TranslatorInterface $translator)
+    {
+    }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -24,14 +29,14 @@ class JoinGroupController implements RequestHandlerInterface
 
         // Private groups require an invite — for now just block joining
         if ($group->is_private && $actor->id !== $group->user_id && ! $actor->isAdmin()) {
-            return new JsonResponse(['error' => 'This group is private'], 403);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.group_private')], 403);
         }
 
         $existing = $group->members()->where('user_id', $actor->id)->first();
 
         if ($existing) {
             if ($existing->banned_at !== null) {
-                return new JsonResponse(['error' => 'You have been removed from this group.'], 403);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.removed_from_group')], 403);
             }
             return new JsonResponse([
                 'status'      => 'joined',
@@ -55,7 +60,7 @@ class JoinGroupController implements RequestHandlerInterface
         // The `is_private` guard above is not enough on its own: a group
         // can be invite-only without being marked private.
         if ($group->membership_type === 'invite') {
-            return new JsonResponse(['error' => 'This group is invite-only.'], 403);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.invite_only')], 403);
         }
 
         $group->members()->create([

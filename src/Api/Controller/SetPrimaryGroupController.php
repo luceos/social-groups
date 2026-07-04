@@ -9,9 +9,14 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class SetPrimaryGroupController implements RequestHandlerInterface
 {
+    public function __construct(private TranslatorInterface $translator)
+    {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
@@ -30,13 +35,13 @@ class SetPrimaryGroupController implements RequestHandlerInterface
         $group = SocialGroup::find($groupId);
 
         if (! $group) {
-            return new JsonResponse(['error' => 'Group not found'], 404);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.group_not_found')], 404);
         }
 
         $isMember = $group->activeMembership($actor->id)->exists();
 
         if (! $isMember) {
-            return new JsonResponse(['error' => 'You are not a member of this group'], 403);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.not_member')], 403);
         }
 
         SocialGroupUserPrimary::updateOrCreate(

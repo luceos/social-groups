@@ -172,7 +172,7 @@ export default class EditGroupModal extends Modal {
     const name = this.name().trim();
 
     if (!name) {
-      this.errors.name = 'Group name is required.';
+      this.errors.name = app.translator.trans('ernestdefoe-social-groups.forum.create_modal.name_required');
       m.redraw();
       return;
     }

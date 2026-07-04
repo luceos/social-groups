@@ -12,12 +12,13 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ListUserGroupsController implements RequestHandlerInterface
 {
     use ReadsRouteParam;
 
-    public function __construct(private LoggerInterface $log, private GroupAssetUrl $assetUrl) {}
+    public function __construct(private LoggerInterface $log, private GroupAssetUrl $assetUrl, private TranslatorInterface $translator) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -27,7 +28,7 @@ class ListUserGroupsController implements RequestHandlerInterface
 
             $profileUser = User::find($userId);
             if (! $profileUser) {
-                return new JsonResponse(['error' => 'User not found.'], 404);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.user_not_found')], 404);
             }
 
             $primaryGroupId = $profileUser->socialGroupPrimary?->group_id;
@@ -74,7 +75,7 @@ class ListUserGroupsController implements RequestHandlerInterface
             return new JsonResponse(['data' => $groups->toArray()]);
         } catch (\Throwable $e) {
             $this->log->error('[social-groups] ListUserGroupsController: ' . $e->getMessage(), ['exception' => $e]);
-            return new JsonResponse(['error' => 'An unexpected error occurred.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.unexpected')], 500);
         }
     }
 }

@@ -12,6 +12,7 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class UploadGroupImageController implements RequestHandlerInterface
 {
@@ -21,7 +22,8 @@ class UploadGroupImageController implements RequestHandlerInterface
 
     public function __construct(
         protected FilesystemFactory $filesystem,
-        protected SettingsRepositoryInterface $settings
+        protected SettingsRepositoryInterface $settings,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -50,12 +52,12 @@ class UploadGroupImageController implements RequestHandlerInterface
         $file = $files['file'] ?? null;
 
         if (! $file || $file->getError() !== UPLOAD_ERR_OK) {
-            return new JsonResponse(['error' => 'No valid file uploaded'], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.no_file')], 422);
         }
 
         $ext = strtolower(pathinfo($file->getClientFilename(), PATHINFO_EXTENSION));
         if (! in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
-            return new JsonResponse(['error' => 'Invalid file type. Allowed: jpg, jpeg, png, gif, webp'], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.invalid_file_type')], 422);
         }
 
         $maxSize = (int) $this->settings->get('ernestdefoe-social-groups.max_image_bytes', self::DEFAULT_MAX_BYTES);
@@ -65,7 +67,7 @@ class UploadGroupImageController implements RequestHandlerInterface
         $size = $file->getSize();
         if ($size === null || $size <= 0 || $size > $maxSize) {
             $maxMb = round($maxSize / (1024 * 1024), 1);
-            return new JsonResponse(['error' => "File too large. Maximum size is {$maxMb}MB"], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.file_too_large', ['{max}' => $maxMb])], 422);
         }
 
         // Read the stream once so we can both sniff and upload without rewinding
@@ -79,7 +81,7 @@ class UploadGroupImageController implements RequestHandlerInterface
 
         $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (! in_array($mimeType, $allowedMimes, true)) {
-            return new JsonResponse(['error' => 'Invalid file content. Only image files are allowed.'], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-social-groups.lib.errors.invalid_file_content')], 422);
         }
 
         $disk = $this->filesystem->disk('flarum-assets');

@@ -12,6 +12,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class GroupRssFeedController implements RequestHandlerInterface
 {
@@ -20,6 +21,7 @@ class GroupRssFeedController implements RequestHandlerInterface
         private LoggerInterface $log,
         private Config $config,
         private SettingsRepositoryInterface $settings,
+        private TranslatorInterface $translator,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -33,7 +35,7 @@ class GroupRssFeedController implements RequestHandlerInterface
             $group = SocialGroup::where('slug', $slug)->firstOrFail();
 
             if ($group->is_private) {
-                return $this->xmlError('This group is private.', 403);
+                return $this->xmlError($this->translator->trans('ernestdefoe-social-groups.lib.errors.group_private'), 403);
             }
 
             $baseUrl  = rtrim((string) $this->config->url(), '/');
@@ -105,10 +107,10 @@ class GroupRssFeedController implements RequestHandlerInterface
             $response->getBody()->write($xml);
             return $response->withHeader('Content-Type', 'application/rss+xml; charset=UTF-8');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return $this->xmlError('Group not found.', 404);
+            return $this->xmlError($this->translator->trans('ernestdefoe-social-groups.lib.errors.group_not_found'), 404);
         } catch (\Throwable $e) {
             $this->log->error('[social-groups] GroupRssFeedController: ' . $e->getMessage(), ['exception' => $e]);
-            return $this->xmlError('An unexpected error occurred.', 500);
+            return $this->xmlError($this->translator->trans('ernestdefoe-social-groups.lib.errors.unexpected'), 500);
         }
     }
 
