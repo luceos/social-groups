@@ -452,13 +452,25 @@ class SocialGroupPostResource extends AbstractDatabaseResource
     public function fields(): array
     {
         return [
+            // The reply input fields are consumed by creating()/updating()
+            // from the raw request body (they need cross-field logic: the
+            // membership gate, parent-post flattening, link-preview
+            // sanitization). They still MUST be declared writable — the
+            // JSON:API layer rejects any request whose body contains a
+            // declared-but-unwritable field with a 403 ("Field [x] is not
+            // writable"), which broke every reply and edit. The no-op
+            // set() keeps the lifecycle hooks as the single writers.
             Schema\Integer::make('discussionId')
-                ->property('discussion_id'),
+                ->property('discussion_id')
+                ->writableOnCreate()
+                ->set(fn () => null),
 
             Schema\Integer::make('groupId')
                 ->property('group_id'),
 
-            Schema\Str::make('content'),
+            Schema\Str::make('content')
+                ->writable()
+                ->set(fn () => null),
 
             Schema\Str::make('contentParsed')
                 ->get(function (SocialGroupPost $post) {
@@ -466,6 +478,8 @@ class SocialGroupPostResource extends AbstractDatabaseResource
                 }),
 
             Schema\Arr::make('linkPreview')
+                ->writableOnCreate()
+                ->set(fn () => null)
                 ->visible(fn () => $this->capabilities->linkPreview)
                 ->get(function (SocialGroupPost $post) {
                     if (! $this->capabilities->linkPreview) {
@@ -507,7 +521,9 @@ class SocialGroupPostResource extends AbstractDatabaseResource
 
             Schema\Integer::make('parentPostId')
                 ->property('parent_post_id')
-                ->nullable(),
+                ->nullable()
+                ->writableOnCreate()
+                ->set(fn () => null),
 
             Schema\Boolean::make('canEdit')
                 ->get(function (SocialGroupPost $post, Context $context) {

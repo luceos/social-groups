@@ -277,7 +277,8 @@ function renderActionBar(d, fp, attrs, t) {
 
 function renderReplyRow(d, attrs, t) {
   const actor = app.session.user;
-  if (!actor || !attrs.isMember || d.isLocked) return null;
+  if (!actor || d.isLocked) return null;
+  if (!attrs.isMember && !d.canReply) return null;
 
   return m('.SGFeed-replyRow', [
     m('.SGFeed-replyAvatar', [

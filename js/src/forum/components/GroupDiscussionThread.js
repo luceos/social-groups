@@ -676,7 +676,7 @@ export default class GroupDiscussionThread extends Page {
             this.viewTypingBar(),
 
             actor && !this.discussion.isLocked
-              ? (this.discussion.canReply()
+              ? (this.discussion.canReply
                   ? this.viewReplyBox(actor)
                   : m('.SGThread-joinToReply', [
                       m('i.fa-solid.fa-user-plus'),
@@ -880,7 +880,7 @@ export default class GroupDiscussionThread extends Page {
                 : [m('i.fa-solid.fa-face-grin-beam'), ' ', app.translator.trans('ernestdefoe-social-groups.forum.discussions.react')]),
           ])
         : null,
-      actor && this.discussion?.canReply() && !this.discussion?.isLocked
+      actor && this.discussion?.canReply && !this.discussion?.isLocked
         ? m('button.SGThread-replyBtn', {
             class:   this.replyingToId === (post.parentPostId ?? post.id) ? 'is-active' : '',
             onclick: () => this.startInlineReply(post),

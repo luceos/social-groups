@@ -124,6 +124,7 @@ function mapDiscussion(d) {
     createdAt: d.attribute('createdAt') || null,
     canDelete: !!d.attribute('canDelete'),
     canShare: !!d.attribute('canShare'),
+    canReply: !!d.attribute('canReply'),
     sharedFrom: d.attribute('sharedFrom') || null,
     poll: d.attribute('poll') || null,
     firstPost: projectFirstPost(d.firstPost()),
@@ -163,6 +164,7 @@ function projectDiscussionFromResource(d) {
     isLocked: !!d.attribute('isLocked'),
     createdAt: d.attribute('createdAt') || d.attribute('lastPostedAt') || null,
     canDelete: !!d.attribute('canDelete'),
+    canReply: !!d.attribute('canReply'),
   };
 }
 
