@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 
 // Migration 000010 used hasColumn() which can silently skip if Flarum already
@@ -9,16 +10,11 @@ use Illuminate\Database\Schema\Builder;
 return [
     'up' => function (Builder $schema) {
         $db     = $schema->getConnection();
-        $prefix = $db->getTablePrefix();
 
-        $exists = $db->select(
-            "SHOW COLUMNS FROM `{$prefix}social_group_posts` LIKE 'content_parsed'"
-        );
-
-        if (empty($exists)) {
-            $db->statement(
-                "ALTER TABLE `{$prefix}social_group_posts` ADD COLUMN `content_parsed` MEDIUMTEXT NULL AFTER `content`"
-            );
+        if (! $db->getSchemaBuilder()->hasColumn('social_group_posts', 'content_parsed')) {
+            $schema->table('social_group_posts', function (Blueprint $table) {
+                $table->mediumText('content_parsed')->nullable()->after('content');
+            });
         }
     },
 
